@@ -1,0 +1,3 @@
+include README.md LICENSE.md requirements.txt
+include prointvar/config_template.ini
+recursive-include tests *.py
