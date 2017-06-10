@@ -380,22 +380,35 @@ class DSSPgenerator(object):
         if not os.path.isfile(inputfile):
             raise IOError("{} not available or could not be read...".format(inputfile))
 
+        # inputfile needs to be in PDB or mmCIF format
+        filename, extension = os.path.splitext(inputfile)
+        if extension not in ['.pdb', '.ent', '.cif']:
+            raise ValueError("{} is expected to be in mmCIF or PDB format..."
+                             "".format(inputfile))
+
     def _generate_output(self):
         if not self.outputfile:
             filename, extension = os.path.splitext(self.inputfile)
             self.outputfile = filename + ".dssp"
 
+    def _run(self, dssp_bin):
+        cmd = "{} -i {} -o {}".format(dssp_bin, self.inputfile, self.outputfile)
+        os.system(cmd)
+        if not os.path.isfile(self.outputfile):
+            raise IOError("DSSP output not generated for {}".format(self.outputfile))
+
     def run(self, override=False):
-        # run dssp and generate output
         if not os.path.exists(self.outputfile) or override:
             if os.path.isfile(config.dssp_bin):
-                cmd = "{} -i {} -o {}".format(config.dssp_bin, self.inputfile, self.outputfile)
-                os.system(cmd)
+                dssp_bin = config.dssp_bin
             elif os.path.isfile(config.dssp_bin_local):
-                cmd = "{} -i {} -o {}".format(config.dssp_bin_local, self.inputfile, self.outputfile)
-                os.system(cmd)
+                dssp_bin = config.dssp_bin_local
             else:
                 raise IOError('DSSP executable is not available...')
+
+            # run dssp and generate output
+            self._run(dssp_bin)
+
         else:
             flash('DSSP for {} already available...'.format(self.outputfile))
         return
