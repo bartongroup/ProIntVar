@@ -110,8 +110,8 @@ def parse_hb2_from_file(inputfile, excluded=(), verbose=False):
     return table
 
 
-def get_hbplus_selected_from_table(data, chain_A=None, res_D=None,
-                                   chain_D=None, res_A=None):
+def get_hbplus_selected_from_table(data, chain_A=None, chain_D=None,
+                                   res_A=None, res_D=None):
     """
     Utility that filters a pandas DataFrame by the input tuples.
 
@@ -132,10 +132,10 @@ def get_hbplus_selected_from_table(data, chain_A=None, res_D=None,
         table = row_selector(table, 'CHAIN_A', chain_A, method="isin")
 
     if res_D is not None:
-        table = row_selector(table, 'RESID_D', res_D, method="isin")
+        table = row_selector(table, 'RES_D', res_D, method="isin")
 
     if res_A is not None:
-        table = row_selector(table, 'RESID_A', res_A, method="isin")
+        table = row_selector(table, 'RES_A', res_A, method="isin")
 
     return table
 
@@ -252,17 +252,20 @@ class HBPLUSgenerator(object):
 
         if clean_output:
             # remove output files
-            with suppress(FileNotFoundError):
-                if self.inputfile != filename:
+            def lazy_remove_files(filename):
+                with suppress(FileNotFoundError):
                     os.remove(filename)
-                if output_hbplus != self.outputfile:
-                    os.remove(output_hbplus)
-                os.remove(output_clean)
-                os.remove(output_clean_log)
-                os.remove(output_hbplus_log)
-                # other files
-                os.remove("./hbdebug.dat")
-                os.remove("./fort.15")
+
+            if self.inputfile != filename:
+                lazy_remove_files(filename)
+            if output_hbplus != self.outputfile:
+                lazy_remove_files(output_hbplus)
+            lazy_remove_files(output_clean)
+            lazy_remove_files(output_clean_log)
+            lazy_remove_files(output_hbplus_log)
+            # other files
+            lazy_remove_files("./hbdebug.dat")
+            lazy_remove_files("./fort.15")
 
     def run(self, override=False, clean_output=True):
 
