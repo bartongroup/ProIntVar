@@ -92,18 +92,28 @@ class TestHBPLUS(unittest.TestCase):
             self.reader(self.emptyfile).read()
             os.remove(self.emptyfile)
 
+    def test_generator_pdb_exec(self):
+        if os.path.isfile(self.inputpdb):
+            self.generator(self.inputpdb,
+                           self.inputhbplus + '.test').run(clean_output=True,
+                                                           override=True)
+            msg = ("HBPLUS execution failed: make sure the settings "
+                   "are set properly in config.ini!")
+            self.assertTrue(os.path.isfile(self.inputhbplus + '.test'), msg)
+            os.remove(self.inputhbplus + '.test')
+        else:
+            raise IOError("%s" % self.inputpdb)
+
     def test_generator_pdb(self):
         if os.path.isfile(self.inputpdb):
-            self.generator(self.inputpdb, self.inputhbplus).run(clean_output=True,
-                                                                override=True)
+            self.generator(self.inputpdb, self.inputhbplus).run()
             self.assertTrue(os.path.isfile(self.inputhbplus))
         else:
             raise IOError("%s" % self.inputpdb)
 
     def test_generator_cif(self):
         if os.path.isfile(self.inputcif):
-            self.generator(self.inputcif, self.inputhbplus).run(clean_output=True,
-                                                                override=True)
+            self.generator(self.inputcif, self.inputhbplus).run()
             self.assertTrue(os.path.isfile(self.inputhbplus))
         else:
             raise IOError("%s" % self.inputcif)

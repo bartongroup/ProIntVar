@@ -103,6 +103,16 @@ class TestDSSP(unittest.TestCase):
             self.reader(self.emptyfile).read()
             os.remove(self.emptyfile)
 
+    def test_generator_cif_exec(self):
+        if os.path.isfile(self.inputcif):
+            self.generator(self.inputcif, self.inputdssp + '.test').run(override=True)
+            msg = ("DSSP execution failed: make sure the settings "
+                   "are set properly in config.ini!")
+            self.assertTrue(os.path.isfile(self.inputdssp + '.test'), msg)
+            os.remove(self.inputdssp + '.test')
+        else:
+            raise IOError("%s" % self.inputcif)
+
     def test_generator_cif(self):
         if os.path.isfile(self.inputcif):
             self.generator(self.inputcif, self.inputdssp).run()
