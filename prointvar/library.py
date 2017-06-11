@@ -147,6 +147,28 @@ hbplus_types = {"CHAIN_D": str,
                 "ANGLE_D-A-AA": float,
                 "ID": int}
 
+arpeggio_types = {"ENTRY_A": str,
+                  "ENTRY_B": str,
+                  "STERIC_CLASH": int,
+                  "COVALENT": int,
+                  "VDW_CLASH": int,
+                  "VDW_INTER": int,
+                  "PROXIMAL": int,
+                  "HYDROGEN": int,
+                  "WEAK_HYDROGEN": int,
+                  "HALOGEN": int,
+                  "IONIC": int,
+                  "METAL_COMPLEX": int,
+                  "AROMATIC": int,
+                  "HYDROPHOBIC": int,
+                  "CARBONYL": int,
+                  "POLAR": int,
+                  "WEAK_POLAR": int,
+                  "DIST": float,
+                  "VDW_DIST": float,
+                  "ENTITIES": str}
+
+
 boolean_to_string = {0: "False",
                      1: "True"}
 
