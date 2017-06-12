@@ -37,7 +37,8 @@ _PDB_FORMAT = "%s%5i %-4s%c%3s %c%4s%c   %8.3f%8.3f%8.3f%s%6.2f      %4s%2s%2s\n
 
 def parse_mmcif_atoms_from_file(inputfile, excluded=(), add_res_full=True,
                                 add_contacts=False, dist=5, first_model=True,
-                                add_atom_altloc=False, verbose=False):
+                                add_atom_altloc=False, remove_altloc=False,
+                                reset_atom_id=True, verbose=False):
     """
     Parse mmCIF ATOM and HETATM lines.
 
@@ -48,7 +49,9 @@ def parse_mmcif_atoms_from_file(inputfile, excluded=(), add_res_full=True,
     :param add_contacts: boolean
     :param dist: distance threshold in Angstrom
     :param first_model: boolean
-    :param add_atom_altloc: boolean
+    :param add_atom_altloc: boolean (new string join)
+    :param remove_altloc: boolean
+    :param reset_atom_id: boolean
     :param verbose: boolean
     :return: returns a pandas DataFrame
     """
@@ -113,6 +116,15 @@ def parse_mmcif_atoms_from_file(inputfile, excluded=(), add_res_full=True,
     if add_atom_altloc:
         table = add_mmcif_atom_altloc(table)
 
+    if remove_altloc:
+        table = remove_multiple_altlocs(table)
+        reset_atom_id = True
+
+    if reset_atom_id:
+        table.reset_index(inplace=True)
+        table = table.drop(['index'], axis=1)
+        table['id'] = table.index + 1
+
     # enforce some specific column types
     for col in table:
         if col in mmcif_types:
@@ -128,8 +140,9 @@ def parse_mmcif_atoms_from_file(inputfile, excluded=(), add_res_full=True,
     return table
 
 
-def parse_pdb_atoms_from_file(inputfile, excluded=(), add_contacts=False, dist=5,
-                              first_model=True, add_atom_altloc=False, verbose=False):
+def parse_pdb_atoms_from_file(inputfile, excluded=(), add_contacts=False,
+                              dist=5, first_model=True, add_atom_altloc=False,
+                              remove_altloc=False, reset_atom_id=True, verbose=False):
     """
     Parse PDB ATOM and HETATM lines.
 
@@ -138,7 +151,9 @@ def parse_pdb_atoms_from_file(inputfile, excluded=(), add_contacts=False, dist=5
     :param add_contacts: boolean
     :param dist: distance threshold in Angstrom
     :param first_model: boolean 
-    :param add_atom_altloc: boolean
+    :param add_atom_altloc: boolean (new string join)
+    :param remove_altloc: boolean
+    :param reset_atom_id: boolean
     :param verbose: boolean
     :return: returns a pandas DataFrame
     """
@@ -211,6 +226,15 @@ def parse_pdb_atoms_from_file(inputfile, excluded=(), add_contacts=False, dist=5
 
     if add_atom_altloc:
         table = add_mmcif_atom_altloc(table)
+
+    if remove_altloc:
+        table = remove_multiple_altlocs(table)
+        reset_atom_id = True
+
+    if reset_atom_id:
+        table.reset_index(inplace=True)
+        table = table.drop(['index'], axis=1)
+        table['id'] = table.index + 1
 
     # enforce some specific column types
     for col in table:
@@ -648,7 +672,7 @@ def add_mmcif_res_split(data):
 
 def add_label_alt_id(data):
     """
-    Utility that adds fixes the label_alt_id column to match what is
+    Utility that fixes the label_alt_id column to match what is
     expected in the mmCIF format.
 
     :param data: pandas DataFrame object
@@ -671,7 +695,8 @@ def add_label_alt_id(data):
 def add_mmcif_atom_altloc(data):
     """
     Utility that adds new columns to the table.
-    adds: 'label_atom_altloc_id', and 'auth_atom_altloc_id'
+    adds: 'label_atom_altloc_id', and 'auth_atom_altloc_id' which is a
+        string join between '*_atom_id' + 'label_alt_id'
     
     :param data: pandas DataFrame object
     :return: returns a modified pandas DataFrame
@@ -691,6 +716,38 @@ def add_mmcif_atom_altloc(data):
     data['auth_atom_altloc_id'] = data.apply(join_atom_altloc,
                                              axis=1, args=('auth', ))
     return data
+
+
+def remove_multiple_altlocs(data):
+    """
+    Removes alternative locations (i.e. 'rows') leaving only the first.
+    Needs to find rows with alt_id != '.' and then find following rows until
+    '.' appears again (expects atoms to be consequent).
+
+    :param data: pandas DataFrame object
+    :return: returns a modified pandas DataFrame
+    """
+
+    table = data
+    drop_ixs = []
+    for ix in table.index:
+        altloc = table.loc[ix, 'label_alt_id']
+        if altloc != '.':
+            # table.loc[ix, 'label_alt_id'] = '.'
+            table.set_value(ix, 'label_alt_id', '.')
+            atomid = table.loc[ix, 'label_atom_id']
+            try:
+                for nx in range(1, 100, 1):
+                    altnx = table.loc[ix + nx, 'label_alt_id']
+                    atomnx = table.loc[ix + nx, 'label_atom_id']
+                    if altnx != '.' and atomnx == atomid:
+                        # store indexes of the rows to be dropped
+                        drop_ixs.append(ix + nx)
+                    else:
+                        break
+            except KeyError:
+                break
+    return table.drop(table.index[drop_ixs])
 
 
 def add_mmcif_contact_info(data, category='label'):
@@ -861,8 +918,9 @@ class MMCIFreader(object):
         return self.atoms(**kwargs)
 
     def atoms(self, excluded=None, add_res_full=True, add_contacts=False, dist=5,
-              first_model=True, add_atom_altloc=False, format_type="mmcif",
-              residue_agg=False, agg_method='centroid', category='label'):
+              first_model=True, add_atom_altloc=False, remove_altloc=False,
+              reset_atom_id=True, format_type="mmcif", residue_agg=False,
+              agg_method='centroid', category='label'):
         if excluded is None:
             excluded = self.excluded
         if format_type == "mmcif":
@@ -871,6 +929,8 @@ class MMCIFreader(object):
                                                     add_contacts=add_contacts, dist=dist,
                                                     first_model=first_model,
                                                     add_atom_altloc=add_atom_altloc,
+                                                    remove_altloc=remove_altloc,
+                                                    reset_atom_id=reset_atom_id,
                                                     verbose=self.verbose)
 
         elif format_type == "pdb":
@@ -878,6 +938,8 @@ class MMCIFreader(object):
                                                   add_contacts=add_contacts, dist=dist,
                                                   first_model=first_model,
                                                   add_atom_altloc=add_atom_altloc,
+                                                  remove_altloc=remove_altloc,
+                                                  reset_atom_id=reset_atom_id,
                                                   verbose=self.verbose)
         else:
             message = 'The provided format {} is not implemented...'.format(format_type)

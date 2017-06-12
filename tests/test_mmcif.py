@@ -25,7 +25,8 @@ from prointvar.mmcif import (MMCIFreader, MMCIFwriter, parse_mmcif_atoms_from_fi
                              add_mmcif_res_full, get_mmcif_full_contacts_from_table,
                              add_mmcif_contact_info, parse_pdb_atoms_from_file,
                              add_mmcif_res_split, get_atom_line, write_pdb_from_table,
-                             add_mmcif_atom_altloc, residues_aggregation)
+                             add_mmcif_atom_altloc, residues_aggregation,
+                             remove_multiple_altlocs)
 
 from prointvar.config import config as c
 root = os.path.abspath(os.path.dirname(__file__))
@@ -79,6 +80,7 @@ class TestMMCIF(unittest.TestCase):
         self.get_atom_line = get_atom_line
         self.add_mmcif_atom_altloc = add_mmcif_atom_altloc
         self.residues_aggregation = residues_aggregation
+        self.remove_altloc = remove_multiple_altlocs
 
     def tearDown(self):
         """Remove testing framework."""
@@ -111,6 +113,7 @@ class TestMMCIF(unittest.TestCase):
         self.get_atom_line = None
         self.add_mmcif_atom_altloc = None
         self.residues_aggregation = None
+        self.remove_altloc = None
 
     def test_file_not_found_reader(self):
         with self.assertRaises(IOError):
@@ -565,7 +568,7 @@ class TestMMCIF(unittest.TestCase):
 
     def test_parse_pdb_altloc(self):
         if os.path.isfile(self.inputpdb2):
-            data = self.parser_pdb(self.inputpdb2)
+            data = self.parser_pdb(self.inputpdb2, remove_altloc=False)
             data = self.add_mmcif_atom_altloc(data)
             self.assertIn('label_atom_altloc_id', [k for k in data])
             self.assertIn('auth_atom_altloc_id', [k for k in data])
@@ -611,6 +614,24 @@ class TestMMCIF(unittest.TestCase):
         self.assertEqual('VAL', data.loc[0, 'label_comp_id'])
         self.assertEqual('118', data.loc[0, 'auth_seq_id'])
         self.assertAlmostEqual(-7.310, data.loc[0, 'Cartn_x'], places=2)
+
+    def test_reader_remove_altloc(self):
+        reader = self.reader(self.inputpdb2)
+        data = reader.atoms(format_type='pdb', remove_altloc=True)
+        self.assertEqual(1, data.loc[0, 'id'])
+        self.assertEqual('N', data.loc[0, 'type_symbol'])
+        self.assertEqual('N', data.loc[0, 'label_atom_id'])
+        self.assertEqual('.', data.loc[0, 'label_alt_id'])
+
+    def test_remove_altloc(self):
+        reader = self.reader(self.inputpdb2)
+        data = reader.atoms(format_type='pdb', remove_altloc=False, reset_atom_id=False)
+        ndata = self.remove_altloc(data)
+        self.assertEqual(1, ndata.loc[0, 'id'])
+        self.assertEqual('N', ndata.loc[0, 'type_symbol'])
+        self.assertEqual('N', ndata.loc[0, 'label_atom_id'])
+        self.assertEqual('.', ndata.loc[0, 'label_alt_id'])
+
 
 if __name__ == '__main__':
     suite = unittest.TestLoader().loadTestsFromTestCase(TestMMCIF)
