@@ -26,12 +26,12 @@ import os
 import json
 import shutil
 import pandas as pd
-from contextlib import suppress
 
 from prointvar.mmcif import MMCIFwriter
 from prointvar.mmcif import MMCIFreader
 
 from prointvar.utils import flash
+from prointvar.utils import lazy_file_remover
 from prointvar.utils import row_selector
 from prointvar.utils import string_split
 from prointvar.library import arpeggio_types
@@ -292,16 +292,10 @@ class ARPEGGIOgenerator(object):
 
         if clean_output:
             # remove output files
-            def lazy_remove_files(filename):
-                with suppress(FileNotFoundError):
-                    os.remove(filename)
-
             if output_arpeggio != self.outputfile:
-                lazy_remove_files(output_arpeggio)
-            lazy_remove_files(output_bs_contacts)
-            lazy_remove_files(output_atomtypes)
-            # if self.inputfile_back != self.inputfile:
-            #     lazy_remove_files(self.inputfile)
+                lazy_file_remover(output_arpeggio)
+            lazy_file_remover(output_bs_contacts)
+            lazy_file_remover(output_atomtypes)
 
     def run(self, override=False, clean_output=True, save_clean_pdb=False):
 
@@ -325,7 +319,7 @@ class ARPEGGIOgenerator(object):
             flash('ARPEGGIO for {} already available...'.format(self.outputfile))
 
         if self.inputfile.endswith('_clean.pdb') and not save_clean_pdb:
-            os.remove(self.inputfile)
+            lazy_file_remover(self.inputfile)
         return
 
 

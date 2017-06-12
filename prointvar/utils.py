@@ -21,6 +21,7 @@ import json
 import requests
 import pandas as pd
 from datetime import datetime
+from contextlib import suppress
 from collections import OrderedDict
 
 from Bio import pairwise2
@@ -79,6 +80,11 @@ def create_directory(directory):
     if not os.path.exists(directory):
         os.makedirs(directory)
     return
+
+
+def lazy_file_remover(filename):
+    with suppress(FileNotFoundError):
+        os.remove(filename)
 
 
 def flash(message):

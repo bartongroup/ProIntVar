@@ -14,12 +14,12 @@ import os
 import json
 import shutil
 import pandas as pd
-from contextlib import suppress
 
 from prointvar.mmcif import MMCIFwriter
 
 from prointvar.utils import flash
 from prointvar.utils import row_selector
+from prointvar.utils import lazy_file_remover
 from prointvar.library import hbplus_types
 
 from prointvar.config import config
@@ -252,20 +252,16 @@ class HBPLUSgenerator(object):
 
         if clean_output:
             # remove output files
-            def lazy_remove_files(filename):
-                with suppress(FileNotFoundError):
-                    os.remove(filename)
-
             if self.inputfile != filename:
-                lazy_remove_files(filename)
+                lazy_file_remover(filename)
             if output_hbplus != self.outputfile:
-                lazy_remove_files(output_hbplus)
-            lazy_remove_files(output_clean)
-            lazy_remove_files(output_clean_log)
-            lazy_remove_files(output_hbplus_log)
+                lazy_file_remover(output_hbplus)
+            lazy_file_remover(output_clean)
+            lazy_file_remover(output_clean_log)
+            lazy_file_remover(output_hbplus_log)
             # other files
-            lazy_remove_files("./hbdebug.dat")
-            lazy_remove_files("./fort.15")
+            lazy_file_remover("./hbdebug.dat")
+            lazy_file_remover("./fort.15")
 
     def run(self, override=False, clean_output=True):
 
