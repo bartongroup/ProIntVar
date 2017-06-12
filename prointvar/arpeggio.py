@@ -5,6 +5,19 @@
 
 This defines the methods that work with ARPEGGIO files.
 
+Needs the Edited Arpeggio Fork from: https://github.com/biomadeira/arpeggio
+
+Propositions for things to work:
+- Generate new PDB file from mmCIF and (even) PDB so that some issues (below) are cleared
+    - Remove alternative locations and reset the atom sequential id
+      MMCIFreader(<...>).atoms(remove_altloc=True, reset_atom_id=True)
+
+    - Chain IDs need to be a single character so it is safer to run with category='auth'
+      MMCIFwriter(<...>).run(category='auth')
+
+    - Remove hydrogens
+      MMCIFreader(<...>).atoms(remove_hydrogens=True)
+
 Fábio Madeira, 2017+
 
 """
@@ -16,6 +29,7 @@ import pandas as pd
 from contextlib import suppress
 
 from prointvar.mmcif import MMCIFwriter
+from prointvar.mmcif import MMCIFreader
 
 from prointvar.utils import flash
 from prointvar.utils import row_selector
@@ -39,7 +53,7 @@ def parse_arpeggio_from_file(inputfile, excluded=(), verbose=False):
         flash("Parsing ARPEGGIO from lines...")
 
     # example lines
-    # format documentation at https://bitbucket.org/biomadeira/arpeggio/overview
+    # format documentation at https://github.com/biomadeira/arpeggio
     """
     B/376/ND2	B/374/O	0	0	0	0	1	0	0	0	0	0	0	0	0	0	0	4.971	1.901	INTRA_SELECTION
     B/376/CB	B/374/O	0	0	0	0	1	0	0	0	0	0	0	0	0	0	0	4.538	1.318	INTRA_SELECTION
@@ -93,27 +107,30 @@ def parse_arpeggio_from_file(inputfile, excluded=(), verbose=False):
 def add_arpeggio_res_split(data):
     """
     Utility that adds new columns to the table.
-    Adds new columns from the 'full atom description' (e.g B/377/N).
+    Adds new columns from the 'full atom description' (e.g B/377/GLU/N).
 
-    adds: 'CHAIN', 'RES', 'ATOM', and 'INSCODE'
+    adds: 'CHAIN', 'RES', 'COMP', 'ATOM', and 'INSCODE'
 
     :param data: pandas DataFrame object
     :return: returns a modified pandas DataFrame
     """
     table = data
 
-    def fix_chain_id(data, key):
+    def get_chain_id(data, key):
         return data[key].split('/')[0]
 
-    def fix_res_id(data, key):
+    def get_res_id(data, key):
         values = string_split(data[key].split('/')[1])
         return values[0]
 
-    # TODO test altlocs!
-    def fix_atom_id(data, key):
-        return data[key].split('/')[2]
+    def get_comp_id(data, key):
+        values = string_split(data[key].split('/')[2])
+        return values[0]
 
-    def fix_icode_id(data, key):
+    def get_atom_id(data, key):
+        return data[key].split('/')[3]
+
+    def get_icode_id(data, key):
         values = string_split(data[key].split('/')[1])
         if len(values) == 2:
             return values[1]
@@ -121,15 +138,17 @@ def add_arpeggio_res_split(data):
             return '?'
 
     table.is_copy = False
-    table['CHAIN_A'] = table.apply(fix_chain_id, axis=1, args=('ENTRY_A', ))
-    table['RES_A'] = table.apply(fix_res_id, axis=1, args=('ENTRY_A', ))
-    table['ATOM_A'] = table.apply(fix_atom_id, axis=1, args=('ENTRY_A', ))
-    table['INSCODE_A'] = table.apply(fix_icode_id, axis=1, args=('ENTRY_A', ))
+    table['CHAIN_A'] = table.apply(get_chain_id, axis=1, args=('ENTRY_A', ))
+    table['RES_A'] = table.apply(get_res_id, axis=1, args=('ENTRY_A', ))
+    table['COMP_A'] = table.apply(get_comp_id, axis=1, args=('ENTRY_A', ))
+    table['ATOM_A'] = table.apply(get_atom_id, axis=1, args=('ENTRY_A', ))
+    table['INSCODE_A'] = table.apply(get_icode_id, axis=1, args=('ENTRY_A', ))
 
-    table['CHAIN_B'] = table.apply(fix_chain_id, axis=1, args=('ENTRY_B', ))
-    table['RES_B'] = table.apply(fix_res_id, axis=1, args=('ENTRY_B', ))
-    table['ATOM_B'] = table.apply(fix_atom_id, axis=1, args=('ENTRY_B', ))
-    table['INSCODE_B'] = table.apply(fix_icode_id, axis=1, args=('ENTRY_B', ))
+    table['CHAIN_B'] = table.apply(get_chain_id, axis=1, args=('ENTRY_B', ))
+    table['RES_B'] = table.apply(get_res_id, axis=1, args=('ENTRY_B', ))
+    table['COMP_B'] = table.apply(get_comp_id, axis=1, args=('ENTRY_B', ))
+    table['ATOM_B'] = table.apply(get_atom_id, axis=1, args=('ENTRY_B', ))
+    table['INSCODE_B'] = table.apply(get_icode_id, axis=1, args=('ENTRY_B', ))
     return table
 
 
@@ -209,6 +228,8 @@ class ARPEGGIOgenerator(object):
         :param outputfile: if not provided will use the same file name and <.contacts> extension
         :param verbose: boolean
         """
+
+        self.inputfile_back = inputfile
         self.inputfile = inputfile
         self.outputfile = outputfile
         self.verbose = verbose
@@ -223,7 +244,7 @@ class ARPEGGIOgenerator(object):
         # inputfile needs to be in PDB format
         filename, extension = os.path.splitext(inputfile)
         if extension in ['.pdb', '.ent']:
-            pass
+            self._generate_pdb_from_pdb()
         elif extension in ['.cif']:
             self._generate_pdb_from_mmcif()
         else:
@@ -238,27 +259,25 @@ class ARPEGGIOgenerator(object):
     def _generate_pdb_from_mmcif(self):
         filename, extension = os.path.splitext(self.inputfile)
         w = MMCIFwriter(inputfile=self.inputfile, outputfile=filename + ".pdb")
-        w.run(format_type="pdb")
+        r = MMCIFreader(inputfile=self.inputfile)
+        data = r.atoms(remove_altloc=True, reset_atom_id=True, format_type='mmcif')
+        w.run(data=data, format_type="pdb", category="auth")
         self.inputfile = filename + ".pdb"
+
+    def _generate_pdb_from_pdb(self):
+        filename, extension = os.path.splitext(self.inputfile)
+        w = MMCIFwriter(inputfile=None, outputfile=filename + "_clean.pdb")
+        r = MMCIFreader(inputfile=self.inputfile)
+        data = r.atoms(remove_altloc=True, reset_atom_id=True, format_type='pdb')
+        w.run(data=data, format_type="pdb", category="auth")
+        self.inputfile = filename + "_clean.pdb"
 
     def _run(self, python_path, python_exe, arpeggio_bin, clean_output=True):
 
         filename, extension = os.path.splitext(self.inputfile)
         output_arpeggio = filename + ".contacts"
         output_bs_contacts = filename + ".bs_contacts"
-        output_amam = filename + ".amam"
-        output_amri = filename + ".amri"
-        output_ari = filename + ".ari"
-        output_ri = filename + ".ri"
         output_atomtypes = filename + ".atomtypes"
-        output_rings = filename + ".rings"
-        output_polarmatch = filename + ".polarmatch"
-        output_residue_sifts = filename + ".residue_sifts"
-        output_sift = filename + ".sift"
-        output_siftmatch = filename + ".siftmatch"
-        output_specific_sift = filename + ".specific.sift"
-        output_specific_siftmatch = filename + ".specific.siftmatch"
-        output_specific_polarmatch = filename + ".specific.polarmatch"
         
         # run arpeggio
         cmd = 'PYTHONPATH={} {} {} {}'.format(python_path, python_exe,
@@ -280,21 +299,11 @@ class ARPEGGIOgenerator(object):
             if output_arpeggio != self.outputfile:
                 lazy_remove_files(output_arpeggio)
             lazy_remove_files(output_bs_contacts)
-            lazy_remove_files(output_amam)
-            lazy_remove_files(output_amri)
-            lazy_remove_files(output_ari)
-            lazy_remove_files(output_ri)
             lazy_remove_files(output_atomtypes)
-            lazy_remove_files(output_rings)
-            lazy_remove_files(output_polarmatch)
-            lazy_remove_files(output_residue_sifts)
-            lazy_remove_files(output_sift)
-            lazy_remove_files(output_siftmatch)
-            lazy_remove_files(output_specific_sift)
-            lazy_remove_files(output_specific_siftmatch)
-            lazy_remove_files(output_specific_polarmatch)
+            # if self.inputfile_back != self.inputfile:
+            #     lazy_remove_files(self.inputfile)
 
-    def run(self, override=False, clean_output=True):
+    def run(self, override=False, clean_output=True, save_clean_pdb=False):
 
         if not os.path.exists(self.outputfile) or override:
             if os.path.isfile(config.python_exe) and os.path.exists(config.arpeggio_bin):
@@ -314,6 +323,9 @@ class ARPEGGIOgenerator(object):
 
         else:
             flash('ARPEGGIO for {} already available...'.format(self.outputfile))
+
+        if self.inputfile.endswith('_clean.pdb') and not save_clean_pdb:
+            os.remove(self.inputfile)
         return
 
 

@@ -112,6 +112,24 @@ class TestARPEGGIO(unittest.TestCase):
         else:
             raise IOError("%s" % self.inputpdb_fast)
 
+    # TODO handle residues with missing atoms
+    @unittest.expectedFailure
+    def test_generator_pdb_exec_fail(self):
+        pdbid = "1ejg"
+        inputpdb = "{}{}{}.pdb".format(c.db_root, c.db_cif, pdbid)
+        inputpdb_clean = "{}{}{}_clean.pdb".format(c.db_root, c.db_cif, pdbid)
+        inputarpeggio = "{}{}{}.contacts".format(c.db_root, c.db_cif, pdbid)
+        try:
+            self.generator(inputpdb,
+                       inputarpeggio).run(clean_output=True,
+                                          override=True)
+        except:
+            pass
+        msg = "PDB with residues have missing atoms..."
+        os.remove(inputpdb_clean)
+        os.remove(inputarpeggio)
+        self.assertTrue(os.path.isfile(inputarpeggio), msg)
+
     def test_generator_pdb(self):
         if os.path.isfile(self.inputpdb):
             self.generator(self.inputpdb, self.inputarpeggio).run()
