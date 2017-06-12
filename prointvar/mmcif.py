@@ -38,7 +38,7 @@ _PDB_FORMAT = "%s%5i %-4s%c%3s %c%4s%c   %8.3f%8.3f%8.3f%s%6.2f      %4s%2s%2s\n
 def parse_mmcif_atoms_from_file(inputfile, excluded=(), add_res_full=True,
                                 add_contacts=False, dist=5, first_model=True,
                                 add_atom_altloc=False, remove_altloc=False,
-                                reset_atom_id=True, verbose=False):
+                                remove_hydrogens=True, reset_atom_id=True, verbose=False):
     """
     Parse mmCIF ATOM and HETATM lines.
 
@@ -51,6 +51,7 @@ def parse_mmcif_atoms_from_file(inputfile, excluded=(), add_res_full=True,
     :param first_model: boolean
     :param add_atom_altloc: boolean (new string join)
     :param remove_altloc: boolean
+    :param remove_hydrogens: boolean
     :param reset_atom_id: boolean
     :param verbose: boolean
     :return: returns a pandas DataFrame
@@ -120,6 +121,9 @@ def parse_mmcif_atoms_from_file(inputfile, excluded=(), add_res_full=True,
         table = remove_multiple_altlocs(table)
         reset_atom_id = True
 
+    if remove_hydrogens:
+        table = row_selector(table, key='type_symbol', value='H', method='diffs')
+
     if reset_atom_id:
         table.reset_index(inplace=True)
         table = table.drop(['index'], axis=1)
@@ -142,7 +146,8 @@ def parse_mmcif_atoms_from_file(inputfile, excluded=(), add_res_full=True,
 
 def parse_pdb_atoms_from_file(inputfile, excluded=(), add_contacts=False,
                               dist=5, first_model=True, add_atom_altloc=False,
-                              remove_altloc=False, reset_atom_id=True, verbose=False):
+                              remove_altloc=False, remove_hydrogens=True,
+                              reset_atom_id=True, verbose=False):
     """
     Parse PDB ATOM and HETATM lines.
 
@@ -153,6 +158,7 @@ def parse_pdb_atoms_from_file(inputfile, excluded=(), add_contacts=False,
     :param first_model: boolean 
     :param add_atom_altloc: boolean (new string join)
     :param remove_altloc: boolean
+    :param remove_hydrogens: boolean
     :param reset_atom_id: boolean
     :param verbose: boolean
     :return: returns a pandas DataFrame
@@ -230,6 +236,9 @@ def parse_pdb_atoms_from_file(inputfile, excluded=(), add_contacts=False,
     if remove_altloc:
         table = remove_multiple_altlocs(table)
         reset_atom_id = True
+
+    if remove_hydrogens:
+        table = row_selector(table, key='type_symbol', value='H', method='diffs')
 
     if reset_atom_id:
         table.reset_index(inplace=True)
@@ -919,8 +928,8 @@ class MMCIFreader(object):
 
     def atoms(self, excluded=None, add_res_full=True, add_contacts=False, dist=5,
               first_model=True, add_atom_altloc=False, remove_altloc=False,
-              reset_atom_id=True, format_type="mmcif", residue_agg=False,
-              agg_method='centroid', category='label'):
+              remove_hydrogens=True, reset_atom_id=True, format_type="mmcif",
+              residue_agg=False, agg_method='centroid', category='label'):
         if excluded is None:
             excluded = self.excluded
         if format_type == "mmcif":
@@ -930,6 +939,7 @@ class MMCIFreader(object):
                                                     first_model=first_model,
                                                     add_atom_altloc=add_atom_altloc,
                                                     remove_altloc=remove_altloc,
+                                                    remove_hydrogens=remove_hydrogens,
                                                     reset_atom_id=reset_atom_id,
                                                     verbose=self.verbose)
 
@@ -939,6 +949,7 @@ class MMCIFreader(object):
                                                   first_model=first_model,
                                                   add_atom_altloc=add_atom_altloc,
                                                   remove_altloc=remove_altloc,
+                                                  remove_hydrogens=remove_hydrogens,
                                                   reset_atom_id=reset_atom_id,
                                                   verbose=self.verbose)
         else:
