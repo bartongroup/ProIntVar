@@ -28,8 +28,8 @@ from Bio import pairwise2
 from Bio.SubsMat import MatrixInfo as matlist
 
 from prointvar.library import (ASA_Miller, ASA_Wilke, ASA_Sander)
-from prointvar.library import aa_common_ext
-from prointvar.library import aa_symbols_rev_ext
+from prointvar.library import aa_codes_1to3_common
+from prointvar.library import aa_codes_1to3_extended
 
 
 _ATOM_FORMAT_STRING = "%s%5i %-4s%c%3s %c%4i%c   %8.3f%8.3f%8.3f%s%6.2f      %4s%2s%2s\n"
@@ -264,7 +264,7 @@ def check_sequence(sequence, gap_symbol='-', new_gap_symbol='-', ambiguous='X'):
     :return: returns modified sequence
     """
 
-    new_sequence = "".join([ambiguous if aa not in aa_common_ext else aa
+    new_sequence = "".join([ambiguous if aa not in list(aa_codes_1to3_extended.keys()) else aa
                             for aa in sequence])
     if gap_symbol != new_gap_symbol:
         new_sequence = new_sequence.replace(gap_symbol, new_gap_symbol)
@@ -405,7 +405,7 @@ def compute_rsa(acc, resname, method="Sander"):
         raise ValueError("Method {} is not implemented...".format(method))
 
     try:
-        rsa = round((acc / sasa[aa_symbols_rev_ext[resname]] * 100), 3)
+        rsa = round((acc / sasa[aa_codes_1to3_extended[resname]] * 100), 3)
     except KeyError:
         return rsa
 

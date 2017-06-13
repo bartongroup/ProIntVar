@@ -38,7 +38,7 @@ from prointvar.utils import lazy_file_remover
 from prointvar.utils import row_selector
 from prointvar.utils import string_split
 from prointvar.library import arpeggio_types
-from prointvar.library import aa_symbols_ext
+from prointvar.library import aa_codes_3to1_extended
 
 from prointvar.config import config
 
@@ -222,7 +222,8 @@ def add_arpeggio_group_pdb(data):
     table = data
 
     def get_group_pdb(data, key):
-        if data[key] in aa_symbols_ext:
+        # this maybe a bit crude way of assigning this value
+        if data[key] in aa_codes_3to1_extended:
             return 'ATOM'
         else:
             return 'HETATM'

@@ -20,13 +20,12 @@ from string import ascii_uppercase
 from prointvar.mmcif import MMCIFreader
 from prointvar.mmcif import MMCIFwriter
 
-from prointvar.utils import compute_rsa
 from prointvar.utils import flash
+from prointvar.utils import compute_rsa
 from prointvar.utils import get_rsa_class
 from prointvar.utils import row_selector
 # TODO FIX
 from prointvar.utils import logging_out
-
 from prointvar.library import dssp_types
 
 from prointvar.config import config

@@ -18,7 +18,6 @@ from collections import OrderedDict
 
 from prointvar.utils import flash
 from prointvar.utils import row_selector
-
 from prointvar.library import sifts_types
 
 
