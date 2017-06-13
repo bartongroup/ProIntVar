@@ -15,21 +15,12 @@ import json
 import shlex
 import pandas as pd
 from io import StringIO
-from collections import OrderedDict
-
 from scipy.spatial import cKDTree
-
-from prointvar.contacts import get_interaction_chains
-from prointvar.contacts import get_interaction_molecules
-from prointvar.contacts import get_interaction_topologies
-from prointvar.contacts import get_interaction_properties
-from prointvar.contacts import get_distance_between_atoms
-from prointvar.contacts import get_distance_between_atoms_vdw
+from collections import OrderedDict
 
 from prointvar.utils import flash
 from prointvar.utils import row_selector
 from prointvar.utils import string_split
-
 from prointvar.library import mmcif_types
 
 _PDB_FORMAT = "%s%5i %-4s%c%3s %c%4s%c   %8.3f%8.3f%8.3f%s%6.2f      %4s%2s%2s\n"
@@ -413,139 +404,6 @@ def residues_aggregation(data, agg_method='centroid', category='label'):
     return table.sort_values(by='id').reset_index()
 
 
-def get_contact_indexes_from_table(data, dist=5):
-    """
-    Gets the DataFrame indexes of the nearby atoms under a provided radius (dist).
-
-    :param data: pandas DataFrame object
-    :param dist: distance threshold in Angstrom
-    :return: list of pandas DataFrame indexes
-    """
-
-    table = data
-    tree = cKDTree(table[['Cartn_x', 'Cartn_y', 'Cartn_z']])
-    query_point = table.loc[:, ['Cartn_x', 'Cartn_y', 'Cartn_z']]
-    indexes = tree.query_ball_point(query_point, r=dist)
-
-    return indexes
-
-
-def get_mmcif_full_contacts_from_table(data, dist=5, add_contact_info=True,
-                                       chain=None, res=None, atom=None, lines=None,
-                                       category='label', ignore_same_chain=False,
-                                       ignore_same_res=True, ignore_consecutive=3,
-                                       left_sided=True):
-    """
-    Finding residues/atoms within a distance threshold. The new DataFrame only contains
-    rows that participate in interactions.
-    
-    :param data: pandas DataFrame
-    :param dist: distance threshold in Angstrom
-    :param add_contact_info: boolean
-    :param chain: (tuple) chain IDs or None
-    :param res: (tuple) res IDs or None (needs chain)
-    :param atom: (tuple) atom IDs or None (needs chain and res)
-    :param lines: 'ATOM' or 'HETATM' or None (both)
-    :param category: data category to be used as precedence in _atom_site.*_*
-        asym_id, seq_id and atom_id
-    :param dist_vdw: distance with Van der Waals threshold in Angstrom
-    :param ignore_same_chain: ignores contacts within the same chain
-    :param ignore_same_res: ignores contacts within the same res
-    :param ignore_consecutive: number of surrounding residues (in sequence in both 
-        directions) that will be ignored
-    :param left_sided: (boolean) if True only A->B index are reported, otherwise
-        both A->B and B->A pairs are reported
-    :return: new pandas DataFrame
-    """
-
-    table = data
-
-    if 'contact_indexes' not in table:
-        table = add_mmcif_contacts(table, dist=dist)
-
-    # filter based on chain, res, atom and lines
-    ftable = get_mmcif_selected_from_table(table, chain=chain, res=res, atom=atom,
-                                           lines=lines, category=category)
-    ftable = ftable.copy()
-
-    # get indexes from the table
-    indexes = []
-    for ix in ftable.index:
-        indexes.append([int(i) for i in ftable.loc[ix, 'contact_indexes'].split(',')])
-
-    flatten = []
-    for i, ix in enumerate(ftable.index):
-        pairs = [(ix, jx) for jx in indexes[i]]
-        flatten += tuple(pairs)
-
-    if left_sided:
-        # if pairs are present in both directions (i.e. A->B and B->A)
-        # remove one of the pairs from the bottom up
-        for pair in flatten[::-1]:
-            inv_pair = (pair[1], pair[1])
-            if inv_pair in flatten:
-                flatten.remove(pair)
-
-    # get new DataFrame
-    rows = []
-    header1 = list(table)
-    header2 = list(map(lambda x: '%s_2' % x, list(table)))
-    header = header1 + header2
-    for entry in flatten:
-        i = entry[0]
-        j = entry[1]
-        values = list(table.loc[i, :]) + list(table.loc[j, :])
-        assert len(header) == len(values)
-        new_dict = {k: v for k, v in zip(header, values)}
-        rows.append(new_dict)
-    table = pd.DataFrame(rows)
-
-    # filter based on the type of contacts
-    if ignore_same_res:
-        table = table.loc[((table['{}_asym_id'.format(category)] !=
-                            table['{}_asym_id_2'.format(category)]) |
-                           ((table['{}_asym_id'.format(category)] ==
-                             table['{}_asym_id_2'.format(category)]) &
-                            (table['{}_seq_id'.format(category)] !=
-                             table['{}_seq_id_2'.format(category)])))]
-
-    if ignore_same_chain:
-        table = table.loc[(table['{}_asym_id'.format(category)] !=
-                           table['{}_asym_id_2'.format(category)])]
-
-    if ignore_consecutive:
-        try:
-            # FIXME use the query
-            table = table.loc[((table['{}_asym_id'.format(category)] !=
-                                table['{}_asym_id_2'.format(category)]) |
-                               ((table['{}_asym_id'.format(category)] ==
-                                 table['{}_asym_id_2'.format(category)]) &
-                                (abs(table['auth_seq_id'].astype(int) -
-                                     table['auth_seq_id_2'].astype(int)) >=
-                                 ignore_consecutive)))]
-        except ValueError as e:
-            if 'pdbe_label_seq_id' in table and 'pdbe_label_seq_id_2' in table:
-                table = table.loc[((table['{}_asym_id'.format(category)] !=
-                                    table['{}_asym_id_2'.format(category)]) |
-                                   ((table['{}_asym_id'.format(category)] ==
-                                     table['{}_asym_id_2'.format(category)]) &
-                                    (abs(table['auth_seq_id'].astype(int) -
-                                         table['auth_seq_id_2'].astype(int)) >=
-                                     ignore_consecutive)))]
-            else:
-                flash("Skipping 'ignore_consecutive' with {}...".format(e))
-
-    # extend the table with information about the interaction
-    table = table.apply(lambda x: x.fillna('-'))
-    if add_contact_info:
-        table = add_mmcif_contact_info(table)
-
-    if table.empty:
-        raise ValueError('Filtering resulted in an empty DataFrame...')
-
-    return table
-
-
 def write_mmcif_from_table(outputfile, data, override=False):
     """
     Generic method that writes 'atom' lines in mmCIF format.
@@ -597,6 +455,23 @@ def write_pdb_from_table(outputfile, data, override=False):
     else:
         flash('PDB for {} already available...'.format(outputfile))
     return
+
+
+def get_contact_indexes_from_table(data, dist=5):
+    """
+    Gets the DataFrame indexes of the nearby atoms under a provided radius (dist).
+
+    :param data: pandas DataFrame object
+    :param dist: distance threshold in Angstrom
+    :return: list of pandas DataFrame indexes
+    """
+
+    table = data
+    tree = cKDTree(table[['Cartn_x', 'Cartn_y', 'Cartn_z']])
+    query_point = table.loc[:, ['Cartn_x', 'Cartn_y', 'Cartn_z']]
+    indexes = tree.query_ball_point(query_point, r=dist)
+
+    return indexes
 
 
 def add_mmcif_contacts(data, dist=5):
@@ -757,62 +632,6 @@ def remove_multiple_altlocs(data):
             except KeyError:
                 break
     return table.drop(table.index[drop_ixs])
-
-
-def add_mmcif_contact_info(data, category='label'):
-    """
-    Utility that adds new columns to the table. Columns added are:
-    'distance', 'distance_vdw', 'int_types', 'int_atom' and 'int_res'.
-
-    :param data: pandas DataFrame object
-    :param category: data category to be used as precedence in _atom_site.*_*
-        asym_id, seq_id and atom_id
-    :return: returns a modified pandas DataFrame
-    """
-
-    table = data
-    headers = [x for x in table.columns.values if x.endswith('_2')]
-    if headers:
-        table['distance'] = table.apply(get_distance_between_atoms, axis=1)
-        table['distance_vdw'] = table.apply(get_distance_between_atoms_vdw,
-                                            axis=1, args=(category, ))
-        table['int_chains'] = table.apply(get_interaction_chains,
-                                          axis=1, args=(category, ))
-        table['int_molecules'] = table.apply(get_interaction_molecules,
-                                             axis=1, args=(category, ))
-        table['int_topologies'] = table.apply(get_interaction_topologies,
-                                              axis=1, args=(category, ))
-        table['int_properties'] = table.apply(get_interaction_properties,
-                                              axis=1, args=(category, ))
-        table['int_atom'] = 'A'
-        table['int_res'] = '-'
-
-        # temp table with used to find the closest atom-atom distances used for
-        # reporting 'int_res'
-        ntable = table.groupby(['{}_asym_id'.format(category),
-                                '{}_asym_id_2'.format(category),
-                                '{}_seq_id_full'.format(category),
-                                '{}_seq_id_full_2'.format(category)],
-                               as_index=False)['distance'].min()
-
-        # add 'int_res' values for the closest atom-atom interactions
-        for ix in ntable.index:
-            # FIXME use query
-            tmptable = table[((table['{}_asym_id'.format(category)] ==
-                               ntable.loc[ix, '{}_asym_id'.format(category)]) &
-                              (table['{}_asym_id_2'.format(category)] ==
-                               ntable.loc[ix, '{}_asym_id_2'.format(category)]) &
-                              (table['{}_seq_id_full'.format(category)] ==
-                               ntable.loc[ix, '{}_seq_id_full'.format(category)]) &
-                              (table['{}_seq_id_full_2'.format(category)] ==
-                               ntable.loc[ix, '{}_seq_id_full_2'.format(category)]) &
-                              (table['distance'] == ntable.loc[ix, 'distance']))]
-            index = tmptable.index.tolist()[0]
-            table.set_value(index, 'int_res', 'R')
-
-    else:
-        raise ValueError('This method expects a DataFrame with contact pairs...')
-    return table
 
 
 def get_atom_line(data, index, atom_number, coords=None, new_chain=None):

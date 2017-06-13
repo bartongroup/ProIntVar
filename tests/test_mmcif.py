@@ -22,8 +22,7 @@ from prointvar.mmcif import (MMCIFreader, MMCIFwriter, parse_mmcif_atoms_from_fi
                              parse_mmcif_categories_from_file,
                              write_mmcif_from_table, get_mmcif_selected_from_table,
                              get_contact_indexes_from_table, add_mmcif_contacts,
-                             add_mmcif_res_full, get_mmcif_full_contacts_from_table,
-                             add_mmcif_contact_info, parse_pdb_atoms_from_file,
+                             add_mmcif_res_full, parse_pdb_atoms_from_file,
                              add_mmcif_res_split, get_atom_line, write_pdb_from_table,
                              add_mmcif_atom_altloc, residues_aggregation,
                              remove_multiple_altlocs)
@@ -73,8 +72,6 @@ class TestMMCIF(unittest.TestCase):
         self.parser_categories = parse_mmcif_categories_from_file
         self.add_contacts = add_mmcif_contacts
         self.add_res_full = add_mmcif_res_full
-        self.contacts_table = get_mmcif_full_contacts_from_table
-        self.add_contact_info = add_mmcif_contact_info
         self.add_mmcif_res_split = add_mmcif_res_split
         self.write_pdb_from_table = write_pdb_from_table
         self.get_atom_line = get_atom_line
@@ -106,8 +103,6 @@ class TestMMCIF(unittest.TestCase):
         self.parser_categories = None
         self.add_contacts = None
         self.add_res_full = None
-        self.contacts_table = None
-        self.add_contact_info = None
         self.add_mmcif_res_split = None
         self.write_pdb_from_table = None
         self.get_atom_line = None
@@ -446,68 +441,6 @@ class TestMMCIF(unittest.TestCase):
         self.assertIn('label_seq_id_full', data)
         self.assertIn('auth_seq_id_full', data)
         self.assertEqual(data.loc[0, 'auth_seq_id_full'], '118')
-
-    def test_get_contacts_table(self):
-        reader = self.reader(self.inputcif)
-        d = reader.atoms(add_contacts=True)
-        seqid = d[(d['auth_seq_id'] == '285') & (d['label_asym_id'] == 'A')]
-        seqid = seqid.loc[seqid.index[0], 'label_seq_id']
-        data = self.contacts_table(d, dist=5, add_contact_info=False,
-                                   chain=('A',), res=(seqid,), atom=None, lines=None,
-                                   category='label', ignore_same_chain=False,
-                                   ignore_same_res=True, ignore_consecutive=3)
-        self.assertIn('label_asym_id_2', data)
-        self.assertIn('label_seq_id_2', data)
-        self.assertIn('label_atom_id_2', data)
-        self.assertEqual('A', data.loc[0, 'label_asym_id'])
-        self.assertEqual('A', data.loc[0, 'label_asym_id_2'])
-
-    def test_get_contact_info_from_table(self):
-        reader = self.reader(self.inputcif)
-        d = reader.atoms(add_contacts=True)
-        # get the label_seq_id of the PDB_resnum '285'
-        seqid = d[(d['auth_seq_id'] == '285') & (d['label_asym_id'] == 'A')]
-        seqid = seqid.loc[seqid.index[0], 'label_seq_id']
-        data = self.contacts_table(d, dist=5, add_contact_info=True,
-                                   chain=('A',), res=(seqid,), atom=None, lines=None,
-                                   category='label', ignore_same_chain=False,
-                                   ignore_same_res=True, ignore_consecutive=3)
-        self.assertIn('distance', data)
-        self.assertIn('distance_vdw', data)
-        self.assertIn('int_chains', data)
-        self.assertIn('int_molecules', data)
-        self.assertIn('int_topologies', data)
-        self.assertIn('int_properties', data)
-        self.assertIn('int_atom', data)
-        self.assertIn('int_res', data)
-        self.assertEqual(2.89, data.loc[4, 'distance'])
-        self.assertEqual(0.00, data.loc[4, 'distance_vdw'])
-        self.assertEqual('R', data.loc[4, 'int_res'])
-        self.assertEqual('Intra-Chain', data.loc[4, 'int_chains'])
-
-    def test_add_contact_info(self):
-        reader = self.reader(self.inputcif)
-        d = reader.atoms(add_contacts=True)
-        # get the label_seq_id of the PDB_resnum '285'
-        seqid = d[(d['auth_seq_id'] == '285') & (d['label_asym_id'] == 'A')]
-        seqid = seqid.loc[seqid.index[0], 'label_seq_id']
-        data = self.contacts_table(d, dist=5, add_contact_info=False,
-                                   chain=('A',), res=(seqid,), atom=None, lines=None,
-                                   category='label', ignore_same_chain=False,
-                                   ignore_same_res=True, ignore_consecutive=3)
-        data = self.add_contact_info(data)
-        self.assertIn('distance', data)
-        self.assertIn('distance_vdw', data)
-        self.assertIn('int_chains', data)
-        self.assertIn('int_molecules', data)
-        self.assertIn('int_topologies', data)
-        self.assertIn('int_properties', data)
-        self.assertIn('int_atom', data)
-        self.assertIn('int_res', data)
-        self.assertEqual(2.89, data.loc[4, 'distance'])
-        self.assertEqual(0.00, data.loc[4, 'distance_vdw'])
-        self.assertEqual('R', data.loc[4, 'int_res'])
-        self.assertEqual('Intra-Chain', data.loc[4, 'int_chains'])
 
     def test_parse_pdb(self):
         if os.path.isfile(self.inputpdb):

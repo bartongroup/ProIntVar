@@ -48,12 +48,6 @@ mmcif_types = {'group_PDB': str,
                'auth_seq_id_full': str,
                'label_seq_id_full': str,
                'contact_indexes': str,
-               'distance': float,
-               'distance_vdw': float,
-               'int_types': str,
-               'int_class': str,
-               'int_atom': str,
-               'int_res': str
                }
 
 dssp_types = {'LINE': str,
