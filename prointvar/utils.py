@@ -450,11 +450,4 @@ def row_selector(data, key=None, value=None, method="isin"):
 
 
 if __name__ == '__main__':
-    # testing routines
-    # print(current_time())
-    # identifier = "2bva"
-    # url = "http://www.ebi.ac.uk/pdbe/api/pdb/entry/secondary_structure/%s" % identifier
-    # read = request_info_url(identifier, url, lines=False, verbose=True)
-    # information = json.loads(read)
-    # print(json.dumps(information, sort_keys=False, indent=4))
     pass

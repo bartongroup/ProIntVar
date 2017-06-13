@@ -467,33 +467,4 @@ def dssp_runner_split_chains(values, bio=False, override=False, logger=None, ver
     return
 
 if __name__ == '__main__':
-    pdbid = "2pah"
-    # pdbid = "1cg2"
-    # pdbid = "3kic"
-
-    # new error cases
-    # pdbid = "2rie"
-    # pdbid = "3f1i"
-    pdbid = "3j6l"
-
-    from prointvar.config import config as c
-
-    # inputcif = "{}{}{}.cif".format(c.db_root, c.db_cif, pdbid)
-    inputdssp = "{}{}{}_bio.dssp".format(c.db_root, c.db_dssp_generated, pdbid)
-    # DSSPgenerator(inputcif, inputdssp).run()
-
-    d = DSSPreader(inputdssp)
-    d.read()
-    nd = d.data
-    # nd = d.to_json(pretty=True)
-    # print(nd)
-    # nd = json.loads(nd)
-    # print(nd[0])
-    # print([k for k in nd[0]])
-    # print(nd.loc[0, "CHAIN"])
-    # print(nd.loc[:, "CHAIN"].unique())
-    # print(nd.loc[:, "RES"].unique())
-    # print(nd.loc[nd['AA'] == '!*'])
-    print(nd.tail())
-    # print(get_dssp_selected_from_table(nd, chain_full=('BA',)).tail())
     pass
