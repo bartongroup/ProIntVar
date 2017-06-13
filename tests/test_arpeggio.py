@@ -19,7 +19,9 @@ except ImportError:
 
 from prointvar.arpeggio import (ARPEGGIOreader, ARPEGGIOgenerator,
                                 parse_arpeggio_from_file,
-                                get_arpeggio_selected_from_table)
+                                get_arpeggio_selected_from_table,
+                                add_arpeggio_res_split, add_arpeggio_group_pdb,
+                                interaction_modes, residues_aggregation)
 
 from prointvar.config import config as c
 root = os.path.abspath(os.path.dirname(__file__))
@@ -62,6 +64,10 @@ class TestARPEGGIO(unittest.TestCase):
         self.reader = ARPEGGIOreader
         self.generator = ARPEGGIOgenerator
         self.filter = get_arpeggio_selected_from_table
+        self.add_arpeggio_res_split = add_arpeggio_res_split
+        self.add_arpeggio_group_pdb = add_arpeggio_group_pdb
+        self.interaction_modes = interaction_modes
+        self.residues_aggregation = residues_aggregation
 
     def tearDown(self):
         """Remove testing framework."""
@@ -81,6 +87,10 @@ class TestARPEGGIO(unittest.TestCase):
         self.reader = None
         self.generator = None
         self.filter = None
+        self.add_arpeggio_res_split = None
+        self.add_arpeggio_group_pdb = None
+        self.interaction_modes = None
+        self.residues_aggregation = None
 
     def test_file_not_found_reader(self):
         with self.assertRaises(IOError):
@@ -210,6 +220,76 @@ class TestARPEGGIO(unittest.TestCase):
         reader.read(excluded=self.excluded)
         data = self.filter(reader.data, res_A=('374',))
         self.assertNotIn('119', data.RES_A.unique())
+
+    def test_add_split_res(self):
+        reader = self.reader(self.inputarpeggio)
+        data = reader.contacts(excluded=self.excluded, add_res_split=False,
+                               add_group_pdb=False)
+        self.assertNotIn('CHAIN_A', data)
+        self.assertNotIn('CHAIN_B', data)
+        data = self.add_arpeggio_res_split(data)
+        self.assertIn('CHAIN_A', data)
+        self.assertIn('CHAIN_B', data)
+        self.assertEqual(data.loc[0, 'CHAIN_A'], 'B')
+
+    def test_add_group_pdb(self):
+        reader = self.reader(self.inputarpeggio)
+        data = reader.contacts(excluded=self.excluded, add_group_pdb=False)
+        self.assertNotIn('GROUP_A', data)
+        self.assertNotIn('GROUP_B', data)
+        data = self.add_arpeggio_group_pdb(data)
+        self.assertIn('GROUP_A', data)
+        self.assertIn('GROUP_B', data)
+        self.assertEqual(data.loc[0, 'GROUP_A'], 'ATOM')
+        self.assertEqual(data.loc[0, 'GROUP_B'], 'ATOM')
+
+    def test_interaction_modes(self):
+        reader = self.reader(self.inputarpeggio)
+        data = reader.contacts(int_filter=True, int_mode='inter-chain')
+        self.assertEqual(285, len(data))
+        self.assertNotEqual(data.loc[0, 'CHAIN_A'], data.loc[0, 'CHAIN_B'])
+        data = reader.contacts(int_filter=True, int_mode='intra-chain')
+        self.assertEqual(27135, len(data))
+        self.assertEqual(data.loc[0, 'CHAIN_A'], data.loc[0, 'CHAIN_B'])
+        data = reader.contacts()
+        data = self.interaction_modes(data, int_mode='hetatm')
+        self.assertEqual(41, len(data))
+        self.assertEqual(data.loc[0, 'COMP_A'], 'GLU')
+        self.assertEqual(data.loc[0, 'COMP_B'], 'FE')
+
+    def test_residues_agg(self):
+        reader = self.reader(self.inputarpeggio)
+        data = reader.contacts(residue_agg=True, agg_method='minimum')
+        self.assertEqual(data.loc[0, 'RES_FULL_A'], '118')
+        self.assertEqual(data.loc[0, 'RES_FULL_B'], '312')
+        self.assertEqual(data.loc[0, 'ATOM_A'], 'CG1')
+        self.assertEqual(data.loc[0, 'ATOM_B'], 'O')
+        self.assertEqual(data.loc[0, 'DIST'], 3.758)
+        self.assertEqual(data.loc[0, 'VDW_DIST'], 0.538)
+        self.assertEqual(data.loc[1, 'RES_FULL_A'], '118')
+        self.assertEqual(data.loc[1, 'RES_FULL_B'], '409')
+        self.assertEqual(data.loc[1, 'ATOM_A'], 'CG2')
+        self.assertEqual(data.loc[1, 'ATOM_B'], 'CG')
+        self.assertEqual(data.loc[1, 'DIST'], 4.370)
+        self.assertEqual(data.loc[1, 'VDW_DIST'], 0.970)
+
+    def test_residues_agg_method(self):
+        reader = self.reader(self.inputarpeggio)
+        data = reader.contacts()
+        data = self.residues_aggregation(data, agg_method='first')
+        self.assertEqual(data.loc[0, 'RES_FULL_A'], '118')
+        self.assertEqual(data.loc[0, 'RES_FULL_B'], '312')
+        self.assertEqual(data.loc[0, 'ATOM_A'], 'CG1')
+        self.assertEqual(data.loc[0, 'ATOM_B'], 'C')
+        self.assertEqual(data.loc[0, 'DIST'], 4.458)
+        self.assertEqual(data.loc[0, 'VDW_DIST'], 1.058)
+        self.assertEqual(data.loc[1, 'RES_FULL_A'], '118')
+        self.assertEqual(data.loc[1, 'RES_FULL_B'], '409')
+        self.assertEqual(data.loc[1, 'ATOM_A'], 'CG2')
+        self.assertEqual(data.loc[1, 'ATOM_B'], 'CD')
+        self.assertEqual(data.loc[1, 'DIST'], 4.533)
+        self.assertEqual(data.loc[1, 'VDW_DIST'], 1.133)
+        pass
 
 
 if __name__ == '__main__':
