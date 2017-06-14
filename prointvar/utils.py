@@ -20,6 +20,9 @@ import time
 import json
 import requests
 import pandas as pd
+from string import digits
+from string import ascii_lowercase
+from string import ascii_uppercase
 from datetime import datetime
 from contextlib import suppress
 from collections import OrderedDict
@@ -442,6 +445,17 @@ def row_selector(data, key=None, value=None, method="isin"):
         raise ValueError(message)
 
     return table
+
+
+def get_new_asym_id():
+    """
+    Both DSSP and arpeggio work with single-letter characters such
+        as [A-Z], [a-z], [0-9]; which gives a total of 62 chars
+    :return:
+    """
+    chain_ids = ascii_uppercase + ascii_lowercase + digits
+    for char in chain_ids:
+        yield char
 
 
 if __name__ == '__main__':

@@ -543,6 +543,29 @@ aa_codes_3to1_extended = {
     'ETA': 'X', 'CYH': 'X',
 }
 
+aa_default_atoms = {
+    'ALA': ['N', 'O', 'CA', 'C', 'CB'],
+    'CYS': ['N', 'O', 'CA', 'C', 'SG', 'CB'],
+    'ASP': ['N', 'O', 'CA', 'C', 'CG', 'OD2', 'OD1', 'CB'],
+    'GLU': ['N', 'O', 'CA', 'C', 'CD', 'CG', 'OE1', 'CB', 'OE2'],
+    'PHE': ['N', 'O', 'CA', 'C', 'CE1', 'CD1', 'CZ', 'CG', 'CB', 'CE2', 'CD2'],
+    'GLY': ['N', 'O', 'CA', 'C'],
+    'HIS': ['N', 'O', 'CA', 'C', 'CB', 'CG', 'ND1', 'CD2', 'CE1', 'NE2'],
+    'LYS': ['N', 'O', 'CA', 'C', 'NZ', 'CD', 'CE', 'CG', 'CB'],
+    'ILE': ['N', 'O', 'CA', 'C', 'CG2', 'CD1', 'CB', 'CG1'],
+    'LEU': ['N', 'O', 'CA', 'C', 'CD2', 'CD1', 'CG', 'CB'],
+    'MET': ['N', 'O', 'CA', 'C', 'SD', 'CG', 'CB', 'CE'],
+    'ASN': ['N', 'O', 'CA', 'C', 'ND2', 'OD1', 'CB', 'CG'],
+    'PRO': ['N', 'O', 'CA', 'C', 'CD', 'CG', 'CB'],
+    'GLN': ['N', 'O', 'CA', 'C', 'CD', 'NE2', 'OE1', 'CB', 'CG'],
+    'ARG': ['N', 'O', 'CA', 'C', 'CZ', 'CD', 'NE', 'CG', 'CB'],
+    'SER': ['N', 'O', 'CA', 'C', 'CB', 'OG'],
+    'THR': ['N', 'O', 'CA', 'C', 'OG1', 'CG2', 'CB'],
+    'VAL': ['N', 'O', 'CA', 'C', 'CB', 'CG2', 'CG1'],
+    'TYR': ['N', 'O', 'CA', 'C', 'CE1', 'CD1', 'CZ', 'CG', 'CB', 'CE2', 'CD2'],
+    'TRP': ['N', 'O', 'CA', 'C', 'NE1', 'CZ3', 'CD1', 'CE3', 'CG', 'CB', 'CZ2', 'CE2', 'CD2'],
+}
+
 # obtained from biopython at
 # https://github.com/biopython/biopython/blob/master/Bio/PDB/DSSP.py
 # Miller max acc: Miller et al. 1987 http://dx.doi.org/10.1016/0022-2836(87)90038-6

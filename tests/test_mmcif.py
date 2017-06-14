@@ -25,7 +25,8 @@ from prointvar.mmcif import (MMCIFreader, MMCIFwriter, parse_mmcif_atoms_from_fi
                              add_mmcif_res_full, parse_pdb_atoms_from_file,
                              add_mmcif_res_split, get_atom_line, write_pdb_from_table,
                              add_mmcif_atom_altloc, residues_aggregation,
-                             remove_multiple_altlocs)
+                             remove_multiple_altlocs, add_mmcif_new_chain_id,
+                             remove_partial_residues)
 
 from prointvar.config import config as c
 root = os.path.abspath(os.path.dirname(__file__))
@@ -78,6 +79,8 @@ class TestMMCIF(unittest.TestCase):
         self.add_mmcif_atom_altloc = add_mmcif_atom_altloc
         self.residues_aggregation = residues_aggregation
         self.remove_altloc = remove_multiple_altlocs
+        self.add_mmcif_new_chain_id = add_mmcif_new_chain_id
+        self.remove_partial_residues = remove_partial_residues
 
     def tearDown(self):
         """Remove testing framework."""
@@ -109,6 +112,8 @@ class TestMMCIF(unittest.TestCase):
         self.add_mmcif_atom_altloc = None
         self.residues_aggregation = None
         self.remove_altloc = None
+        self.add_mmcif_new_chain_id = None
+        self.remove_partial_residues = None
 
     def test_file_not_found_reader(self):
         with self.assertRaises(IOError):
@@ -564,6 +569,32 @@ class TestMMCIF(unittest.TestCase):
         self.assertEqual('N', ndata.loc[0, 'type_symbol'])
         self.assertEqual('N', ndata.loc[0, 'label_atom_id'])
         self.assertEqual('.', ndata.loc[0, 'label_alt_id'])
+
+    def test_add_new_chain_id(self):
+        r = self.reader(self.inputbiocif)
+        data = r.atoms(add_new_chain_id=False)
+        keys = [k for k in data]
+        self.assertNotIn("new_asym_id", keys)
+        self.assertListEqual([k for k in data.label_asym_id.unique()],
+                             ['A', 'AA', 'B', 'BA', 'C', 'CA', 'D', 'DA'])
+        # data = r.atoms(add_new_chain_id=True)
+        data = self.add_mmcif_new_chain_id(data)
+        keys = [k for k in data]
+        self.assertIn("new_asym_id", keys)
+        self.assertListEqual([k for k in data.new_asym_id.unique()],
+                             ['A', 'B', 'C', 'D', 'E', 'F', 'G', 'H'])
+
+    def test_remove_partial_res(self):
+        reader = self.reader(self.inputpdb2)
+        data = reader.atoms(format_type='pdb', remove_altloc=True,
+                            remove_partial_res=False, reset_atom_id=True)
+        # counting the number of atoms in res with label_seq_id = '25'
+        self.assertEqual(16, list(data.label_seq_id.tolist()).count('25'))
+        # data = reader.atoms(format_type='pdb', remove_altloc=True,
+        #                     remove_partial_res=True, reset_atom_id=True)
+        data = self.remove_partial_residues(data)
+        # counting the number of atoms in res with label_seq_id = '25'
+        self.assertEqual(8, list(data.label_seq_id.tolist()).count('25'))
 
 
 if __name__ == '__main__':

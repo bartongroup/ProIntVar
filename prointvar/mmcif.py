@@ -21,7 +21,9 @@ from collections import OrderedDict
 from prointvar.utils import flash
 from prointvar.utils import row_selector
 from prointvar.utils import string_split
+from prointvar.utils import get_new_asym_id
 from prointvar.library import mmcif_types
+from prointvar.library import aa_default_atoms
 
 _PDB_FORMAT = "%s%5i %-4s%c%3s %c%4s%c   %8.3f%8.3f%8.3f%s%6.2f      %4s%2s%2s\n"
 
@@ -29,7 +31,9 @@ _PDB_FORMAT = "%s%5i %-4s%c%3s %c%4s%c   %8.3f%8.3f%8.3f%s%6.2f      %4s%2s%2s\n
 def parse_mmcif_atoms_from_file(inputfile, excluded=(), add_res_full=True,
                                 add_contacts=False, dist=5, first_model=True,
                                 add_atom_altloc=False, remove_altloc=False,
-                                remove_hydrogens=True, reset_atom_id=True, verbose=False):
+                                remove_hydrogens=True, reset_atom_id=True,
+                                add_new_chain_id=True, remove_partial_res=True,
+                                verbose=False):
     """
     Parse mmCIF ATOM and HETATM lines.
 
@@ -44,6 +48,8 @@ def parse_mmcif_atoms_from_file(inputfile, excluded=(), add_res_full=True,
     :param remove_altloc: boolean
     :param remove_hydrogens: boolean
     :param reset_atom_id: boolean
+    :param add_new_chain_id: (boolean) used for chain_id mapping
+    :param remove_partial_res: (boolean) removes amino acids with missing atoms
     :param verbose: boolean
     :return: returns a pandas DataFrame
     """
@@ -108,12 +114,18 @@ def parse_mmcif_atoms_from_file(inputfile, excluded=(), add_res_full=True,
     if add_atom_altloc:
         table = add_mmcif_atom_altloc(table)
 
+    if add_new_chain_id:
+        table = add_mmcif_new_chain_id(table)
+
     if remove_altloc:
         table = remove_multiple_altlocs(table)
         reset_atom_id = True
 
     if remove_hydrogens:
         table = row_selector(table, key='type_symbol', value='H', method='diffs')
+
+    if remove_partial_res:
+        table = remove_partial_residues(table)
 
     if reset_atom_id:
         table.reset_index(inplace=True)
@@ -138,7 +150,8 @@ def parse_mmcif_atoms_from_file(inputfile, excluded=(), add_res_full=True,
 def parse_pdb_atoms_from_file(inputfile, excluded=(), add_contacts=False,
                               dist=5, first_model=True, add_atom_altloc=False,
                               remove_altloc=False, remove_hydrogens=True,
-                              reset_atom_id=True, verbose=False):
+                              reset_atom_id=True, add_new_chain_id=True,
+                              remove_partial_res=True, verbose=False):
     """
     Parse PDB ATOM and HETATM lines.
 
@@ -151,6 +164,8 @@ def parse_pdb_atoms_from_file(inputfile, excluded=(), add_contacts=False,
     :param remove_altloc: boolean
     :param remove_hydrogens: boolean
     :param reset_atom_id: boolean
+    :param add_new_chain_id: (boolean) used for chain_id mapping
+    :param remove_partial_res: (boolean) removes amino acids with missing atoms
     :param verbose: boolean
     :return: returns a pandas DataFrame
     """
@@ -224,12 +239,18 @@ def parse_pdb_atoms_from_file(inputfile, excluded=(), add_contacts=False,
     if add_atom_altloc:
         table = add_mmcif_atom_altloc(table)
 
+    if add_new_chain_id:
+        table = add_mmcif_new_chain_id(table)
+
     if remove_altloc:
         table = remove_multiple_altlocs(table)
         reset_atom_id = True
 
     if remove_hydrogens:
         table = row_selector(table, key='type_symbol', value='H', method='diffs')
+
+    if remove_partial_res:
+        table = remove_partial_residues(table)
 
     if reset_atom_id:
         table.reset_index(inplace=True)
@@ -399,7 +420,7 @@ def residues_aggregation(data, agg_method='centroid', category='label'):
         agg_method = 'mean'
     columns_to_agg = {col: agg_generic if table[col].dtype == 'object' else agg_method
                       for col in table.columns if col not in agg_cols}
-    columns_to_agg['id'.format(category)] = 'first'
+    columns_to_agg['id'] = 'first'
     table = table.groupby(by=agg_cols, as_index=False).agg(columns_to_agg)
     table.sort_values(by='id').reset_index()
     return table
@@ -603,6 +624,37 @@ def add_mmcif_atom_altloc(data):
     return data
 
 
+def add_mmcif_new_chain_id(data, category='auth'):
+    """
+    Adds a new column to the table with a new Entity/Chain ID to be used
+    for mapping chains.
+
+    :param data: pandas DataFrame object
+    :param category: data category to be used as precedence in _atom_site.*_*
+        asym_id, seq_id and atom_id
+    :return: returns a modified pandas DataFrame
+    """
+
+    table = data
+    try:
+        new_chain_id = get_new_asym_id()
+        ochain_ids = table.loc[:, "{}_asym_id".format(category)].tolist()
+        nchain_ids = []
+        new_chain = 'A'
+        prev_chain = "''''"
+        for chain in ochain_ids:
+            if prev_chain != chain:
+                prev_chain = chain
+                new_chain = next(new_chain_id)
+            nchain_ids.append(new_chain)
+        table['new_asym_id'] = nchain_ids
+    except StopIteration:
+        message = ("This structure contains >62 chains, which causes problems to work "
+                   "with DSSP and arpeggio. Please review the structure...")
+        raise StopIteration(message)
+    return table
+
+
 def remove_multiple_altlocs(data):
     """
     Removes alternative locations (i.e. 'rows') leaving only the first.
@@ -632,6 +684,59 @@ def remove_multiple_altlocs(data):
                         break
             except KeyError:
                 break
+    return table.drop(table.index[drop_ixs])
+
+
+def remove_partial_residues(data, category='label'):
+    """
+    Removes residues that contain missing atoms. Needs to check
+    which atoms are available for each residue. Also removes residues with
+    same '*_seq_id' as the previous residue.
+
+    :param data: pandas DataFrame object
+    :param category: data category to be used as precedence in _atom_site.*_*
+        asym_id, seq_id and atom_id
+    :return: returns a modified pandas DataFrame
+    """
+    table = data
+    drop_ixs = []
+    curr_ixs = []
+    curr_atoms = []
+    prev_res = ''
+    prev_seq = ''
+    next_res_for_rm = False
+    table.reset_index(inplace=True)
+    table = table.drop(['index'], axis=1)
+    for ix in table.index:
+        group = table.loc[ix, 'group_PDB']
+        if group == 'ATOM':
+            curr_res = table.loc[ix, '{}_comp_id'.format(category)]
+            curr_seq = table.loc[ix, '{}_seq_id'.format(category)]
+            if curr_res in aa_default_atoms:
+                curr_atom = table.loc[ix, '{}_atom_id'.format(category)]
+                if prev_res == curr_res and prev_seq == curr_seq:
+                    curr_ixs.append(ix)
+                    curr_atoms.append(curr_atom)
+                else:
+                    if curr_ixs:
+                        # check available atoms
+                        default_atoms = aa_default_atoms[prev_res]
+                        intersection = list(set(default_atoms) - set(curr_atoms))
+                        if intersection != [] or next_res_for_rm:
+                            # missing atoms: means that there are atoms in the 'default' list
+                            # that are not observed in the structure
+                            drop_ixs += curr_ixs
+                            next_res_for_rm = False
+                        elif prev_seq == curr_seq:
+                            # duplicated *_seq_id: means that the next residue has got the same
+                            # *_seq_id as the previous res (could come from removing altlocs)
+                            next_res_for_rm = True
+                    # resetting variables
+                    prev_res = curr_res
+                    prev_seq = curr_seq
+                    curr_ixs = [ix]
+                    curr_atoms = [curr_atom]
+
     return table.drop(table.index[drop_ixs])
 
 
@@ -749,7 +854,8 @@ class MMCIFreader(object):
     def atoms(self, excluded=None, add_res_full=True, add_contacts=False, dist=5,
               first_model=True, add_atom_altloc=False, remove_altloc=False,
               remove_hydrogens=True, reset_atom_id=True, format_type="mmcif",
-              residue_agg=False, agg_method='centroid', category='label'):
+              residue_agg=False, agg_method='centroid', category='label',
+              add_new_chain_id=True, remove_partial_res=False):
         if excluded is None:
             excluded = self.excluded
         if format_type == "mmcif":
@@ -761,6 +867,8 @@ class MMCIFreader(object):
                                                     remove_altloc=remove_altloc,
                                                     remove_hydrogens=remove_hydrogens,
                                                     reset_atom_id=reset_atom_id,
+                                                    add_new_chain_id=add_new_chain_id,
+                                                    remove_partial_res=remove_partial_res,
                                                     verbose=self.verbose)
 
         elif format_type == "pdb":
@@ -771,6 +879,8 @@ class MMCIFreader(object):
                                                   remove_altloc=remove_altloc,
                                                   remove_hydrogens=remove_hydrogens,
                                                   reset_atom_id=reset_atom_id,
+                                                  add_new_chain_id=add_new_chain_id,
+                                                  remove_partial_res=remove_partial_res,
                                                   verbose=self.verbose)
         else:
             message = 'The provided format {} is not implemented...'.format(format_type)
