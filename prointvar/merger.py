@@ -14,7 +14,6 @@ from __future__ import print_function
 
 import os
 import pandas as pd
-from collections import OrderedDict
 
 from prointvar.dssp import DSSPgenerator
 from prointvar.dssp import DSSPreader
@@ -24,30 +23,11 @@ from prointvar.sifts import SIFTSreader
 from prointvar.sifts import get_sifts_selected_from_table
 from prointvar.mmcif import MMCIFreader
 from prointvar.mmcif import get_mmcif_selected_from_table
+from prointvar.fetchers import fetch_best_structures_pdbe
 
 from prointvar.utils import flash
-from prointvar.utils import fetch_from_url_or_retry
 
 from prointvar.config import config
-
-
-# TODO move to utils?
-def fetch_best_structures_pdbe(identifier, retry_in=(429,)):
-    """
-    Queries the PDBe API SIFTS mappings best_structures endpoint.
-
-    :param identifier: UniProt ID
-    :param retry_in: http code for retrying connections
-    :return: dictionary
-    """
-
-    pdbe_endpoint = "mappings/best_structures/"
-    url = config.api_pdbe + pdbe_endpoint + identifier
-    try:
-        rows = fetch_from_url_or_retry(url, retry_in=retry_in, json=True)
-    except:
-        rows = {}
-    return rows
 
 
 class TableMergerError(Exception):

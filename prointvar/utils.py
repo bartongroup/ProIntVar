@@ -176,12 +176,7 @@ def fetch_from_url_or_retry(url, json=True, header=None, post=False, data=None,
         response = requests.get(url, headers=header, params=params, stream=stream)
 
     if response.ok:
-        if json:
-            return response.json()
-        elif stream:
-            return response
-        else:
-            return response.content
+        return response
     elif response.status_code in retry_in and n_retries >= 0:
         time.sleep(wait)
         return fetch_from_url_or_retry(url, json, header, post, data, retry_in, wait,
