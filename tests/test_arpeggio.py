@@ -17,6 +17,8 @@ try:
 except ImportError:
     from unittest.mock import patch
 
+from prointvar.mmcif import MMCIFreader, MMCIFwriter
+
 from prointvar.arpeggio import (ARPEGGIOreader, ARPEGGIOgenerator,
                                 parse_arpeggio_from_file,
                                 get_arpeggio_selected_from_table,
@@ -122,8 +124,7 @@ class TestARPEGGIO(unittest.TestCase):
         else:
             raise IOError("%s" % self.inputpdb_fast)
 
-    # TODO handle residues with missing atoms
-    @unittest.expectedFailure
+    # @unittest.expectedFailure
     def test_generator_pdb_exec_fail(self):
         pdbid = "1ejg"
         inputpdb = "{}{}{}.pdb".format(c.db_root, c.db_cif, pdbid)
@@ -131,14 +132,28 @@ class TestARPEGGIO(unittest.TestCase):
         inputarpeggio = "{}{}{}.contacts".format(c.db_root, c.db_cif, pdbid)
         try:
             self.generator(inputpdb,
+                           inputarpeggio).run(clean_output=True,
+                                              override=True)
+        except (FileNotFoundError, OSError):
+            # expected failure
+            msg = "PDB with residues have missing atoms..."
+            self.assertFalse(os.path.isfile(inputarpeggio), msg)
+
+        inputpdb_new = "{}{}{}_new.pdb".format(c.db_root, c.db_cif, pdbid)
+        r = MMCIFreader(inputpdb)
+        data = r.atoms(format_type="pdb", remove_altloc=True,
+                       remove_hydrogens=True, reset_atom_id=True,
+                       remove_partial_res=True)
+        w = MMCIFwriter(inputfile=None, outputfile=inputpdb_new)
+        w.run(data, format_type='pdb')
+
+        self.generator(inputpdb_new,
                        inputarpeggio).run(clean_output=True,
                                           override=True)
-        except:
-            pass
-        msg = "PDB with residues have missing atoms..."
+        self.assertTrue(os.path.isfile(inputarpeggio))
         os.remove(inputpdb_clean)
+        os.remove(inputpdb_new)
         os.remove(inputarpeggio)
-        self.assertTrue(os.path.isfile(inputarpeggio), msg)
 
     def test_generator_pdb(self):
         if os.path.isfile(self.inputpdb):
