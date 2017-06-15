@@ -454,13 +454,15 @@ def write_mmcif_from_table(outputfile, data, override=False):
     return
 
 
-def write_pdb_from_table(outputfile, data, override=False):
+def write_pdb_from_table(outputfile, data, override=False, pro_format=False):
     """
     Generic method that writes 'atom' lines in PDB format.
     
     :param outputfile: path to the PDB file
     :param data: pandas DataFrame object
     :param override: boolean
+    :param pro_format: ProIntVar internal format where asym_id and seq_id
+        are outputted from new_asyn_id and new_seq_id
     :return: (side effects) writes to file
     """
 
@@ -470,7 +472,8 @@ def write_pdb_from_table(outputfile, data, override=False):
     for i in table.index:
         atom_number += 1
         atom_lines.append(get_atom_line(data=table, index=i,
-                                        atom_number=atom_number))
+                                        atom_number=atom_number,
+                                        pro_format=pro_format))
 
     # write the final output
     if not os.path.exists(outputfile) or override:
@@ -770,7 +773,8 @@ def remove_partial_residues(data, category='label'):
     return table.drop(table.index[drop_ixs])
 
 
-def get_atom_line(data, index, atom_number, coords=None, new_chain=None):
+def get_atom_line(data, index, atom_number, pro_format=False,
+                  coords=None, new_chain=None, category='auth'):
     """
     Returns an ATOM PDB-formatted string.
     (Based on code from the PDB module in Biopython.)
@@ -778,8 +782,12 @@ def get_atom_line(data, index, atom_number, coords=None, new_chain=None):
     :param data: pandas DataFrame object
     :param index: atom index
     :param atom_number: incremental number
+    :param pro_format: ProIntVar internal format where asym_id and seq_id
+        are outputted from new_asyn_id and new_seq_id
     :param coords: list of transformed coordinates
     :param new_chain: if true defaults to chain "A"
+    :param category: data category to be used as precedence in _atom_site.*_*
+        asym_id, seq_id and atom_id
     :return: returns a PDB-formatted ATOM/HETATM line
     """
 
@@ -800,7 +808,7 @@ def get_atom_line(data, index, atom_number, coords=None, new_chain=None):
     ATOM     22 HD22 ASN A   2      25.276  31.270   8.035  1.00  0.00           H
     """
 
-    name = table.loc[ix, 'label_atom_id']
+    name = table.loc[ix, '{}_atom_id'.format(category)]
     if len(name) == 1:
         name = " {}  ".format(name.strip())
     elif len(name) == 2:
@@ -814,26 +822,28 @@ def get_atom_line(data, index, atom_number, coords=None, new_chain=None):
     if altloc == ".":
         altloc = " "
 
-    resname = table.loc[ix, 'label_comp_id']
+    resname = table.loc[ix, '{}_comp_id'.format(category)]
 
     # FIXME is this needed?
     # overriding the original chain name
     if new_chain is not None:
         chain_id = new_chain
     else:
-        chain_id = table.loc[ix, 'label_asym_id']
-        chain_id = chain_id[0]
+        if pro_format:
+            chain_id = table.loc[ix, 'new_asym_id']
+        else:
+            chain_id = table.loc[ix, '{}_asym_id'.format(category)]
+            chain_id = chain_id[0]
 
-    try:
-        resseq = str(table.loc[ix, 'auth_seq_id'])
-    except:
-        resseq = str(table.loc[ix, 'label_seq_id'])
+    if pro_format:
+        resseq = str(table.loc[ix, 'new_seq_id'])
+    else:
+        resseq = str(table.loc[ix, '{}_seq_id'.format(category)])
 
     icode = table.loc[ix, 'pdbx_PDB_ins_code']
     if icode == "?":
         icode = " "
 
-    # FIXME is this needed?
     # overriding the original coordinates
     if coords is not None:
         x = float(coords[0])
@@ -969,15 +979,15 @@ class MMCIFwriter(object):
             self.outputfile = filename + "_filtered.cif"
 
     def run(self, data=None, chain=None, res=None, atom=None, lines=None, category='label',
-            override=False, format_type="mmcif"):
+            override=False, format_type="mmcif", pro_format=False):
         # writes a new mmCIF with selected chains, residues, atoms, or lines
         if data is None:
             r = MMCIFreader(inputfile=self.inputfile)
             # guess the input format as 'format_type' refers to the output format
             try:
-                data = r.read(excluded=(), format_type="mmcif")
+                data = r.atoms(excluded=(), format_type="mmcif")
             except ValueError:
-                data = r.read(excluded=(), format_type="pdb")
+                data = r.atoms(excluded=(), format_type="pdb")
         self.data = get_mmcif_selected_from_table(data, chain=chain, res=res, atom=atom,
                                                   lines=lines, category=category)
         if format_type == "mmcif":
@@ -985,7 +995,7 @@ class MMCIFwriter(object):
                                    override=override)
         elif format_type == "pdb":
             write_pdb_from_table(outputfile=self.outputfile, data=self.data,
-                                 override=override)
+                                 override=override, pro_format=pro_format)
         else:
             message = 'The provided format {} is not implemented...'.format(format_type)
             raise ValueError(message)
