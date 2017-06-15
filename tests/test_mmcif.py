@@ -23,7 +23,7 @@ from prointvar.mmcif import (MMCIFreader, MMCIFwriter, parse_mmcif_atoms_from_fi
                              write_mmcif_from_table, get_mmcif_selected_from_table,
                              get_contact_indexes_from_table, add_mmcif_contacts,
                              add_mmcif_res_full, parse_pdb_atoms_from_file,
-                             add_mmcif_res_split, get_atom_line, write_pdb_from_table,
+                             get_mmcif_res_split, get_atom_line, write_pdb_from_table,
                              add_mmcif_atom_altloc, residues_aggregation,
                              remove_multiple_altlocs, add_mmcif_new_chain_id,
                              remove_partial_residues)
@@ -73,7 +73,7 @@ class TestMMCIF(unittest.TestCase):
         self.parser_categories = parse_mmcif_categories_from_file
         self.add_contacts = add_mmcif_contacts
         self.add_res_full = add_mmcif_res_full
-        self.add_mmcif_res_split = add_mmcif_res_split
+        self.get_mmcif_res_split = get_mmcif_res_split
         self.write_pdb_from_table = write_pdb_from_table
         self.get_atom_line = get_atom_line
         self.add_mmcif_atom_altloc = add_mmcif_atom_altloc
@@ -106,7 +106,7 @@ class TestMMCIF(unittest.TestCase):
         self.parser_categories = None
         self.add_contacts = None
         self.add_res_full = None
-        self.add_mmcif_res_split = None
+        self.get_mmcif_res_split = None
         self.write_pdb_from_table = None
         self.get_atom_line = None
         self.add_mmcif_atom_altloc = None
@@ -477,7 +477,7 @@ class TestMMCIF(unittest.TestCase):
     def test_get_res_split(self):
         if os.path.isfile(self.inputpdb):
             data = self.parser_pdb(self.inputpdb)
-            data = self.add_mmcif_res_split(data)
+            data = self.get_mmcif_res_split(data)
             self.assertIn('label_seq_id_full', [k for k in data])
             self.assertIn('label_seq_id', [k for k in data])
             self.assertIn('auth_seq_id', [k for k in data])
@@ -492,15 +492,15 @@ class TestMMCIF(unittest.TestCase):
 
     def test_get_res_split_various(self):
         data = pd.DataFrame([{'label_seq_id_full': '1'}])
-        data = self.add_mmcif_res_split(data)
+        data = self.get_mmcif_res_split(data)
         self.assertEqual('1', data.loc[0, 'label_seq_id'])
         self.assertEqual('?', data.loc[0, 'pdbx_PDB_ins_code'])
         data = pd.DataFrame([{'label_seq_id_full': '-10'}])
-        data = self.add_mmcif_res_split(data)
+        data = self.get_mmcif_res_split(data)
         self.assertEqual('-10', data.loc[0, 'label_seq_id'])
         self.assertEqual('?', data.loc[0, 'pdbx_PDB_ins_code'])
         data = pd.DataFrame([{'label_seq_id_full': '-100A'}])
-        data = self.add_mmcif_res_split(data)
+        data = self.get_mmcif_res_split(data)
         self.assertEqual('-100', data.loc[0, 'label_seq_id'])
         self.assertEqual('A', data.loc[0, 'pdbx_PDB_ins_code'])
 

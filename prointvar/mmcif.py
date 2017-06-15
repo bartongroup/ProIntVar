@@ -201,13 +201,15 @@ def parse_pdb_atoms_from_file(inputfile, excluded=(), add_contacts=False,
     lines = "\n".join(lines)
 
     header = ('group_PDB', 'id', 'label_atom_id', 'label_alt_id', 'label_comp_id',
-              'label_asym_id', 'label_seq_id_full', 'Cartn_x', 'Cartn_y', 'Cartn_z',
+              'label_asym_id', 'label_seq_id_full', 'label_seq_id',
+              'pdbx_PDB_ins_code', 'Cartn_x', 'Cartn_y', 'Cartn_z',
               'occupancy', 'B_iso_or_equiv', 'type_symbol', 'auth_atom_id', 'auth_comp_id',
-              'auth_asym_id', 'auth_seq_id_full', 'pdbx_PDB_model_num')
+              'auth_asym_id', 'auth_seq_id_full', 'auth_seq_id', 'pdbx_PDB_model_num')
 
-    widths = ((0, 6), (6, 11), (12, 16), (16, 17), (17, 20), (21, 22), (22, 26),
+    # https://www.cgl.ucsf.edu/chimera/docs/UsersGuide/tutorials/pdbintro.html
+    widths = ((0, 6), (6, 11), (12, 16), (16, 17), (17, 20), (21, 22), (22, 27), (22, 26), (26, 27),
               (30, 38), (38, 46), (46, 54), (54, 60), (60, 66), (76, 78), # (72, 76), ('seg_id')
-              (12, 16), (17, 20), (21, 22), (22, 26), (78, 79))
+              (12, 16), (17, 20), (21, 22), (22, 27), (22, 26), (78, 79))
 
     all_str = {key: str for key in header}
     table = pd.read_fwf(StringIO(lines), names=header, colspecs=widths,
@@ -227,10 +229,10 @@ def parse_pdb_atoms_from_file(inputfile, excluded=(), add_contacts=False,
         table = row_selector(table, key='pdbx_PDB_model_num', value=None,
                              method='first')
 
-    # adding a 'label_seq_id' , 'auth_seq_id' and 'pdbx_PDB_ins_code'
-    table = add_mmcif_res_split(table)
-    # adding the 'label_alt_id
-    table = add_label_alt_id(table)
+    # fixes the 'pdbx_PDB_ins_code'
+    table = fix_pdb_ins_code(table)
+    # fixes the 'label_alt_id
+    table = fix_label_alt_id(table)
 
     # table modular extensions
     if add_contacts:
@@ -545,7 +547,7 @@ def add_mmcif_res_full(data):
     return table
 
 
-def add_mmcif_res_split(data):
+def get_mmcif_res_split(data):
     """
     Utility that adds new columns to the table.
     Adds new columns from the 'full res' (i.e. seq_id + ins_code).
@@ -576,9 +578,30 @@ def add_mmcif_res_split(data):
     return table
 
 
-def add_label_alt_id(data):
+def fix_pdb_ins_code(data):
     """
-    Utility that fixes the label_alt_id column to match what is
+    Utility that fixes the 'pdbx_PDB_ins_code' column to match is expected
+    in the mmcif format.
+
+    :param data: pandas DataFrame object
+    :return: returns a modified pandas DataFrame
+    """
+
+    table = data
+    ins_codes = []
+    for i in table.index:
+        value = table.loc[i, "pdbx_PDB_ins_code"]
+        if value == '' or value == ' ' or value == '?':
+            value = '?'
+        ins_codes.append(value)
+    table["pdbx_PDB_ins_code"] = ins_codes
+    table['pdbx_PDB_ins_code'] = table['pdbx_PDB_ins_code'].fillna('?').astype(str)
+    return table
+
+
+def fix_label_alt_id(data):
+    """
+    Utility that fixes the 'label_alt_id' column to match what is
     expected in the mmCIF format.
 
     :param data: pandas DataFrame object
@@ -594,7 +617,6 @@ def add_label_alt_id(data):
         alt_locs.append(value)
     table["label_alt_id"] = alt_locs
     table['label_alt_id'] = table['label_alt_id'].fillna('.').astype(str)
-
     return table
 
 
