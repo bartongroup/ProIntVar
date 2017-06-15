@@ -25,7 +25,10 @@ from prointvar.utils import fetch_from_url_or_retry
 from prointvar.utils import flash
 from prointvar.utils import get_pairwise_alignment
 from prointvar.utils import string_split
-# TODO stamp.utils import row_selector
+from prointvar.utils import get_new_pro_ids
+
+# TODO test
+from prointvar.utils import row_selector
 
 from prointvar.config import config as c
 
@@ -101,6 +104,7 @@ class TestUTILS(unittest.TestCase):
         self.current_time = current_time
         self.current_date = current_date
         self.convert_str_to_bool = convert_str_to_bool
+        self.get_new_pro_ids = get_new_pro_ids
 
     def tearDown(self):
         """Remove testing framework."""
@@ -118,6 +122,7 @@ class TestUTILS(unittest.TestCase):
         self.current_time = None
         self.current_date = None
         self.convert_str_to_bool = None
+        self.get_new_pro_ids = None
 
     def test_flash(self):
         with captured_output() as (out, err):
@@ -306,6 +311,15 @@ class TestUTILS(unittest.TestCase):
         self.assertFalse(self.convert_str_to_bool('NO'))
         self.assertFalse(self.convert_str_to_bool('No'))
         self.assertFalse(self.convert_str_to_bool('0'))
+
+    def test_get_new_pro_ids(self):
+        pros = self.get_new_pro_ids()
+        asym_id_1, seq_id_1 = next(pros)
+        self.assertEqual(asym_id_1, 'A')
+        self.assertEqual(seq_id_1, '1')
+        asym_id_2, seq_id_2 = next(pros)
+        self.assertEqual(asym_id_2, 'A')
+        self.assertEqual(seq_id_2, '2')
 
 
 if __name__ == '__main__':

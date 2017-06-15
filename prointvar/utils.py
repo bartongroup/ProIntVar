@@ -447,15 +447,19 @@ def row_selector(data, key=None, value=None, method="isin"):
     return table
 
 
-def get_new_asym_id():
+def get_new_pro_ids():
     """
     Both DSSP and arpeggio work with single-letter characters such
         as [A-Z], [a-z], [0-9]; which gives a total of 62 chars
-    :return:
+    Now this generator returns a new asym_id + seq_id:
+        asym_id: 62 chars
+        seq_id: from '1' to '9999' [up to 4 characters]
+    :return: (str) chainid and (str) seqid
     """
     chain_ids = ascii_uppercase + ascii_lowercase + digits
     for char in chain_ids:
-        yield char
+        for seqid in range(1, 10000, 1):
+            yield char, str(seqid)
 
 
 if __name__ == '__main__':

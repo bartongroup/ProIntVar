@@ -21,7 +21,7 @@ from collections import OrderedDict
 from prointvar.utils import flash
 from prointvar.utils import row_selector
 from prointvar.utils import string_split
-from prointvar.utils import get_new_asym_id
+from prointvar.utils import get_new_pro_ids
 from prointvar.library import mmcif_types
 from prointvar.library import aa_default_atoms
 
@@ -32,7 +32,7 @@ def parse_mmcif_atoms_from_file(inputfile, excluded=(), add_res_full=True,
                                 add_contacts=False, dist=5, first_model=True,
                                 add_atom_altloc=False, remove_altloc=False,
                                 remove_hydrogens=True, reset_atom_id=True,
-                                add_new_chain_id=True, remove_partial_res=True,
+                                add_new_pro_id=True, remove_partial_res=True,
                                 verbose=False):
     """
     Parse mmCIF ATOM and HETATM lines.
@@ -48,7 +48,7 @@ def parse_mmcif_atoms_from_file(inputfile, excluded=(), add_res_full=True,
     :param remove_altloc: boolean
     :param remove_hydrogens: boolean
     :param reset_atom_id: boolean
-    :param add_new_chain_id: (boolean) used for chain_id mapping
+    :param add_new_pro_id: (boolean) used for chain_id mapping
     :param remove_partial_res: (boolean) removes amino acids with missing atoms
     :param verbose: boolean
     :return: returns a pandas DataFrame
@@ -114,8 +114,8 @@ def parse_mmcif_atoms_from_file(inputfile, excluded=(), add_res_full=True,
     if add_atom_altloc:
         table = add_mmcif_atom_altloc(table)
 
-    if add_new_chain_id:
-        table = add_mmcif_new_chain_id(table)
+    if add_new_pro_id:
+        table = add_mmcif_new_pro_ids(table)
 
     if remove_altloc:
         table = remove_multiple_altlocs(table)
@@ -150,7 +150,7 @@ def parse_mmcif_atoms_from_file(inputfile, excluded=(), add_res_full=True,
 def parse_pdb_atoms_from_file(inputfile, excluded=(), add_contacts=False,
                               dist=5, first_model=True, add_atom_altloc=False,
                               remove_altloc=False, remove_hydrogens=True,
-                              reset_atom_id=True, add_new_chain_id=True,
+                              reset_atom_id=True, add_new_pro_id=True,
                               remove_partial_res=True, verbose=False):
     """
     Parse PDB ATOM and HETATM lines.
@@ -164,7 +164,7 @@ def parse_pdb_atoms_from_file(inputfile, excluded=(), add_contacts=False,
     :param remove_altloc: boolean
     :param remove_hydrogens: boolean
     :param reset_atom_id: boolean
-    :param add_new_chain_id: (boolean) used for chain_id mapping
+    :param add_new_pro_id: (boolean) used for chain_id mapping
     :param remove_partial_res: (boolean) removes amino acids with missing atoms
     :param verbose: boolean
     :return: returns a pandas DataFrame
@@ -241,8 +241,8 @@ def parse_pdb_atoms_from_file(inputfile, excluded=(), add_contacts=False,
     if add_atom_altloc:
         table = add_mmcif_atom_altloc(table)
 
-    if add_new_chain_id:
-        table = add_mmcif_new_chain_id(table)
+    if add_new_pro_id:
+        table = add_mmcif_new_pro_ids(table)
 
     if remove_altloc:
         table = remove_multiple_altlocs(table)
@@ -646,7 +646,7 @@ def add_mmcif_atom_altloc(data):
     return data
 
 
-def add_mmcif_new_chain_id(data, category='auth'):
+def add_mmcif_new_pro_ids(data, category='label'):
     """
     Adds a new column to the table with a new Entity/Chain ID to be used
     for mapping chains.
@@ -659,20 +659,28 @@ def add_mmcif_new_chain_id(data, category='auth'):
 
     table = data
     try:
-        new_chain_id = get_new_asym_id()
+        new_pro_id = get_new_pro_ids()
         ochain_ids = table.loc[:, "{}_asym_id".format(category)].tolist()
+        oseq_ids = table.loc[:, "{}_seq_id".format(category)].tolist()
+        flat = [k + l for k, l in zip(ochain_ids, oseq_ids)]
         nchain_ids = []
-        new_chain = 'A'
-        prev_chain = "''''"
-        for chain in ochain_ids:
-            if prev_chain != chain:
-                prev_chain = chain
-                new_chain = next(new_chain_id)
-            nchain_ids.append(new_chain)
+        nseq_ids = []
+        nchain = 'A'
+        nseq = '1'
+        prev_pro = "     "
+        for pro in flat:
+            if prev_pro != pro:
+                prev_pro = pro
+                nchain, nseq = next(new_pro_id)
+            nchain_ids.append(nchain)
+            nseq_ids.append(nseq)
+        assert len(table.index) == len(nchain_ids)
+        assert len(table.index) == len(nseq_ids)
         table['new_asym_id'] = nchain_ids
+        table['new_seq_id'] = nseq_ids
     except StopIteration:
-        message = ("This structure contains >62 chains, which causes problems to work "
-                   "with DSSP and arpeggio. Please review the structure...")
+        message = ("This structure contains >9999 (seq_ids) * 62 (asym_ids), which causes "
+                   "problems to work with DSSP and arpeggio. Please review the structure...")
         raise StopIteration(message)
     return table
 
@@ -877,7 +885,7 @@ class MMCIFreader(object):
               first_model=True, add_atom_altloc=False, remove_altloc=False,
               remove_hydrogens=True, reset_atom_id=True, format_type="mmcif",
               residue_agg=False, agg_method='centroid', category='label',
-              add_new_chain_id=True, remove_partial_res=False):
+              add_new_pro_id=True, remove_partial_res=False):
         if excluded is None:
             excluded = self.excluded
         if format_type == "mmcif":
@@ -889,7 +897,7 @@ class MMCIFreader(object):
                                                     remove_altloc=remove_altloc,
                                                     remove_hydrogens=remove_hydrogens,
                                                     reset_atom_id=reset_atom_id,
-                                                    add_new_chain_id=add_new_chain_id,
+                                                    add_new_pro_id=add_new_pro_id,
                                                     remove_partial_res=remove_partial_res,
                                                     verbose=self.verbose)
 
@@ -901,7 +909,7 @@ class MMCIFreader(object):
                                                   remove_altloc=remove_altloc,
                                                   remove_hydrogens=remove_hydrogens,
                                                   reset_atom_id=reset_atom_id,
-                                                  add_new_chain_id=add_new_chain_id,
+                                                  add_new_pro_id=add_new_pro_id,
                                                   remove_partial_res=remove_partial_res,
                                                   verbose=self.verbose)
         else:
