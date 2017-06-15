@@ -401,6 +401,35 @@ def collapsed_contacts(data, col_method='full'):
     return table
 
 
+def ignore_consecutive_residues(data, numb_res=3):
+    """
+    Drop atom-atom (or res-res) contacts that occur between n
+    'numb_res' consecutive residues.
+
+    If arpeggio has been generated from a 'pro_format' PDB generated file,
+     which uses new_asym_id and new_seq_id, this method should work fine.
+
+    :param data: pandas DataFrame object
+    :param numb_res: (int) number of residues that are skipped
+    :return: returns a modified pandas DataFrame
+    """
+    table = data
+    # this only works if there are no ins_codes
+    ins_codes_1 = [k for k in table.INSCODE_A.unique()]
+    ins_codes_2 = [k for k in table.INSCODE_B.unique()]
+    if (len(ins_codes_1) and len(ins_codes_2) and
+            ins_codes_1[0] == '?' and ins_codes_2[0] == '?'):
+        table = table.loc[((table["CHAIN_A"] != table["CHAIN_B"]) |
+                           ((table["CHAIN_A"] == table["CHAIN_B"]) &
+                            (abs(table["RES_A"].astype(int) -
+                                 table["RES_B"].astype(int)) >= numb_res)))]
+    else:
+        message = ("Warning: Atoms in consecutive residues were not removed as there are "
+                   "some with insertion codes. These are not handled at this time...")
+        flash(message)
+    return table
+
+
 class ARPEGGIOreader(object):
     def __init__(self, inputfile, verbose=False):
         """
@@ -421,7 +450,8 @@ class ARPEGGIOreader(object):
     def contacts(self, excluded=None, add_res_split=True, add_group_pdb=True,
                  residue_agg=False, agg_method='minimum',
                  int_filter=False, int_mode='inter-chain',
-                 collapsed_cont=False, col_method='full'):
+                 collapsed_cont=False, col_method='full',
+                 ignore_consecutive=False, numb_res=3):
 
         if excluded is None:
             excluded = self.excluded
@@ -429,6 +459,9 @@ class ARPEGGIOreader(object):
                                              add_res_split=add_res_split,
                                              add_group_pdb=add_group_pdb,
                                              verbose=self.verbose)
+        if ignore_consecutive:
+            self.data = ignore_consecutive_residues(self.data, numb_res=numb_res)
+
         if residue_agg:
             self.data = residues_aggregation(self.data, agg_method=agg_method)
 

@@ -24,7 +24,7 @@ from prointvar.arpeggio import (ARPEGGIOreader, ARPEGGIOgenerator,
                                 get_arpeggio_selected_from_table,
                                 add_arpeggio_res_split, add_arpeggio_group_pdb,
                                 interaction_modes, residues_aggregation,
-                                collapsed_contacts)
+                                collapsed_contacts, ignore_consecutive_residues)
 
 from prointvar.config import config as c
 root = os.path.abspath(os.path.dirname(__file__))
@@ -72,6 +72,7 @@ class TestARPEGGIO(unittest.TestCase):
         self.interaction_modes = interaction_modes
         self.residues_aggregation = residues_aggregation
         self.collapsed_contacts = collapsed_contacts
+        self.ignore_consecutive = ignore_consecutive_residues
 
     def tearDown(self):
         """Remove testing framework."""
@@ -96,6 +97,7 @@ class TestARPEGGIO(unittest.TestCase):
         self.interaction_modes = None
         self.residues_aggregation = None
         self.collapsed_contacts = None
+        self.ignore_consecutive = None
 
     def test_file_not_found_reader(self):
         with self.assertRaises(IOError):
@@ -332,6 +334,17 @@ class TestARPEGGIO(unittest.TestCase):
                                residue_agg=True, agg_method='minimum')
         self.assertEqual('Hydrophobic-Bond', ', '.join(list(data.loc[1, 'Int_Types'])))
         self.assertEqual(data.loc[1, 'DIST'], 4.370)
+
+    def test_ignore_consecutive(self):
+        reader = self.reader(self.inputarpeggio)
+        data = reader.contacts()
+        self.assertEqual(len(data.index), 27420)
+        data = self.ignore_consecutive(data, numb_res=5)
+        self.assertEqual(len(data.index), 12105)
+        data = reader.contacts(residue_agg=True, agg_method='minimum')
+        self.assertEqual(len(data.index), 4609)
+        data = self.ignore_consecutive(data, numb_res=5)
+        self.assertEqual(len(data.index), 2252)
 
 
 if __name__ == '__main__':
