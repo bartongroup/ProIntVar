@@ -23,7 +23,8 @@ from prointvar.arpeggio import (ARPEGGIOreader, ARPEGGIOgenerator,
                                 parse_arpeggio_from_file,
                                 get_arpeggio_selected_from_table,
                                 add_arpeggio_res_split, add_arpeggio_group_pdb,
-                                interaction_modes, residues_aggregation)
+                                interaction_modes, residues_aggregation,
+                                collapsed_contacts)
 
 from prointvar.config import config as c
 root = os.path.abspath(os.path.dirname(__file__))
@@ -70,6 +71,7 @@ class TestARPEGGIO(unittest.TestCase):
         self.add_arpeggio_group_pdb = add_arpeggio_group_pdb
         self.interaction_modes = interaction_modes
         self.residues_aggregation = residues_aggregation
+        self.collapsed_contacts = collapsed_contacts
 
     def tearDown(self):
         """Remove testing framework."""
@@ -93,6 +95,7 @@ class TestARPEGGIO(unittest.TestCase):
         self.add_arpeggio_group_pdb = None
         self.interaction_modes = None
         self.residues_aggregation = None
+        self.collapsed_contacts = None
 
     def test_file_not_found_reader(self):
         with self.assertRaises(IOError):
@@ -272,6 +275,20 @@ class TestARPEGGIO(unittest.TestCase):
         self.assertEqual(data.loc[0, 'COMP_A'], 'GLU')
         self.assertEqual(data.loc[0, 'COMP_B'], 'FE')
 
+    def test_collapsed_contacts(self):
+        reader = self.reader(self.inputarpeggio)
+        data = reader.contacts(collapsed_cont=True, col_method='full')
+        self.assertNotIn('IONIC', list(data))
+        self.assertIn('Int_Types', list(data))
+        self.assertEqual('VDW-Proximal, Polar-Bond',
+                         ', '.join(list(data.loc[3, 'Int_Types'])))
+        reader = self.reader(self.inputarpeggio)
+        data = reader.contacts()
+        data = self.collapsed_contacts(data, col_method='minimal')
+        self.assertNotIn('IONIC', list(data))
+        self.assertIn('Int_Types', list(data))
+        self.assertEqual('Polar-Bond', ', '.join(list(data.loc[3, 'Int_Types'])))
+
     def test_residues_agg(self):
         reader = self.reader(self.inputarpeggio)
         data = reader.contacts(residue_agg=True, agg_method='minimum')
@@ -304,7 +321,17 @@ class TestARPEGGIO(unittest.TestCase):
         self.assertEqual(data.loc[1, 'ATOM_B'], 'CD')
         self.assertEqual(data.loc[1, 'DIST'], 4.533)
         self.assertEqual(data.loc[1, 'VDW_DIST'], 1.133)
-        pass
+
+    def test_residues_agg_collapsed(self):
+        reader = self.reader(self.inputarpeggio)
+        data = reader.contacts(collapsed_cont=True, col_method='minimal',
+                               residue_agg=True, agg_method='unique')
+        self.assertEqual('Hydrophobic-Bond', ', '.join(list(data.loc[1, 'Int_Types'])))
+        self.assertEqual(len(data.loc[1, 'DIST']), 2)
+        data = reader.contacts(collapsed_cont=True, col_method='minimal',
+                               residue_agg=True, agg_method='minimum')
+        self.assertEqual('Hydrophobic-Bond', ', '.join(list(data.loc[1, 'Int_Types'])))
+        self.assertEqual(data.loc[1, 'DIST'], 4.370)
 
 
 if __name__ == '__main__':

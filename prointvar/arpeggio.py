@@ -38,6 +38,7 @@ from prointvar.utils import lazy_file_remover
 from prointvar.utils import row_selector
 from prointvar.utils import string_split
 from prointvar.library import arpeggio_types
+from prointvar.library import arpeggio_col_renames
 from prointvar.library import aa_codes_3to1_extended
 
 from prointvar.config import config
@@ -314,6 +315,9 @@ def residues_aggregation(data, agg_method='unique'):
                               for col in table.columns if col not in agg_cols}
             columns_to_agg['DIST'] = 'min'
             columns_to_agg['VDW_DIST'] = 'min'
+            # if contacts columns have been collapsed
+            if 'Int_Types' in list(table):
+                columns_to_agg['Int_Types'] = 'unique'
         elif agg_method_origin == 'maximum':
             # need the table sort by distance first: descending
             table = table.sort_values(["DIST", "VDW_DIST"], ascending=[False, False])
@@ -323,6 +327,9 @@ def residues_aggregation(data, agg_method='unique'):
             agg_method = 'max'
             columns_to_agg = {col: agg_generic if table[col].dtype == 'object' else agg_method
                               for col in table.columns if col not in agg_cols}
+            # if contacts columns have been collapsed
+            if 'Int_Types' in list(table):
+                columns_to_agg['Int_Types'] = 'unique'
     table = table.groupby(by=agg_cols, as_index=False).agg(columns_to_agg)
     return table
 
@@ -353,6 +360,47 @@ def interaction_modes(data, int_mode='inter-chain'):
     return table
 
 
+def collapsed_contacts(data, col_method='full'):
+    """
+    Collapses the various contact information columns into a single column.
+
+    :param data: pandas DataFrame object
+    :param col_method: collapse method: 'full' means all columns are used
+        'minimal': only selected contact types are kept
+    :return: returns a modified pandas DataFrame
+    """
+
+    table = data
+    if col_method not in ['full', 'minimal']:
+        raise ValueError('Method {} is not currently implemented...'
+                         ''.format(col_method))
+    # rename the columns
+    table = table.rename(columns=arpeggio_col_renames)
+    col_names = list(arpeggio_col_renames.values())
+    if col_method == 'minimal':
+        col_min = (
+            "Steric-Clash",  "VDW-Bond", "Hydrogen-Bond", "Halogen-Bond", "Ionic-Bond",
+            "Aromatic-Bond", "Hydrophobic-Bond", "Carbonyl-Bond", "Polar-Bond"
+        )
+        excluded = [k for k in col_names if k not in col_min]
+        col_names = list(col_min)
+        table = table.drop(excluded, axis=1)
+    # aggregate results
+    int_types = []
+    for ix in table.index:
+        try:
+            agg = [k for k in col_names if bool(table.loc[ix, k])]
+        except ValueError:
+            # checking on a pre-aggregated entry (i.e. agg_method=='unique')
+            agg = [k for k in col_names if bool(table.loc[ix, k].any())]
+        int_types.append(agg)
+    assert len(table) == len(int_types)
+    table['Int_Types'] = int_types
+    # finally remove all the columns that are not needed anymore
+    table = table.drop(col_names, axis=1)
+    return table
+
+
 class ARPEGGIOreader(object):
     def __init__(self, inputfile, verbose=False):
         """
@@ -372,7 +420,8 @@ class ARPEGGIOreader(object):
 
     def contacts(self, excluded=None, add_res_split=True, add_group_pdb=True,
                  residue_agg=False, agg_method='minimum',
-                 int_filter=False, int_mode='inter-chain'):
+                 int_filter=False, int_mode='inter-chain',
+                 collapsed_cont=False, col_method='full'):
 
         if excluded is None:
             excluded = self.excluded
@@ -380,9 +429,11 @@ class ARPEGGIOreader(object):
                                              add_res_split=add_res_split,
                                              add_group_pdb=add_group_pdb,
                                              verbose=self.verbose)
-
         if residue_agg:
             self.data = residues_aggregation(self.data, agg_method=agg_method)
+
+        if collapsed_cont:
+            self.data = collapsed_contacts(self.data, col_method=col_method)
 
         if int_filter:
             self.data = interaction_modes(self.data, int_mode=int_mode)

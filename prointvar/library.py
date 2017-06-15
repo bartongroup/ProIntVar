@@ -186,6 +186,24 @@ arpeggio_types = {
 
 probe_types = {}
 
+arpeggio_col_renames = {
+    "STERIC_CLASH": "Steric-Clash",
+    "COVALENT": "Covalent-Bond",
+    "VDW_CLASH": "VDW-Clash",
+    "VDW_INTER": "VDW-Bond",
+    "PROXIMAL": "VDW-Proximal",
+    "HYDROGEN": "Hydrogen-Bond",
+    "WEAK_HYDROGEN": "Weak-Hydrogen-Bond",
+    "HALOGEN": "Halogen-Bond",
+    "IONIC": "Ionic-Bond",
+    "METAL_COMPLEX": "Metal-Complex",
+    "AROMATIC": "Aromatic-Bond",
+    "HYDROPHOBIC": "Hydrophobic-Bond",
+    "CARBONYL": "Carbonyl-Bond",
+    "POLAR": "Polar-Bond",
+    "WEAK_POLAR": "Weak-Polar-Bond"
+}
+
 # working species in Ensembl Variants, as of November 2014
 # based on ftp://ftp.ensembl.org/pub/release-77/variation/vcf/
 ensembl_species = [
