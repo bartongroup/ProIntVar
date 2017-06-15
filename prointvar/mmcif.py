@@ -898,6 +898,18 @@ class MMCIFreader(object):
               add_new_pro_id=True, remove_partial_res=False):
         if excluded is None:
             excluded = self.excluded
+
+        if not format_type:
+            # try to guess the correct format
+            if self.inputfile.endswith('.pdb') or self.inputfile.endswith('.ent'):
+                format_type = "pdb"
+            elif self.inputfile.endswith('.cif'):
+                format_type = "mmcif"
+            else:
+                message = ("Could not guess the format of the input file... "
+                           "Please define it by passing 'format_type'='<name>'")
+                raise ValueError(message)
+
         if format_type == "mmcif":
             self.data = parse_mmcif_atoms_from_file(self.inputfile, excluded=excluded,
                                                     add_res_full=add_res_full,
