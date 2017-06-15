@@ -18,7 +18,6 @@ import pandas as pd
 from prointvar.dssp import DSSPgenerator
 from prointvar.dssp import DSSPreader
 from prointvar.dssp import get_dssp_selected_from_table
-from prointvar.dssp import dssp_runner_split_chains
 from prointvar.sifts import SIFTSreader
 from prointvar.sifts import get_sifts_selected_from_table
 from prointvar.mmcif import MMCIFreader
@@ -47,13 +46,6 @@ def mmcif_sifts_table_merger(mmcif_table, sifts_table):
     if ('auth_seq_id_full' in mmcif_table and 'label_asym_id' in mmcif_table and
             'PDB_dbResNum' in sifts_table and 'PDB_entityId' in sifts_table):
 
-        # ensure the types are correct
-        mmcif_table.loc[:, 'auth_seq_id_full'] = \
-            mmcif_table.loc[:, 'auth_seq_id_full'].astype(str)
-
-        sifts_table.loc[:, 'PDB_dbResNum'] = \
-            sifts_table.loc[:, 'PDB_dbResNum'].astype(str)
-
         # workaround for BioUnits
         if 'orig_label_asym_id' in mmcif_table:
             table = mmcif_table.merge(sifts_table, how='left',
@@ -80,20 +72,18 @@ def mmcif_dssp_table_merger(mmcif_table, dssp_table):
     """
 
     # bare minimal columns needed
-    if ('auth_seq_id_full' in mmcif_table and 'label_asym_id' in mmcif_table and
+    if ('new_seq_id' in mmcif_table and 'new_asym_id' in mmcif_table and
+            'RES' in dssp_table and 'CHAIN' in dssp_table):
+
+        table = mmcif_table.merge(dssp_table, how='left',
+                                  left_on=['new_seq_id', 'new_asym_id'],
+                                  right_on=['RES', 'CHAIN_FULL'])
+    elif ('auth_seq_id_full' in mmcif_table and 'label_asym_id' in mmcif_table and
             'RES' in dssp_table and 'CHAIN_FULL' in dssp_table):
-
-        # ensure the types are correct
-        mmcif_table.loc[:, 'auth_seq_id_full'] = \
-            mmcif_table.loc[:, 'auth_seq_id_full'].astype(str)
-
-        dssp_table.loc[:, 'RES'] = \
-            dssp_table.loc[:, 'RES'].astype(str)
 
         table = mmcif_table.merge(dssp_table, how='left',
                                   left_on=['auth_seq_id_full', 'label_asym_id'],
                                   right_on=['RES', 'CHAIN_FULL'])
-
     else:
         raise TableMergerError('Not possible to merge mmCIF and DSSP table! '
                                'Some of the necessary columns are missing...')
@@ -112,13 +102,6 @@ def dssp_sifts_table_merger(dssp_table, sifts_table):
     # bare minimal columns needed
     if ('RES' in dssp_table and 'CHAIN' in dssp_table and
             'PDB_dbResNum' in sifts_table and 'PDB_entityId' in sifts_table):
-
-        # ensure the types are correct
-        dssp_table.loc[:, 'RES'] = \
-            dssp_table.loc[:, 'RES'].astype(str)
-
-        sifts_table.loc[:, 'PDB_dbResNum'] = \
-            sifts_table.loc[:, 'PDB_dbResNum'].astype(str)
 
         table = dssp_table.merge(sifts_table, how='left',
                                  left_on=['RES', 'CHAIN'],
@@ -139,26 +122,35 @@ def dssp_dssp_table_merger(bound_table, unbound_table):
     :return: merged pandas DataFrame
     """
 
+    # assumes a pre-merge with mmcif was performed, and that bound dssp is observed
+    if ('label_seq_id' in bound_table and 'label_asym_id' in bound_table and
+            'RES' in unbound_table and 'CHAIN_FULL' in unbound_table and
+            'RES' in bound_table and 'CHAIN_FULL' in bound_table):
+
+        # rename the unbound columns
+        cols = ('ACC', 'SS', 'SS_CLASS', 'RSA', 'RSA_CLASS', 'RES', 'CHAIN_FULL')
+        excluded = tuple([k for k in unbound_table if k not in cols])
+        if excluded is not None:
+            unbound_table = unbound_table.drop(list(excluded), axis=1)
+        unbound_table.columns = ['{}_UNB'.format(k) for k in unbound_table]
+
+        table = bound_table.merge(unbound_table, how='left',
+                                  left_on=['label_seq_id', 'label_asym_id'],
+                                  right_on=['RES_UNB', 'CHAIN_FULL_UNB'])
     # bare minimal columns needed
-    if ('RES' in bound_table and 'CHAIN_FULL' in bound_table and
+    elif ('RES' in bound_table and 'CHAIN_FULL' in bound_table and
             'RES' in unbound_table and 'CHAIN_FULL' in unbound_table):
 
-            bound_table.loc[:, 'RES'] = \
-                bound_table.loc[:, 'RES'].astype(str)
+        # rename the unbound columns
+        cols = ('ACC', 'SS', 'SS_CLASS', 'RSA', 'RSA_CLASS', 'RES', 'CHAIN_FULL')
+        excluded = tuple([k for k in unbound_table if k not in cols])
+        if excluded is not None:
+            unbound_table = unbound_table.drop(list(excluded), axis=1)
+        unbound_table.columns = ['{}_UNB'.format(k) for k in unbound_table]
 
-            unbound_table.loc[:, 'RES'] = \
-                unbound_table.loc[:, 'RES'].astype(str)
-
-            # rename the unbound columns
-            cols = ('ACC', 'SS', 'SS_CLASS', 'RSA', 'RSA_CLASS', 'RES', 'CHAIN_FULL')
-            excluded = tuple([k for k in unbound_table if k not in cols])
-            if excluded is not None:
-                unbound_table = unbound_table.drop(list(excluded), axis=1)
-            unbound_table.columns = ['{}_UNB'.format(k) for k in unbound_table]
-
-            table = bound_table.merge(unbound_table, how='left',
-                                      left_on=['RES', 'CHAIN_FULL'],
-                                      right_on=['RES_UNB', 'CHAIN_FULL_UNB'])
+        table = bound_table.merge(unbound_table, how='left',
+                                  left_on=['RES', 'CHAIN_FULL'],
+                                  right_on=['RES_UNB', 'CHAIN_FULL_UNB'])
     else:
         raise TableMergerError('Not possible to merge the DSSP tables! '
                                'Some of the necessary columns are missing...')
@@ -248,19 +240,19 @@ def table_generator(uniprot_id=None, pdb_id=None, chain=None, res=None,
         # DSSP table
         if add_dssp:
             if bio:
-                inputdssp = "{}{}{}_bio.dssp" \
+                outputdssp = "{}{}{}_bio.dssp" \
                             "".format(config.db_root, config.db_dssp_generated, pdb_id)
             else:
-                inputdssp = "{}{}{}.dssp" \
+                outputdssp = "{}{}{}.dssp" \
                             "".format(config.db_root, config.db_dssp_generated, pdb_id)
-            w = DSSPgenerator(inputcif, inputdssp)
+            w = DSSPgenerator(inputcif, outputdssp)
             w.run()
-            if os.path.exists(inputdssp):
-                r = DSSPreader(inputdssp)
+            if os.path.exists(outputdssp):
+                r = DSSPreader(outputdssp)
                 try:
                     dssp_table = r.residues(add_ss_reduced=True, add_rsa_class=True)
                 except IndexError:
-                    print(inputdssp)
+                    print(outputdssp)
                     raise IndexError
                 dssp_table = get_dssp_selected_from_table(dssp_table, chain_full=chain, res=res)
             else:

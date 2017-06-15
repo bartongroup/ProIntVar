@@ -32,7 +32,7 @@ def parse_mmcif_atoms_from_file(inputfile, excluded=(), add_res_full=True,
                                 add_contacts=False, dist=5, first_model=True,
                                 add_atom_altloc=False, remove_altloc=False,
                                 remove_hydrogens=True, reset_atom_id=True,
-                                add_new_pro_id=True, remove_partial_res=True,
+                                add_new_pro_id=False, remove_partial_res=True,
                                 verbose=False):
     """
     Parse mmCIF ATOM and HETATM lines.
@@ -150,7 +150,7 @@ def parse_mmcif_atoms_from_file(inputfile, excluded=(), add_res_full=True,
 def parse_pdb_atoms_from_file(inputfile, excluded=(), add_contacts=False,
                               dist=5, first_model=True, add_atom_altloc=False,
                               remove_altloc=False, remove_hydrogens=True,
-                              reset_atom_id=True, add_new_pro_id=True,
+                              reset_atom_id=True, add_new_pro_id=False,
                               remove_partial_res=True, verbose=False):
     """
     Parse PDB ATOM and HETATM lines.
@@ -895,7 +895,7 @@ class MMCIFreader(object):
               first_model=True, add_atom_altloc=False, remove_altloc=False,
               remove_hydrogens=True, reset_atom_id=True, format_type="mmcif",
               residue_agg=False, agg_method='centroid', category='label',
-              add_new_pro_id=True, remove_partial_res=False):
+              add_new_pro_id=False, remove_partial_res=False):
         if excluded is None:
             excluded = self.excluded
 

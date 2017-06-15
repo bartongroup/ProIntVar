@@ -25,6 +25,8 @@ mmcif_types = {
     'label_asym_id': str,
     'label_entity_id': str,
     'label_seq_id': str,
+    'new_asym_id': str,
+    'new_seq_id': str,
     'pdbx_PDB_ins_code': str,
     'Cartn_x': float,
     'Cartn_y': float,
