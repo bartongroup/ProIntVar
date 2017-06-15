@@ -422,7 +422,8 @@ def row_selector(data, key=None, value=None, method="isin"):
 
     table = data
     assert type(table) is pd.core.frame.DataFrame
-    if key is not None and value is not None:
+    if ((key is not None and value is not None) or
+            (key is not None and method == 'first')):
         assert type(key) is str
         assert type(method) is str
         if key in table:

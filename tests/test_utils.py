@@ -8,6 +8,7 @@ import requests
 import responses
 import unittest
 import datetime
+import pandas as pd
 from io import StringIO
 from datetime import datetime
 from contextlib import contextmanager
@@ -26,8 +27,6 @@ from prointvar.utils import flash
 from prointvar.utils import get_pairwise_alignment
 from prointvar.utils import string_split
 from prointvar.utils import get_new_pro_ids
-
-# TODO test
 from prointvar.utils import row_selector
 
 from prointvar.config import config as c
@@ -105,6 +104,7 @@ class TestUTILS(unittest.TestCase):
         self.current_date = current_date
         self.convert_str_to_bool = convert_str_to_bool
         self.get_new_pro_ids = get_new_pro_ids
+        self.row_selector = row_selector
 
     def tearDown(self):
         """Remove testing framework."""
@@ -123,6 +123,7 @@ class TestUTILS(unittest.TestCase):
         self.current_date = None
         self.convert_str_to_bool = None
         self.get_new_pro_ids = None
+        self.row_selector = None
 
     def test_flash(self):
         with captured_output() as (out, err):
@@ -320,6 +321,21 @@ class TestUTILS(unittest.TestCase):
         asym_id_2, seq_id_2 = next(pros)
         self.assertEqual(asym_id_2, 'A')
         self.assertEqual(seq_id_2, '2')
+
+    def test_row_selector(self):
+        data = pd.DataFrame([{'label': '1', 'value': 1},
+                             {'label': '2', 'value': 1},
+                             {'label': '3', 'value': 2},
+                             {'label': '4', 'value': 3},
+                             {'label': '5', 'value': 5}])
+        d = self.row_selector(data, key='value', value=3, method='equals')
+        self.assertEqual(len(d.index), 1)
+        d = self.row_selector(data, key='value', value=3, method='diffs')
+        self.assertEqual(len(d.index), 4)
+        d = self.row_selector(data, key='value', value=None, method='first')
+        self.assertEqual(len(d.index), 2)
+        d = self.row_selector(data, key='value', value=(2, 3), method='isin')
+        self.assertEqual(len(d.index), 2)
 
 
 if __name__ == '__main__':
