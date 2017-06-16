@@ -127,6 +127,26 @@ sifts_types = {
     'Pfam_dbAccessionId': str
 }
 
+hbplus_types = {
+    "CHAIN_D": str,
+    "RES_D": str,
+    "INSCODE_D": str,
+    "ATOM_D": str,
+    "CHAIN_A": str,
+    "RES_A": str,
+    "INSCODE_A": str,
+    "ATOM_A": str,
+    "DIST_DA": float,
+    "CATEG_DA": str,
+    "NUM_AAS": int,
+    "DIST_CA-CA": float,
+    "ANGLE_DHA": float,
+    "DIST_H-A": float,
+    "ANGLE_H-A-AA": float,
+    "ANGLE_D-A-AA": float,
+    "ID": int
+}
+
 arpeggio_types = {
     "ENTRY_A": str,
     "CHAIN_A": str,
@@ -163,6 +183,8 @@ arpeggio_types = {
     "VDW_DIST": float,
     "ENTITIES": str
 }
+
+probe_types = {}
 
 arpeggio_col_renames = {
     "STERIC_CLASH": "Steric-Clash",
