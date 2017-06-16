@@ -49,7 +49,7 @@ class TestHBPLUS(unittest.TestCase):
         self.inputcif = "{}{}{}.cif".format(c.db_root, c.db_cif, self.pdbid)
         self.outputhbplus = "{}{}{}.h2b".format(c.db_root,
                                                 c.db_contacts_generated, self.pdbid)
-        self.outputhbplus_h = "{}{}{}.hbplus.h".format(c.db_root, c.db_cif, self.pdbid)
+        self.outputhbplus_h = "{}{}{}.hbplus.pdb".format(c.db_root, c.db_cif, self.pdbid)
         self.emptyfile = "{}{}{}.tmp".format(c.db_root, c.tmp_dir_local, self.pdbid)
         self.notfound = ""
         self.excluded = ()

@@ -32,7 +32,7 @@ class TestREDUCE(unittest.TestCase):
         self.pdbid = '2pah'
         self.inputpdb = "{}{}{}.pdb".format(c.db_root, c.db_cif, self.pdbid)
         self.inputcif = "{}{}{}.cif".format(c.db_root, c.db_cif, self.pdbid)
-        self.outputred = "{}{}{}.reduce.h".format(c.db_root, c.db_cif, self.pdbid)
+        self.outputred = "{}{}{}.reduce.pdb".format(c.db_root, c.db_cif, self.pdbid)
         self.emptyfile = "{}{}{}.tmp".format(c.db_root, c.tmp_dir_local, self.pdbid)
         self.notfound = ""
         self.excluded = ()
