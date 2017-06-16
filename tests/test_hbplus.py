@@ -47,8 +47,9 @@ class TestHBPLUS(unittest.TestCase):
         self.pdbid = '2pah'
         self.inputpdb = "{}{}{}.pdb".format(c.db_root, c.db_cif, self.pdbid)
         self.inputcif = "{}{}{}.cif".format(c.db_root, c.db_cif, self.pdbid)
-        self.inputhbplus = "{}{}{}.h2b".format(c.db_root,
-                                               c.db_contacts_generated, self.pdbid)
+        self.outputhbplus = "{}{}{}.h2b".format(c.db_root,
+                                                c.db_contacts_generated, self.pdbid)
+        self.outputhbplus_h = "{}{}{}.hbplus.h".format(c.db_root, c.db_cif, self.pdbid)
         self.emptyfile = "{}{}{}.tmp".format(c.db_root, c.tmp_dir_local, self.pdbid)
         self.notfound = ""
         self.excluded = ()
@@ -64,7 +65,7 @@ class TestHBPLUS(unittest.TestCase):
         self.pdbid = None
         self.inputpdb = None
         self.inputcif = None
-        self.inputhbplus = None
+        self.outputhbplus = None
 
         self.emptyfile = None
         self.notfound = None
@@ -95,44 +96,44 @@ class TestHBPLUS(unittest.TestCase):
     def test_generator_pdb_exec(self):
         if os.path.isfile(self.inputpdb):
             self.generator(self.inputpdb,
-                           self.inputhbplus + '.test').run(clean_output=True,
-                                                           override=True)
+                           self.outputhbplus + '.test').run(clean_output=True,
+                                                            override=True)
             msg = ("HBPLUS execution failed: make sure the settings "
                    "are set properly in config.ini!")
-            self.assertTrue(os.path.isfile(self.inputhbplus + '.test'), msg)
-            os.remove(self.inputhbplus + '.test')
+            self.assertTrue(os.path.isfile(self.outputhbplus + '.test'), msg)
+            os.remove(self.outputhbplus + '.test')
         else:
             raise IOError("%s" % self.inputpdb)
 
     def test_generator_pdb(self):
         if os.path.isfile(self.inputpdb):
-            self.generator(self.inputpdb, self.inputhbplus).run()
-            self.assertTrue(os.path.isfile(self.inputhbplus))
+            self.generator(self.inputpdb, self.outputhbplus).run()
+            self.assertTrue(os.path.isfile(self.outputhbplus))
         else:
             raise IOError("%s" % self.inputpdb)
 
     def test_generator_cif(self):
         if os.path.isfile(self.inputcif):
-            self.generator(self.inputcif, self.inputhbplus).run()
-            self.assertTrue(os.path.isfile(self.inputhbplus))
+            self.generator(self.inputcif, self.outputhbplus).run()
+            self.assertTrue(os.path.isfile(self.outputhbplus))
         else:
             raise IOError("%s" % self.inputcif)
 
     def test_reader_hbplus_verbose(self):
         with captured_output() as (out, err):
-            self.reader(self.inputhbplus, verbose=True).read()
+            self.reader(self.outputhbplus, verbose=True).read()
         # This can go inside or outside the `with` block
         output = out.getvalue().strip()
         self.assertEqual(output, 'Parsing HBPLUS from lines...')
 
     def test_parser_keys(self):
-        self.assertListEqual([k for k in self.parser(self.inputhbplus).CHAIN_A.unique()],
+        self.assertListEqual([k for k in self.parser(self.outputhbplus).CHAIN_A.unique()],
                              ['A', 'B'])
-        self.assertListEqual([k for k in self.parser(self.inputhbplus).CHAIN_D.unique()],
+        self.assertListEqual([k for k in self.parser(self.outputhbplus).CHAIN_D.unique()],
                              ['A', 'B'])
 
     def test_reader_data(self):
-        reader = self.reader(self.inputhbplus)
+        reader = self.reader(self.outputhbplus)
         data = reader.read()
         self.assertEqual(data.loc[0, 'CHAIN_D'], 'A')
         self.assertEqual(data.loc[0, 'CHAIN_A'], 'A')
@@ -147,21 +148,21 @@ class TestHBPLUS(unittest.TestCase):
         self.assertEqual(data.loc[0, 'DIST_DA'], 2.96)
 
     def test_reader_to_json_pretty(self):
-        reader = self.reader(self.inputhbplus)
+        reader = self.reader(self.outputhbplus)
         reader.read()
         data = reader.to_json()
         self.assertEqual(json.loads(data)[0]['CHAIN_D'], 'A')
         self.assertEqual(json.loads(data)[0]['DIST_DA'], 2.96)
 
     def test_reader_to_json(self):
-        reader = self.reader(self.inputhbplus)
+        reader = self.reader(self.outputhbplus)
         reader.read()
         data = reader.to_json(pretty=False)
         self.assertEqual(json.loads(data)[0]['CHAIN_D'], 'A')
         self.assertEqual(json.loads(data)[0]['DIST_DA'], 2.96)
 
     def test_reader_default_excluded(self):
-        reader = self.reader(self.inputhbplus)
+        reader = self.reader(self.outputhbplus)
         keys = reader.read()
         self.assertNotIn("NUM_AAS", keys)
         self.assertNotIn("DIST_CA-CA", keys)
@@ -171,7 +172,7 @@ class TestHBPLUS(unittest.TestCase):
         self.assertNotIn("ANGLE_D-A-AA", keys)
 
     def test_reader_new_excluded(self):
-        reader = self.reader(self.inputhbplus)
+        reader = self.reader(self.outputhbplus)
         keys = reader.read(excluded=self.excluded)
         self.assertIn("NUM_AAS", keys)
         self.assertIn("DIST_CA-CA", keys)
@@ -181,28 +182,38 @@ class TestHBPLUS(unittest.TestCase):
         self.assertIn("ANGLE_D-A-AA", keys)
 
     def test_filter_chain_donor(self):
-        reader = self.reader(self.inputhbplus)
+        reader = self.reader(self.outputhbplus)
         reader.read(excluded=self.excluded)
         data = self.filter(reader.data, chain_D=('A',))
         self.assertNotIn("B", data.CHAIN_D.unique())
 
     def test_filter_chain_acceptor(self):
-        reader = self.reader(self.inputhbplus)
+        reader = self.reader(self.outputhbplus)
         reader.read(excluded=self.excluded)
         data = self.filter(reader.data, chain_A=('B',))
         self.assertNotIn("A", data.CHAIN_A.unique())
 
     def test_filter_res_donor(self):
-        reader = self.reader(self.inputhbplus)
+        reader = self.reader(self.outputhbplus)
         reader.read(excluded=self.excluded)
         data = self.filter(reader.data, res_D=('123',))
         self.assertNotIn('119', data.RES_D.unique())
 
     def test_filter_res_acceptor(self):
-        reader = self.reader(self.inputhbplus)
+        reader = self.reader(self.outputhbplus)
         reader.read(excluded=self.excluded)
         data = self.filter(reader.data, res_A=('127',))
         self.assertNotIn('119', data.RES_A.unique())
+
+    def test_generator_pdb_hydrogen(self):
+        if os.path.isfile(self.inputpdb):
+            self.generator(self.inputpdb, self.outputhbplus_h).run(hydro_pdb_out=True,
+                                                                   run_clean=False,
+                                                                   override=True)
+            self.assertTrue(os.path.isfile(self.outputhbplus_h))
+        else:
+            raise IOError("%s" % self.inputpdb)
+
 
 if __name__ == '__main__':
     suite = unittest.TestLoader().loadTestsFromTestCase(TestHBPLUS)

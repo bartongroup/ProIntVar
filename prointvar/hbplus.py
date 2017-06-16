@@ -218,7 +218,8 @@ class HBPLUSgenerator(object):
         w.run(format_type="pdb")
         self.inputfile = filename + ".pdb"
 
-    def _run(self, hbplus_bin, clean_bin, clean_output=True):
+    def _run(self, hbplus_bin, clean_bin=None, run_clean=True,
+             clean_output=True, hydro_pdb_out=False):
         # clean and hbplus clip absolute paths to 78 chars
         root, filename = os.path.split(self.inputfile)
         if self.inputfile != filename:
@@ -230,25 +231,32 @@ class HBPLUSgenerator(object):
         output_clean_log = basename + ".clean.log"
         output_hbplus = basename + ".hb2"
         output_hbplus_log = basename + ".hbplus.log"
-        # input_hbplus_h = filename + ".h" # '-o' option
-        # input_hbplus_hhb = filename + ".hhb" # '-L' option
+        output_hbplus_h = basename + ".h" # '-o' option
+        # output_hbplus_hhb = basename + ".hhb" # '-L' option
 
         # it is recommended that the clean tool is run before calling hbplus
-        cmd = "{} <<< {} > {}".format(clean_bin, filename, output_clean_log)
-        os.system(cmd)
-        if not os.path.isfile(output_clean):
-            raise IOError("Clean (HBPLUS) output not generated for {}"
-                          "".format(output_clean))
+        if clean_bin and run_clean:
+            cmd = "{} <<< {} > {}".format(clean_bin, filename, output_clean_log)
+            os.system(cmd)
+            if not os.path.isfile(output_clean):
+                raise IOError("Clean (HBPLUS) output not generated for {}"
+                              "".format(output_clean))
+        else:
+            output_clean = filename
 
         # run hbplus
-        cmd = "{} -R {} > {}".format(hbplus_bin, output_clean, output_hbplus_log)
+        cmd = "{} -R {} -o > {}".format(hbplus_bin, output_clean, output_hbplus_log)
         os.system(cmd)
         if not os.path.isfile(output_hbplus):
             raise IOError("HBPLUS output not generated for {}".format(output_hbplus))
 
         # mv the automatically generated file -> to the provided outputfile
-        if output_hbplus != self.outputfile:
-            shutil.copyfile(output_hbplus, self.outputfile)
+        if hydro_pdb_out:
+            if output_hbplus_h != self.outputfile:
+                shutil.copyfile(output_hbplus_h, self.outputfile)
+        else:
+            if output_hbplus != self.outputfile:
+                shutil.copyfile(output_hbplus, self.outputfile)
 
         if clean_output:
             # remove output files
@@ -256,6 +264,8 @@ class HBPLUSgenerator(object):
                 lazy_file_remover(filename)
             if output_hbplus != self.outputfile:
                 lazy_file_remover(output_hbplus)
+            if output_hbplus_h != self.outputfile:
+                lazy_file_remover(output_hbplus_h)
             lazy_file_remover(output_clean)
             lazy_file_remover(output_clean_log)
             lazy_file_remover(output_hbplus_log)
@@ -263,22 +273,26 @@ class HBPLUSgenerator(object):
             lazy_file_remover("./hbdebug.dat")
             lazy_file_remover("./fort.15")
 
-    def run(self, override=False, clean_output=True):
+    def run(self, override=False, run_clean=False, clean_output=True,
+            hydro_pdb_out=False):
 
         if not os.path.exists(self.outputfile) or override:
-            if (os.path.isfile(config.hbplus_bin) and
-                    os.path.isfile(config.clean_bin)):
+            if os.path.isfile(config.hbplus_bin):
                 hbplus_bin = config.hbplus_bin
-                clean_bin = config.clean_bin
-            elif (os.path.isfile(config.hbplus_bin_local) and
-                    os.path.isfile(config.clean_bin_local)):
+                clean_bin = None
+                if run_clean and os.path.isfile(config.clean_bin):
+                    clean_bin = config.clean_bin
+            elif os.path.isfile(config.hbplus_bin_local):
                 hbplus_bin = config.hbplus_bin_local
-                clean_bin = config.clean_bin_local
+                clean_bin = None
+                if run_clean and os.path.isfile(config.clean_bin_local):
+                    clean_bin = config.clean_bin_local
             else:
                 raise IOError('HBPLUS executables are not available...')
 
             # run hbplus and generate output
-            self._run(hbplus_bin, clean_bin, clean_output=clean_output)
+            self._run(hbplus_bin, clean_bin, run_clean=run_clean,
+                      clean_output=clean_output, hydro_pdb_out=hydro_pdb_out)
 
         else:
             flash('HBPLUS for {} already available...'.format(self.outputfile))
