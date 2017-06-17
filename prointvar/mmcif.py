@@ -16,6 +16,7 @@ import shlex
 import pandas as pd
 from io import StringIO
 from scipy.spatial import cKDTree
+from string import ascii_uppercase
 from collections import OrderedDict
 
 from prointvar.utils import flash
@@ -192,6 +193,7 @@ def parse_pdb_atoms_from_file(inputfile, excluded=(), add_contacts=False,
     with open(inputfile) as inlines:
         for line in inlines:
             line = line.rstrip()
+            line = line[0:78]
             if line.startswith("MODEL"):
                 modelnumb = line.split()[1]
             elif line.startswith("ATOM"):
@@ -233,6 +235,8 @@ def parse_pdb_atoms_from_file(inputfile, excluded=(), add_contacts=False,
     table = fix_pdb_ins_code(table)
     # fixes the 'label_alt_id
     table = fix_label_alt_id(table)
+    # fixes 'type_symbol' if missing
+    table = fix_type_symbol(table)
 
     # table modular extensions
     if add_contacts:
@@ -620,6 +624,29 @@ def fix_label_alt_id(data):
         alt_locs.append(value)
     table["label_alt_id"] = alt_locs
     table['label_alt_id'] = table['label_alt_id'].fillna('.').astype(str)
+    return table
+
+
+def fix_type_symbol(data):
+    """
+    Utility that fixes the 'type_symbol' column to match what is
+    expected in the mmCIF format - when missing in the Structure.
+
+    :param data: pandas DataFrame object
+    :return: returns a modified pandas DataFrame
+    """
+    table = data
+
+    # print(table.head())
+    def get_type_symbol(data, key, key_fix):
+        # this maybe a bit crude way of assigning this value
+        if data[key] != " " and data[key] != "" and len(data[key]):
+            return data[key]
+        else:
+            return ''.join([x for x in data[key_fix] if x in ascii_uppercase])[0]
+    table.is_copy = False
+    table['type_symbol'] = table.apply(get_type_symbol, axis=1,
+                                       args=('type_symbol', 'label_atom_id'))
     return table
 
 
