@@ -32,6 +32,8 @@ from collections import namedtuple
 
 from prointvar.mmcif import MMCIFwriter
 from prointvar.mmcif import MMCIFreader
+from prointvar.reduce import REDUCEgenerator
+from prointvar.hbplus import HBPLUSgenerator
 
 from prointvar.utils import flash
 from prointvar.utils import lazy_file_remover
@@ -497,6 +499,7 @@ class ARPEGGIOgenerator(object):
 
         self.inputfile_back = inputfile
         self.inputfile = inputfile
+        self.inputfile_h = None
         self.outputfile = outputfile
         self.verbose = verbose
         self.data = None
@@ -529,23 +532,43 @@ class ARPEGGIOgenerator(object):
                        remove_partial_res=True, format_type=None)
         w.run(data=data, format_type="pdb", category="auth")
 
-    def _run(self, python_path, python_exe, arpeggio_bin, clean_output=True):
+    def _generate_pdb_with_hydrogens(self, hydro_method="hbplus", override=False):
+        if hydro_method == "hbplus":
+            w = HBPLUSgenerator(inputfile=self.inputfile, outputfile=self.inputfile_h)
+            w.run(hydro_pdb_out=True, override=override)
+        elif hydro_method == "reduce":
+            w = REDUCEgenerator(inputfile=self.inputfile, outputfile=self.inputfile_h)
+            w.run(override=override)
+        else:
+            raise ValueError('Method {} is not currently implemented...'
+                             ''.format(hydro_method))
+
+    def _run(self, python_path, python_exe, arpeggio_bin, clean_output=True,
+             hydro_method="arpeggio"):
 
         filename, extension = os.path.splitext(self.inputfile)
+        input_arpeggio = filename + ".pdb"
         output_arpeggio = filename + ".contacts"
         output_bs_contacts = filename + ".bs_contacts"
         output_atomtypes = filename + ".atomtypes"
-        
+        output_hydro = filename + "_hydrogenated.pdb"
+
+        if hydro_method in ["hbplus", "reduce"]:
+            input_arpeggio = filename + ".h.pdb"
+
         # run arpeggio
-        cmd = 'PYTHONPATH={} {} {} {}'.format(python_path, python_exe,
-                                              arpeggio_bin, self.inputfile)
+        cmd = 'PYTHONPATH={} {} {} -wh {}'.format(python_path, python_exe,
+                                                  arpeggio_bin, input_arpeggio)
         os.system(cmd)
         if not os.path.isfile(output_arpeggio):
-            raise IOError("ARPEGGIO output not generated for {}".format(self.inputfile))
+            raise IOError("ARPEGGIO output not generated for {}".format(input_arpeggio))
 
         # mv the automatically generated file -> to the provided outputfile
         if output_arpeggio != self.outputfile:
             shutil.copyfile(output_arpeggio, self.outputfile)
+
+        if hydro_method == "arpeggio":
+            shutil.copyfile(output_hydro, self.inputfile_h)
 
         if clean_output:
             # remove output files
@@ -553,8 +576,17 @@ class ARPEGGIOgenerator(object):
                 lazy_file_remover(output_arpeggio)
             lazy_file_remover(output_bs_contacts)
             lazy_file_remover(output_atomtypes)
+            lazy_file_remover(output_hydro)
 
-    def run(self, override=False, clean_output=True, save_new_pdb=False):
+    def run(self, override=False, clean_output=True, save_new_pdb=False,
+            hydro_method="arpeggio"):
+
+        # get PDB with explicit hydrogen atoms
+        filename, extension = os.path.splitext(self.inputfile_back)
+        self.inputfile_h = filename + ".h.pdb"
+        if hydro_method in ["hbplus", "reduce"]:
+            self._generate_pdb_with_hydrogens(hydro_method=hydro_method,
+                                              override=override)
 
         if not os.path.exists(self.outputfile) or override:
             if os.path.isfile(config.python_exe) and os.path.exists(config.arpeggio_bin):
@@ -570,13 +602,16 @@ class ARPEGGIOgenerator(object):
                 raise IOError('ARPEGGIO executable is not available...')
 
             # run arpeggio and generate output
-            self._run(python_path, python_exe, arpeggio_bin, clean_output=clean_output)
+            self._run(python_path, python_exe, arpeggio_bin, clean_output=clean_output,
+                      hydro_method=hydro_method)
 
         else:
             flash('ARPEGGIO for {} already available...'.format(self.outputfile))
 
         if self.inputfile.endswith('_new.pdb') and not save_new_pdb:
             lazy_file_remover(self.inputfile)
+        if not save_new_pdb:
+            lazy_file_remover(self.inputfile_h)
         return
 
 
