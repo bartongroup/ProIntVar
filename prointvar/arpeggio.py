@@ -509,10 +509,8 @@ class ARPEGGIOgenerator(object):
 
         # inputfile needs to be in PDB format
         filename, extension = os.path.splitext(inputfile)
-        if extension in ['.pdb', '.ent']:
-            self._generate_pdb_from_pdb()
-        elif extension in ['.cif']:
-            self._generate_pdb_from_mmcif()
+        if extension in ['.pdb', '.ent', '.cif']:
+            self._generate_pdb()
         else:
             raise ValueError("{} is expected to be in mmCIF or PDB format..."
                              "".format(inputfile))
@@ -522,21 +520,14 @@ class ARPEGGIOgenerator(object):
             filename, extension = os.path.splitext(self.inputfile)
             self.outputfile = filename + ".contacts"
 
-    def _generate_pdb_from_mmcif(self):
+    def _generate_pdb(self):
         filename, extension = os.path.splitext(self.inputfile)
-        w = MMCIFwriter(inputfile=self.inputfile, outputfile=filename + ".pdb")
-        r = MMCIFreader(inputfile=self.inputfile)
-        data = r.atoms(remove_altloc=True, reset_atom_id=True, format_type='mmcif')
+        self.inputfile = filename + "_new.pdb"
+        w = MMCIFwriter(inputfile=None, outputfile=self.inputfile)
+        r = MMCIFreader(inputfile=self.inputfile_back)
+        data = r.atoms(remove_altloc=True, reset_atom_id=True,
+                       remove_partial_res=True, format_type=None)
         w.run(data=data, format_type="pdb", category="auth")
-        self.inputfile = filename + ".pdb"
-
-    def _generate_pdb_from_pdb(self):
-        filename, extension = os.path.splitext(self.inputfile)
-        w = MMCIFwriter(inputfile=None, outputfile=filename + "_clean.pdb")
-        r = MMCIFreader(inputfile=self.inputfile)
-        data = r.atoms(remove_altloc=True, reset_atom_id=True, format_type='pdb')
-        w.run(data=data, format_type="pdb", category="auth")
-        self.inputfile = filename + "_clean.pdb"
 
     def _run(self, python_path, python_exe, arpeggio_bin, clean_output=True):
 
@@ -563,7 +554,7 @@ class ARPEGGIOgenerator(object):
             lazy_file_remover(output_bs_contacts)
             lazy_file_remover(output_atomtypes)
 
-    def run(self, override=False, clean_output=True, save_clean_pdb=False):
+    def run(self, override=False, clean_output=True, save_new_pdb=False):
 
         if not os.path.exists(self.outputfile) or override:
             if os.path.isfile(config.python_exe) and os.path.exists(config.arpeggio_bin):
@@ -584,7 +575,7 @@ class ARPEGGIOgenerator(object):
         else:
             flash('ARPEGGIO for {} already available...'.format(self.outputfile))
 
-        if self.inputfile.endswith('_clean.pdb') and not save_clean_pdb:
+        if self.inputfile.endswith('_new.pdb') and not save_new_pdb:
             lazy_file_remover(self.inputfile)
         return
 

@@ -133,7 +133,6 @@ class TestARPEGGIO(unittest.TestCase):
     def test_generator_pdb_exec_fail(self):
         pdbid = "1ejg"
         inputpdb = "{}{}{}.pdb".format(c.db_root, c.db_cif, pdbid)
-        inputpdb_clean = "{}{}{}_clean.pdb".format(c.db_root, c.db_cif, pdbid)
         inputarpeggio = "{}{}{}.contacts".format(c.db_root, c.db_cif, pdbid)
         try:
             self.generator(inputpdb,
@@ -156,7 +155,6 @@ class TestARPEGGIO(unittest.TestCase):
                        inputarpeggio).run(clean_output=True,
                                           override=True)
         self.assertTrue(os.path.isfile(inputarpeggio))
-        os.remove(inputpdb_clean)
         os.remove(inputpdb_new)
         os.remove(inputarpeggio)
 
