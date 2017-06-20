@@ -46,13 +46,14 @@ from prointvar.config import config
 
 
 def parse_arpeggio_from_file(inputfile, excluded=(), add_res_split=True,
-                             verbose=False):
+                             parse_special=False, verbose=False):
     """
     Parse lines of the ARPEGGIO *contacts* file to get entries from...
 
     :param inputfile: path to the ARPEGGIO file
     :param excluded: option to exclude ARPEGGIO columns
     :param add_res_split: (boolean) splits ENTRY_* into 'CHAIN', 'ATOM', 'RES', 'INSCODE'
+    :param parse_special: (boolean) tries to parse special contact types
     :param verbose: boolean
     :return: returns a pandas DataFrame
     """
@@ -90,6 +91,10 @@ def parse_arpeggio_from_file(inputfile, excluded=(), add_res_split=True,
     if add_res_split:
         table = add_arpeggio_res_split(table)
 
+    if parse_special:
+        # tries to parse *.amam, *.amri, *.ari and *.ri
+        table = add_special_cont_types(inputfile, table)
+
     if excluded is not None:
         assert type(excluded) is tuple
         try:
@@ -106,6 +111,85 @@ def parse_arpeggio_from_file(inputfile, excluded=(), add_res_split=True,
             except ValueError:
                 # there are some NaNs in there
                 pass
+
+    if table.empty:
+        raise ValueError('{} resulted in an empty DataFrame...'.format(inputfile))
+
+    return table
+
+
+def parse_arpeggio_spec_from_file(inputfile, excluded=(), add_res_split=True,
+                                  int_type="res-res"):
+    """
+    Parse lines of the ARPEGGIO *.amam*, *.amri*, *.ri*  and *.ari* files..
+
+    :param inputfile: path to the ARPEGGIO file
+    :param excluded: option to exclude ARPEGGIO columns
+    :param add_res_split: (boolean) splits ENTRY_* into 'CHAIN', 'ATOM', 'RES', 'INSCODE'
+    :param int_type: (str) 'res-res' or 'atom-res'
+    :return: returns a pandas DataFrame
+    """
+
+    # example lines
+    # format documentation at https://github.com/biomadeira/arpeggio
+    """
+    # amam (res-res)
+    37	A/159/	[23.1595, 16.125999, 35.171997]	40	A/161/	[19.171001, 15.512501, 36.269501]	AMIDEAMIDE	INTER_RESIDUE	INTRA_SELECTION
+    44	A/165/	[14.835501, 12.307, 32.723]	46	A/167/	[18.681, 8.6389999, 31.563]	AMIDEAMIDE	INTER_RESIDUE	INTRA_SELECTION
+    46	A/167/	[18.681, 8.6389999, 31.563]	44	A/165/	[14.835501, 12.307, 32.723]	AMIDEAMIDE	INTER_RESIDUE	INTRA_SELECTION
+    94	A/212/	[6.1964998, 12.783, 58.588501]	96	A/214/	[9.8845005, 12.103001, 60.452499]	AMIDEAMIDE	INTER_RESIDUE	INTRA_SELECTION
+    # amri (res-res)
+    3	A/121/	[-2.691, 14.5735, 27.1605]	64	A/120/	[0.17149999999999999, 14.428833333333333, 24.741499999999995]	AMIDERING	INTER_RESIDUE	INTRA_SELECTION
+    3	A/121/	[-2.691, 14.5735, 27.1605]	151	A/120/	[-0.33888888888888885, 14.43488888888889, 23.960888888888885]	AMIDERING	INTER_RESIDUE	INTRA_SELECTION
+    6	A/124/	[-1.8935, 8.1655006, 31.7075]	81	A/260/	[-3.0968333333333331, 11.735499999999998, 33.67583333333333]	AMIDERING	INTER_RESIDUE	INTRA_SELECTION
+    21	A/143/	[23.228001, 32.715, 33.210999]	80	A/149/	[26.669499999999999, 30.518000000000004, 32.972000000000001]	AMIDERING	INTER_RESIDUE	INTRA_SELECTION
+    # ri (res-res)
+    5	B/208/	[-39.389400000000002, 39.8444, 24.696200000000005]	67	B/204/	[-33.653833333333331, 40.87116666666666, 24.8565]	OT	INTER_RESIDUE	INTRA_SELECTION
+    10	B/187/	[-49.272400000000005, 57.387, 31.215600000000002]	71	B/191/	[-46.081333333333333, 55.690666666666665, 27.043833333333332]	OT	INTER_RESIDUE	INTRA_SELECTION
+    15	A/264/	[5.4510000000000005, 15.938800000000001, 35.380200000000002]	76	A/131/	[3.509666666666666, 16.270499999999998, 30.280166666666663]	OT	INTER_RESIDUE	INTRA_SELECTION
+    25	A/326/	[2.8020000000000005, 33.325000000000003, 41.7986]	93	A/377/	[2.335, 35.671666666666667, 38.610999999999997]	FF	INTER_RESIDUE	INTRA_SELECTION
+    25	A/326/	[2.8020000000000005, 33.325000000000003, 41.7986]	108	A/327/	[-1.7431666666666665, 36.167333333333332, 42.487833333333334]	EF	INTER_RESIDUE	INTRA_SELECTION
+    # ari (atom-res)
+    B/222/N	3	B/220/	[-51.032000000000011, 56.128399999999999, 22.770000000000003]	['DONORPI']	INTER_RESIDUE	INTRA_SELECTION
+    B/200/CB	8	B/201/	[-29.119000000000007, 56.571000000000005, 27.233799999999999]	['CARBONPI']	INTER_RESIDUE	INTRA_SELECTION
+    B/200/CG2	8	B/201/	[-29.119000000000007, 56.571000000000005, 27.233799999999999]	['CARBONPI']	INTER_RESIDUE	INTRA_SELECTION
+    B/224/N	10	B/187/	[-49.272400000000005, 57.387, 31.215600000000002]	['DONORPI']	INTER_RESIDUE	INTRA_SELECTION
+    B/224/CA	10	B/187/	[-49.272400000000005, 57.387, 31.215600000000002]	['CARBONPI']	INTER_RESIDUE	INTRA_SELECTION
+    B/191/CB	10	B/187/	[-49.272400000000005, 57.387, 31.215600000000002]	['CARBONPI']	INTER_RESIDUE	INTRA_SELECTION
+    B/224/CG1	10	B/187/	[-49.272400000000005, 57.387, 31.215600000000002]	['CARBONPI']	INTER_RESIDUE	INTRA_SELECTION
+    """
+
+    if not os.path.isfile(inputfile):
+        raise IOError("{} not available or could not be read...".format(inputfile))
+
+    # column width descriptors
+    if int_type == "res-res":
+        header = ("ID_A", "ENTRY_A", "COORDS_A", "ID_B", "ENTRY_B", "COORDS_B",
+                  "CONT_TYPE", "INT_TYPE", "SELECT")
+    elif int_type == "atom-res":
+        header = ("ENTRY_A", "ID_B", "ENTRY_B", "COORDS_B",
+                  "CONT_TYPE", "INT_TYPE", "SELECT")
+    else:
+        raise ValueError('Input Type {} is not currently implemented...'
+                         ''.format(int_type))
+
+    all_str = {key: str for key in header}
+    table = pd.read_csv(inputfile, sep='\t', low_memory=False,
+                        names=header, compression=None, converters=all_str,
+                        keep_default_na=False)
+
+    # split ENTRIES into CHAIN, RES, and ATOM
+    if add_res_split:
+        table = add_arpeggio_res_split(table)
+
+    if excluded is not None:
+        excluded = tuple([k for k in excluded if k in header])
+        assert type(excluded) is tuple
+        try:
+            table = table.drop(list(excluded), axis=1)
+        except ValueError:
+            # most likely theses are not in there
+            pass
 
     if table.empty:
         raise ValueError('{} resulted in an empty DataFrame...'.format(inputfile))
@@ -198,6 +282,93 @@ def add_arpeggio_res_split(data):
     table['INSCODE_B'] = inscode_b
     table['RES_FULL_B'] = res_b
     table['ATOM_B'] = atom_b
+    return table
+
+
+def add_special_cont_types(inputfile, data):
+    """
+    Tries to parse *.amam, *.amri, *.ari and *.ri and add these data as new
+     columns.
+
+    :param inputfile: path to the ARPEGGIO file
+    :param data: pandas DataFrame object
+    :return: returns a modified pandas DataFrame
+    """
+    table = data
+
+    excluded = ["ID_A", "ENTRY_A", "COORDS_A", "ID_B", "ENTRY_B", "COORDS_B",
+                "CONT_TYPE", "INT_TYPE", "SELECT"]
+
+    filename, extension = os.path.splitext(inputfile)
+    input_amam = filename + ".amam"
+    amam = parse_arpeggio_spec_from_file(input_amam, excluded=tuple(excluded),
+                                         int_type="res-res")
+    table = add_contact_info(table, amam, col_name="Amide-Amide", int_type="res-res")
+
+    input_amri = filename + ".amri"
+    amri = parse_arpeggio_spec_from_file(input_amri, excluded=tuple(excluded),
+                                         int_type="res-res")
+    table = add_contact_info(table, amri, col_name="Amide-Aromatic", int_type="res-res")
+
+    input_ri = filename + ".ri"
+    ri = parse_arpeggio_spec_from_file(input_ri, excluded=tuple(excluded),
+                                       int_type="res-res")
+    table = add_contact_info(table, ri, col_name="Aromatic-Aromatic", int_type="res-res")
+
+    excluded.remove("ID_A")
+    excluded.remove("COORDS_A")
+    input_ari = filename + ".ari"
+    ari = parse_arpeggio_spec_from_file(input_ari, excluded=tuple(excluded),
+                                        int_type="atom-res")
+    table = add_contact_info(table, ari, col_name="Atom-Ring", int_type="atom-res")
+
+    return table
+
+
+def add_contact_info(data, info, col_name="Amide-Amide", int_type="res-res"):
+    """
+    Identifies residues or atoms that are observed in both data and info,
+     adding a new column with '1' or '0' as a proxy of observation.
+
+    :param data: pandas DataFrame object
+    :param info: pandas DataFrame object
+    :param col_name: (str) name of the new column (contact type)
+    :param int_type: (str) 'res-res' or 'atom-res'
+    :return: returns a modified pandas DataFrame
+    """
+
+    table = data
+    a2b = ["CHAIN_A", "RES_FULL_A", "ATOM_A", "CHAIN_B", "RES_FULL_B"]
+    b2a = ["CHAIN_B", "RES_FULL_B", "ATOM_B", "CHAIN_A", "RES_FULL_A"]
+    if int_type == 'res-res':
+        a2b.remove("ATOM_A")
+        b2a.remove("ATOM_B")
+
+    def new_column(data, keys):
+        return "_".join([data[k] for k in keys])
+
+    table.is_copy = False
+    table['a2b'] = table.apply(new_column, axis=1, args=(a2b, ))
+    table['b2a'] = table.apply(new_column, axis=1, args=(b2a, ))
+    info['a2b'] = info.apply(new_column, axis=1, args=(a2b, ))
+
+    conts = []
+    for ix in info.index:
+        # always A->B
+        conts.append(info.loc[ix, 'a2b'])
+
+    values = ['0'] * len(table.index)
+    for ix in table.index:
+        # if '_'.join([v for v in table.loc[ix, a2b]]) in conts:
+        if table.loc[ix, 'a2b'] in conts:
+            values[ix] = '1'
+        elif table.loc[ix, 'b2a'] in conts:
+            values[ix] = '1'
+        else:
+            values[ix] = '0'
+
+    table[col_name] = values
+    table = table.drop(['a2b', 'b2a'], axis=1)
     return table
 
 
@@ -406,12 +577,14 @@ class ARPEGGIOreader(object):
                  residue_agg=False, agg_method='minimum',
                  int_filter=False, int_mode='inter-chain',
                  collapsed_cont=False, col_method='full',
-                 ignore_consecutive=False, numb_res=3):
+                 ignore_consecutive=False, numb_res=3,
+                 parse_special=False):
 
         if excluded is None:
             excluded = self.excluded
         self.data = parse_arpeggio_from_file(self.inputfile, excluded=excluded,
                                              add_res_split=add_res_split,
+                                             parse_special=parse_special,
                                              verbose=self.verbose)
         if ignore_consecutive:
             self.data = ignore_consecutive_residues(self.data, numb_res=numb_res)

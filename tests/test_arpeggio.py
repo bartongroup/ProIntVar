@@ -24,7 +24,9 @@ from prointvar.arpeggio import (ARPEGGIOreader, ARPEGGIOgenerator,
                                 get_arpeggio_selected_from_table,
                                 add_arpeggio_res_split,
                                 interaction_modes, residues_aggregation,
-                                collapsed_contacts, ignore_consecutive_residues)
+                                collapsed_contacts, ignore_consecutive_residues,
+                                parse_arpeggio_spec_from_file, add_contact_info,
+                                add_special_cont_types)
 
 from prointvar.config import config as c
 root = os.path.abspath(os.path.dirname(__file__))
@@ -56,6 +58,10 @@ class TestARPEGGIO(unittest.TestCase):
         self.inputcif = "{}{}{}.cif".format(c.db_root, c.db_cif, self.pdbid)
         self.inputarpeggio = "{}{}{}.contacts".format(c.db_root,
                                                       c.db_contacts_generated, self.pdbid)
+        self.input_amam = "{}{}{}.amam".format(c.db_root, c.db_contacts_generated, self.pdbid)
+        self.input_amri = "{}{}{}.amri".format(c.db_root, c.db_contacts_generated, self.pdbid)
+        self.input_ari = "{}{}{}.ari".format(c.db_root, c.db_contacts_generated, self.pdbid)
+        self.input_ri = "{}{}{}.ri".format(c.db_root, c.db_contacts_generated, self.pdbid)
         self.inputarpeggio_fast = "{}{}{}.contacts".format(c.db_root,
                                                            c.db_contacts_generated,
                                                            self.pdbid_small)
@@ -72,6 +78,9 @@ class TestARPEGGIO(unittest.TestCase):
         self.residues_aggregation = residues_aggregation
         self.collapsed_contacts = collapsed_contacts
         self.ignore_consecutive = ignore_consecutive_residues
+        self.parser_spec = parse_arpeggio_spec_from_file
+        self.add_contact_info = add_contact_info
+        self.add_special_cont_types = add_special_cont_types
 
     def tearDown(self):
         """Remove testing framework."""
@@ -82,6 +91,10 @@ class TestARPEGGIO(unittest.TestCase):
         self.inputpdb_fast = None
         self.inputcif = None
         self.inputarpeggio = None
+        self.input_amam = None
+        self.input_amri = None
+        self.input_ari = None
+        self.input_ri = None
         self.inputarpeggio_fast = None
 
         self.emptyfile = None
@@ -96,6 +109,9 @@ class TestARPEGGIO(unittest.TestCase):
         self.residues_aggregation = None
         self.collapsed_contacts = None
         self.ignore_consecutive = None
+        self.parser_spec = None
+        self.add_contact_info = None
+        self.add_special_cont_types = None
 
     def test_file_not_found_reader(self):
         with self.assertRaises(IOError):
@@ -333,6 +349,74 @@ class TestARPEGGIO(unittest.TestCase):
         self.assertEqual(len(data.index), 4609)
         data = self.ignore_consecutive(data, numb_res=5)
         self.assertEqual(len(data.index), 2252)
+
+    def test_parser_spec_amam(self):
+        data = self.parser_spec(self.input_amam, int_type="res-res")
+        self.assertEqual(data.loc[0, 'CHAIN_A'], 'A')
+        self.assertEqual(data.loc[0, 'CHAIN_B'], 'A')
+        self.assertEqual(data.loc[0, 'RES_FULL_A'], '159')
+        self.assertEqual(data.loc[0, 'RES_FULL_B'], '161')
+
+    def test_parser_spec_amri(self):
+        data = self.parser_spec(self.input_amri, int_type="res-res")
+        self.assertEqual(data.loc[0, 'CHAIN_A'], 'A')
+        self.assertEqual(data.loc[0, 'CHAIN_B'], 'A')
+        self.assertEqual(data.loc[0, 'RES_FULL_A'], '121')
+        self.assertEqual(data.loc[0, 'RES_FULL_B'], '120')
+
+    def test_parser_spec_ari(self):
+        data = self.parser_spec(self.input_ari, int_type="atom-res")
+        self.assertEqual(data.loc[0, 'CHAIN_A'], 'B')
+        self.assertEqual(data.loc[0, 'CHAIN_B'], 'B')
+        self.assertEqual(data.loc[0, 'RES_FULL_A'], '222')
+        self.assertEqual(data.loc[0, 'RES_FULL_B'], '220')
+        self.assertEqual(data.loc[0, 'ATOM_A'], 'N')
+
+    def test_parser_spec_ri(self):
+        data = self.parser_spec(self.input_ri, int_type="res-res")
+        self.assertEqual(data.loc[0, 'CHAIN_A'], 'B')
+        self.assertEqual(data.loc[0, 'CHAIN_B'], 'B')
+        self.assertEqual(data.loc[0, 'RES_FULL_A'], '208')
+        self.assertEqual(data.loc[0, 'RES_FULL_B'], '204')
+
+    def test_add_contact_info_res_res(self):
+        data = self.parser(self.inputarpeggio, excluded=("ENTRY_A", "ENTRY_B", "ENTITIES"))
+        info = self.parser_spec(self.input_ri, int_type="res-res", excluded=("ID_A", "ENTRY_A",
+                                                                             "COORDS_A", "ID_B",
+                                                                             "ENTRY_B", "COORDS_B",
+                                                                             "CONT_TYPE", "INT_TYPE",
+                                                                             "SELECT"))
+        table = self.add_contact_info(data, info, int_type="res-res",
+                                      col_name="Aromatic-Aromatic")
+        self.assertIn('Aromatic-Aromatic', list(table))
+
+    def test_add_contact_info_atom_res(self):
+        data = self.parser(self.inputarpeggio, excluded=("ENTRY_A", "ENTRY_B", "ENTITIES"))
+        info = self.parser_spec(self.input_ari, int_type="atom-res", excluded=("ID_A", "ENTRY_A",
+                                                                               "COORDS_A", "ID_B",
+                                                                               "ENTRY_B", "COORDS_B",
+                                                                               "CONT_TYPE", "INT_TYPE",
+                                                                               "SELECT"))
+        table = self.add_contact_info(data, info, int_type="atom-res",
+                                      col_name="Atom-Ring")
+        self.assertIn('Atom-Ring', list(table))
+
+    def test_parse_special_reader(self):
+        reader = self.reader(self.inputarpeggio)
+        data = reader.contacts(parse_special=True)
+        self.assertIn('Amide-Amide', list(data))
+        self.assertIn('Aromatic-Aromatic', list(data))
+        self.assertIn('Amide-Aromatic', list(data))
+        self.assertIn('Atom-Ring', list(data))
+
+    def test_add_special_cont_types(self):
+        reader = self.reader(self.inputarpeggio)
+        data = reader.contacts(parse_special=False)
+        data = self.add_special_cont_types(self.inputarpeggio, data)
+        self.assertIn('Amide-Amide', list(data))
+        self.assertIn('Aromatic-Aromatic', list(data))
+        self.assertIn('Amide-Aromatic', list(data))
+        self.assertIn('Atom-Ring', list(data))
 
 
 if __name__ == '__main__':
