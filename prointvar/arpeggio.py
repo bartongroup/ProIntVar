@@ -41,20 +41,18 @@ from prointvar.utils import row_selector
 from prointvar.utils import string_split
 from prointvar.library import arpeggio_types
 from prointvar.library import arpeggio_col_renames
-from prointvar.library import aa_codes_3to1_extended
 
 from prointvar.config import config
 
 
 def parse_arpeggio_from_file(inputfile, excluded=(), add_res_split=True,
-                             add_group_pdb=True, verbose=False):
+                             verbose=False):
     """
     Parse lines of the ARPEGGIO *contacts* file to get entries from...
 
     :param inputfile: path to the ARPEGGIO file
     :param excluded: option to exclude ARPEGGIO columns
-    :param add_res_split: (boolean) splits ENTRY_* into 'CHAIN', 'ATOM', 'COMP', 'INSCODE'
-    :param add_group_pdb: (boolean) adds a column with 'ATOM' or 'HETATM'
+    :param add_res_split: (boolean) splits ENTRY_* into 'CHAIN', 'ATOM', 'RES', 'INSCODE'
     :param verbose: boolean
     :return: returns a pandas DataFrame
     """
@@ -65,10 +63,13 @@ def parse_arpeggio_from_file(inputfile, excluded=(), add_res_split=True,
     # example lines
     # format documentation at https://github.com/biomadeira/arpeggio
     """
-    B/376/ASN/ND2	B/374/ILE/O	0	0	0	0	1	0	0	0	0	0	0	0	0	0	0	4.971	1.901	INTRA_SELECTION
-    B/376/ASN/CB	B/374/ILE/O	0	0	0	0	1	0	0	0	0	0	0	0	0	0	0	4.538	1.318	INTRA_SELECTION
-    B/376/ASN/CA	B/374/ILE/O	0	0	0	0	1	0	0	0	0	0	0	0	0	0	0	4.202	0.982	INTRA_SELECTION
-    B/376/ASN/N	    B/374/ILE/O	0	0	0	0	1	0	0	0	0	0	0	0	0	1	0	3.298	0.228	INTRA_SELECTION
+    B/376/ND2	B/374/O	0	0	0	0	1	0	0	0	0	0	0	0	0	0	0	4.971	1.901	INTRA_SELECTION
+    B/376/CB	B/374/O	0	0	0	0	1	0	0	0	0	0	0	0	0	0	0	4.538	1.318	INTRA_SELECTION
+    B/376/CA	B/374/O	0	0	0	0	1	0	0	0	0	0	0	0	0	0	0	4.202	0.982	INTRA_SELECTION
+    B/376/N	B/374/O	0	0	0	0	1	0	0	0	0	0	0	0	0	1	0	3.298	0.228	INTRA_SELECTION
+    B/374/C	B/376/CA	0	0	0	0	1	0	0	0	0	0	0	0	0	0	0	4.928	1.528	INTRA_SELECTION
+    B/374/C	B/376/N	0	0	0	0	1	0	0	0	0	0	0	0	0	0	0	3.819	0.569	INTRA_SELECTION
+    B/375/NE2	B/377/N	0	0	0	0	1	0	0	0	0	0	0	0	0	0	0	4.944	1.844	INTRA_SELECTION
     """
 
     if not os.path.isfile(inputfile):
@@ -88,9 +89,6 @@ def parse_arpeggio_from_file(inputfile, excluded=(), add_res_split=True,
     # split ENTRIES into CHAIN, RES, and ATOM
     if add_res_split:
         table = add_arpeggio_res_split(table)
-
-    if add_group_pdb:
-        table = add_arpeggio_group_pdb(table)
 
     if excluded is not None:
         assert type(excluded) is tuple
@@ -122,7 +120,7 @@ def add_arpeggio_res_split(data):
     Also flips the order or the contacts (i.e. from B->A to A->B)
     Atom-atom pairs are only provided A->B.
 
-    adds: 'CHAIN', 'RES', 'RES_FULL', 'COMP', 'ATOM', and 'INSCODE'
+    adds: 'CHAIN', 'RES', 'RES_FULL', 'ATOM', and 'INSCODE'
 
     :param data: pandas DataFrame object
     :return: returns a modified pandas DataFrame
@@ -155,24 +153,18 @@ def add_arpeggio_res_split(data):
     def get_res_full_id(entry):
         return entry.split('/')[1]
 
-    def get_comp_id(entry):
-        values = string_split(entry.split('/')[2])
-        return values[0]
-
     def get_atom_id(entry):
-        return entry.split('/')[3]
+        return entry.split('/')[2]
 
     chain_a = []
     res_a = []
     inscode_a = []
     res_full_a = []
-    comp_a = []
     atom_a = []
     chain_b = []
     res_b = []
     inscode_b = []
     res_full_b = []
-    comp_b = []
     atom_b = []
     for ix in table.index:
         chain1 = get_chain_id(table.loc[ix, 'ENTRY_A'])
@@ -188,13 +180,11 @@ def add_arpeggio_res_split(data):
         res_a.append(get_res_id(table.loc[ix, entry1]))
         inscode_a.append(get_icode_id(table.loc[ix, entry1]))
         res_full_a.append(get_res_full_id(table.loc[ix, entry1]))
-        comp_a.append(get_comp_id(table.loc[ix, entry1]))
         atom_a.append(get_atom_id(table.loc[ix, entry1]))
         chain_b.append(get_chain_id(table.loc[ix, entry2]))
         res_b.append(get_res_id(table.loc[ix, entry2]))
         inscode_b.append(get_icode_id(table.loc[ix, entry2]))
         res_full_b.append(get_res_full_id(table.loc[ix, entry2]))
-        comp_b.append(get_comp_id(table.loc[ix, entry2]))
         atom_b.append(get_atom_id(table.loc[ix, entry2]))
 
     assert len(chain_a) == len(table)
@@ -202,45 +192,18 @@ def add_arpeggio_res_split(data):
     table['RES_A'] = res_a
     table['INSCODE_A'] = inscode_a
     table['RES_FULL_A'] = res_a
-    table['COMP_A'] = comp_a
     table['ATOM_A'] = atom_a
     table['CHAIN_B'] = chain_b
     table['RES_B'] = res_b
     table['INSCODE_B'] = inscode_b
     table['RES_FULL_B'] = res_b
-    table['COMP_B'] = comp_b
     table['ATOM_B'] = atom_b
-    return table
-
-
-def add_arpeggio_group_pdb(data):
-    """
-    Utility that adds new columns to the table.
-    Adds new columns: 'GROUP_A' and 'GROUP_B'
-
-    :param data: pandas DataFrame object
-    :return: returns a modified pandas DataFrame
-    """
-
-    table = data
-
-    def get_group_pdb(data, key):
-        # this maybe a bit crude way of assigning this value
-        if data[key] in aa_codes_3to1_extended:
-            return 'ATOM'
-        else:
-            return 'HETATM'
-
-    table.is_copy = False
-    table['GROUP_A'] = table.apply(get_group_pdb, axis=1, args=('COMP_A', ))
-    table['GROUP_B'] = table.apply(get_group_pdb, axis=1, args=('COMP_B', ))
     return table
 
 
 def get_arpeggio_selected_from_table(data, chain_A=None, chain_B=None,
                                      res_A=None, res_B=None,
-                                     res_full_A=None, res_full_B=None,
-                                     group_A=None, group_B=None):
+                                     res_full_A=None, res_full_B=None):
     """
     Utility that filters a pandas DataFrame by the input tuples.
 
@@ -251,8 +214,6 @@ def get_arpeggio_selected_from_table(data, chain_A=None, chain_B=None,
     :param res_B: (tuple) res IDs or None (acceptor)
     :param res_full_A: (tuple) res IDs + inscode or None (donor)
     :param res_full_B: (tuple) res IDs + inscode or None (acceptor)
-    :param group_A: (tuple) group_PDB or None (donor)
-    :param group_B: (tuple) group_PDB or None (acceptor)
     :return: returns a modified pandas DataFrame
     """
 
@@ -277,12 +238,6 @@ def get_arpeggio_selected_from_table(data, chain_A=None, chain_B=None,
     if res_full_B is not None:
         table = row_selector(table, 'RES_FULL_B', res_full_B, method="isin")
 
-    if group_A is not None:
-        table = row_selector(table, 'GROUP_A', res_A, method="equals")
-
-    if group_B is not None:
-        table = row_selector(table, 'GROUP_B', res_B, method="equals")
-
     return table
 
 
@@ -297,7 +252,7 @@ def residues_aggregation(data, agg_method='unique'):
     table = data
     agg_generic = agg_method
     agg_method_origin = agg_method
-    agg_cols = ['CHAIN_A', 'RES_FULL_A', 'COMP_A', 'CHAIN_B', 'RES_FULL_B', 'COMP_B']
+    agg_cols = ['CHAIN_A', 'RES_FULL_A', 'CHAIN_B', 'RES_FULL_B']
     if agg_method not in ['first', 'unique', 'minimum', 'maximum']:
         raise ValueError('Method {} is not currently implemented...'
                          ''.format(agg_method))
@@ -339,10 +294,10 @@ def residues_aggregation(data, agg_method='unique'):
 def interaction_modes(data, int_mode='inter-chain'):
     """
     Gets the contacts filtered base on the entities that are interacting.
-    Interaction modes possible: inter-chain, intra-chain and hetatm.
+    Interaction modes possible: inter-chain and intra-chain.
 
     :param data: pandas DataFrame object
-    :param int_mode: current values: 'inter-chain', 'intra-chain' and 'hetatm'
+    :param int_mode: current values: 'inter-chain' and 'intra-chain'
     :return: returns a modified pandas DataFrame
     """
 
@@ -351,8 +306,6 @@ def interaction_modes(data, int_mode='inter-chain'):
         table = table.loc[table['CHAIN_A'] != table['CHAIN_B']]
     elif int_mode == 'intra-chain':
         table = table.loc[table['CHAIN_A'] == table['CHAIN_B']]
-    elif int_mode == 'hetatm':
-        table = table.loc[(table['GROUP_A'] == 'HETATM') | (table['GROUP_B'] == 'HETATM')]
     else:
         raise ValueError('Interaction mode {} is not currently implemented...'
                          ''.format(int_mode))
@@ -449,7 +402,7 @@ class ARPEGGIOreader(object):
     def read(self, **kwargs):
         return self.contacts(**kwargs)
 
-    def contacts(self, excluded=None, add_res_split=True, add_group_pdb=True,
+    def contacts(self, excluded=None, add_res_split=True,
                  residue_agg=False, agg_method='minimum',
                  int_filter=False, int_mode='inter-chain',
                  collapsed_cont=False, col_method='full',
@@ -459,7 +412,6 @@ class ARPEGGIOreader(object):
             excluded = self.excluded
         self.data = parse_arpeggio_from_file(self.inputfile, excluded=excluded,
                                              add_res_split=add_res_split,
-                                             add_group_pdb=add_group_pdb,
                                              verbose=self.verbose)
         if ignore_consecutive:
             self.data = ignore_consecutive_residues(self.data, numb_res=numb_res)
@@ -548,10 +500,23 @@ class ARPEGGIOgenerator(object):
 
         filename, extension = os.path.splitext(self.inputfile)
         input_arpeggio = filename + ".pdb"
-        output_arpeggio = filename + ".contacts"
+        output_arpeggio = filename + ".contacts" # atom-atom contact information
         output_bs_contacts = filename + ".bs_contacts"
-        output_atomtypes = filename + ".atomtypes"
+        output_atomtypes = filename + ".atomtypes" # atom types
         output_hydro = filename + "_hydrogenated.pdb"
+
+        output_amam = filename + ".amam" # res-res amide-amide
+        output_amri = filename + ".amri" # res-res amide-ring
+        output_ari = filename + ".ari" # atom-res atom-ring
+        output_ri = filename + ".ri" # res-res aromatic ring-aromatic ring
+        output_rings = filename + ".rings" # list of res rings
+        output_residue_sifts = filename + ".residue_sifts"
+        output_sift = filename + ".sift"
+        output_siftmatch = filename + ".siftmatch"
+        output_polarmatch = filename + ".polarmatch"
+        output_specific_sift = filename + ".specific.sift"
+        output_specific_siftmatch = filename + ".specific.siftmatch"
+        output_specific_polarmatch = filename + ".specific.polarmatch"
 
         if hydro_method in ["hbplus", "reduce"]:
             input_arpeggio = filename + ".h.pdb"
@@ -566,6 +531,15 @@ class ARPEGGIOgenerator(object):
         # mv the automatically generated file -> to the provided outputfile
         if output_arpeggio != self.outputfile:
             shutil.copyfile(output_arpeggio, self.outputfile)
+            nfilename, nextension = os.path.splitext(self.outputfile)
+            new_output_amam = nfilename + ".amam"
+            new_output_amri = nfilename + ".amri"
+            new_output_ari = nfilename + ".ari"
+            new_output_ri = nfilename + ".ri"
+            shutil.copyfile(output_amam, new_output_amam)
+            shutil.copyfile(output_amri, new_output_amri)
+            shutil.copyfile(output_ari, new_output_ari)
+            shutil.copyfile(output_ri, new_output_ri)
 
         if hydro_method == "arpeggio":
             shutil.copyfile(output_hydro, self.inputfile_h)
@@ -574,9 +548,22 @@ class ARPEGGIOgenerator(object):
             # remove output files
             if output_arpeggio != self.outputfile:
                 lazy_file_remover(output_arpeggio)
+                lazy_file_remover(output_amam)
+                lazy_file_remover(output_amri)
+                lazy_file_remover(output_ari)
+                lazy_file_remover(output_ri)
+
             lazy_file_remover(output_bs_contacts)
             lazy_file_remover(output_atomtypes)
             lazy_file_remover(output_hydro)
+            lazy_file_remover(output_rings)
+            lazy_file_remover(output_residue_sifts)
+            lazy_file_remover(output_sift)
+            lazy_file_remover(output_siftmatch)
+            lazy_file_remover(output_polarmatch)
+            lazy_file_remover(output_specific_sift)
+            lazy_file_remover(output_specific_siftmatch)
+            lazy_file_remover(output_specific_polarmatch)
 
     def run(self, override=False, clean_output=True, save_new_pdb=False,
             hydro_method="arpeggio"):

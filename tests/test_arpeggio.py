@@ -22,7 +22,7 @@ from prointvar.mmcif import MMCIFreader, MMCIFwriter
 from prointvar.arpeggio import (ARPEGGIOreader, ARPEGGIOgenerator,
                                 parse_arpeggio_from_file,
                                 get_arpeggio_selected_from_table,
-                                add_arpeggio_res_split, add_arpeggio_group_pdb,
+                                add_arpeggio_res_split,
                                 interaction_modes, residues_aggregation,
                                 collapsed_contacts, ignore_consecutive_residues)
 
@@ -68,7 +68,6 @@ class TestARPEGGIO(unittest.TestCase):
         self.generator = ARPEGGIOgenerator
         self.filter = get_arpeggio_selected_from_table
         self.add_arpeggio_res_split = add_arpeggio_res_split
-        self.add_arpeggio_group_pdb = add_arpeggio_group_pdb
         self.interaction_modes = interaction_modes
         self.residues_aggregation = residues_aggregation
         self.collapsed_contacts = collapsed_contacts
@@ -93,7 +92,6 @@ class TestARPEGGIO(unittest.TestCase):
         self.generator = None
         self.filter = None
         self.add_arpeggio_res_split = None
-        self.add_arpeggio_group_pdb = None
         self.interaction_modes = None
         self.residues_aggregation = None
         self.collapsed_contacts = None
@@ -157,6 +155,10 @@ class TestARPEGGIO(unittest.TestCase):
         self.assertTrue(os.path.isfile(inputarpeggio))
         os.remove(inputpdb_new)
         os.remove(inputarpeggio)
+        os.remove("{}{}{}.amam".format(c.db_root, c.db_cif, pdbid))
+        os.remove("{}{}{}.amri".format(c.db_root, c.db_cif, pdbid))
+        os.remove("{}{}{}.ari".format(c.db_root, c.db_cif, pdbid))
+        os.remove("{}{}{}.ri".format(c.db_root, c.db_cif, pdbid))
 
     def test_generator_pdb(self):
         if os.path.isfile(self.inputpdb):
@@ -241,25 +243,13 @@ class TestARPEGGIO(unittest.TestCase):
 
     def test_add_split_res(self):
         reader = self.reader(self.inputarpeggio)
-        data = reader.contacts(excluded=self.excluded, add_res_split=False,
-                               add_group_pdb=False)
+        data = reader.contacts(excluded=self.excluded, add_res_split=False)
         self.assertNotIn('CHAIN_A', data)
         self.assertNotIn('CHAIN_B', data)
         data = self.add_arpeggio_res_split(data)
         self.assertIn('CHAIN_A', data)
         self.assertIn('CHAIN_B', data)
         self.assertEqual(data.loc[0, 'CHAIN_A'], 'B')
-
-    def test_add_group_pdb(self):
-        reader = self.reader(self.inputarpeggio)
-        data = reader.contacts(excluded=self.excluded, add_group_pdb=False)
-        self.assertNotIn('GROUP_A', data)
-        self.assertNotIn('GROUP_B', data)
-        data = self.add_arpeggio_group_pdb(data)
-        self.assertIn('GROUP_A', data)
-        self.assertIn('GROUP_B', data)
-        self.assertEqual(data.loc[0, 'GROUP_A'], 'ATOM')
-        self.assertEqual(data.loc[0, 'GROUP_B'], 'ATOM')
 
     def test_interaction_modes(self):
         reader = self.reader(self.inputarpeggio)
@@ -270,10 +260,10 @@ class TestARPEGGIO(unittest.TestCase):
         self.assertEqual(27135, len(data))
         self.assertEqual(data.loc[0, 'CHAIN_A'], data.loc[0, 'CHAIN_B'])
         data = reader.contacts()
-        data = self.interaction_modes(data, int_mode='hetatm')
-        self.assertEqual(41, len(data))
-        self.assertEqual(data.loc[0, 'COMP_A'], 'GLU')
-        self.assertEqual(data.loc[0, 'COMP_B'], 'FE')
+        data = self.interaction_modes(data, int_mode='inter-chain')
+        self.assertEqual(285, len(data))
+        self.assertEqual(data.loc[0, 'RES_FULL_A'], '368')
+        self.assertEqual(data.loc[0, 'RES_FULL_B'], '368')
 
     def test_collapsed_contacts(self):
         reader = self.reader(self.inputarpeggio)
