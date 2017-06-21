@@ -618,44 +618,39 @@ class ARPEGGIOgenerator(object):
     def __init__(self, inputfile, outputfile=None, verbose=False):
         """
         :param inputfile: Needs to point to a valid PDB or mmCIF file.
-        :param outputfile: if not provided will use the same file name and <.contacts> extension
+        :param outputfile: if not provided will use the same file name and
+          <.contacts> extension
         :param verbose: boolean
         """
-
-        self.inputfile_back = inputfile
         self.inputfile = inputfile
-        self.inputfile_h = None
+        self.inputfile_back = inputfile
         self.outputfile = outputfile
         self.verbose = verbose
         self.data = None
+        self.inputfile_h = None
 
-        # generate outputfile if missing
-        self._generate_output()
+        if not os.path.isfile(self.inputfile):
+            raise IOError("{} not available or could not be read..."
+                          "".format(self.inputfile))
 
-        if not os.path.isfile(inputfile):
-            raise IOError("{} not available or could not be read...".format(inputfile))
-
-        # inputfile needs to be in PDB format
-        filename, extension = os.path.splitext(inputfile)
-        if extension in ['.pdb', '.ent', '.cif']:
-            self._generate_pdb()
-        else:
+        # inputfile needs to be in PDB or mmCIF format
+        filename, extension = os.path.splitext(self.inputfile)
+        if extension not in ['.pdb', '.ent', '.cif']:
             raise ValueError("{} is expected to be in mmCIF or PDB format..."
-                             "".format(inputfile))
+                             "".format(self.inputfile))
 
     def _generate_output(self):
-        if not self.outputfile:
-            filename, extension = os.path.splitext(self.inputfile)
-            self.outputfile = filename + ".contacts"
+        filename, extension = os.path.splitext(self.inputfile)
+        self.outputfile = filename + ".contacts"
 
-    def _generate_pdb(self):
+    def _generate_pdb(self, override=False):
         filename, extension = os.path.splitext(self.inputfile)
         self.inputfile = filename + "_new.pdb"
         w = MMCIFwriter(inputfile=None, outputfile=self.inputfile)
         r = MMCIFreader(inputfile=self.inputfile_back)
         data = r.atoms(remove_altloc=True, reset_atom_id=True,
                        remove_partial_res=True, format_type=None)
-        w.run(data=data, format_type="pdb", category="auth")
+        w.run(data=data, format_type="pdb", category="auth", override=override)
 
     def _generate_pdb_with_hydrogens(self, hydro_method="hbplus", override=False):
         if hydro_method == "hbplus":
@@ -738,15 +733,12 @@ class ARPEGGIOgenerator(object):
             lazy_file_remover(output_specific_siftmatch)
             lazy_file_remover(output_specific_polarmatch)
 
-    def run(self, override=False, clean_output=True, save_new_pdb=False,
-            hydro_method="arpeggio"):
+    def run(self, hydro_method="arpeggio", override=False,
+            clean_output=True, save_new_input=False):
 
-        # get PDB with explicit hydrogen atoms
-        filename, extension = os.path.splitext(self.inputfile_back)
-        self.inputfile_h = filename + ".h.pdb"
-        if hydro_method in ["hbplus", "reduce"]:
-            self._generate_pdb_with_hydrogens(hydro_method=hydro_method,
-                                              override=override)
+        # generate outputfile if missing
+        if not self.outputfile:
+            self._generate_output()
 
         if not os.path.exists(self.outputfile) or override:
             if os.path.isfile(config.python_exe) and os.path.exists(config.arpeggio_bin):
@@ -761,17 +753,28 @@ class ARPEGGIOgenerator(object):
             else:
                 raise IOError('ARPEGGIO executable is not available...')
 
-            # run arpeggio and generate output
+            # inputfile needs to be in PDB format
+            filename, extension = os.path.splitext(self.inputfile)
+            self._generate_pdb(override=override)
+
+            # get PDB with explicit hydrogen atoms
+            self.inputfile_h = filename + ".h.pdb"
+            if hydro_method in ["hbplus", "reduce"]:
+                self._generate_pdb_with_hydrogens(hydro_method=hydro_method,
+                                                  override=override)
+
+            # run arpeggio and generate output - also clean unnecessary output
             self._run(python_path, python_exe, arpeggio_bin, clean_output=clean_output,
                       hydro_method=hydro_method)
 
+            # clean the new PDB input file generated
+            if not save_new_input:
+                if self.inputfile != self.inputfile_back:
+                    lazy_file_remover(self.inputfile)
+                    lazy_file_remover(self.inputfile_h)
+
         else:
             flash('ARPEGGIO for {} already available...'.format(self.outputfile))
-
-        if self.inputfile.endswith('_new.pdb') and not save_new_pdb:
-            lazy_file_remover(self.inputfile)
-        if not save_new_pdb:
-            lazy_file_remover(self.inputfile_h)
         return
 
 

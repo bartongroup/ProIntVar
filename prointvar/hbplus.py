@@ -183,40 +183,38 @@ class HBPLUSgenerator(object):
     def __init__(self, inputfile, outputfile=None, verbose=False):
         """
         :param inputfile: Needs to point to a valid PDB or mmCIF file.
-        :param outputfile: if not provided will use the same file name and <.hb2> extension
+        :param outputfile: if not provided will use the same file name and
+          <.hb2> extension
         :param verbose: boolean
         """
         self.inputfile = inputfile
+        self.inputfile_back = inputfile
         self.outputfile = outputfile
         self.verbose = verbose
         self.data = None
 
-        # generate outputfile if missing
-        self._generate_output()
+        if not os.path.isfile(self.inputfile):
+            raise IOError("{} not available or could not be read..."
+                          "".format(self.inputfile))
 
-        if not os.path.isfile(inputfile):
-            raise IOError("{} not available or could not be read...".format(inputfile))
-
-        # inputfile needs to be in PDB format
-        filename, extension = os.path.splitext(inputfile)
-        if extension in ['.pdb', '.ent']:
-            pass
-        elif extension in ['.cif']:
-            self._generate_pdb_from_mmcif()
-        else:
+        # inputfile needs to be in PDB or mmCIF format
+        filename, extension = os.path.splitext(self.inputfile)
+        if extension not in ['.pdb', '.ent', '.cif']:
             raise ValueError("{} is expected to be in mmCIF or PDB format..."
-                             "".format(inputfile))
+                             "".format(self.inputfile))
 
-    def _generate_output(self):
-        if not self.outputfile:
-            filename, extension = os.path.splitext(self.inputfile)
+    def _generate_output(self, hydro_pdb_out=False):
+        filename, extension = os.path.splitext(self.inputfile)
+        if hydro_pdb_out:
+            self.outputfile = filename + ".h.pdb"
+        else:
             self.outputfile = filename + ".hb2"
 
-    def _generate_pdb_from_mmcif(self):
+    def _generate_pdb(self, override=False):
         filename, extension = os.path.splitext(self.inputfile)
-        w = MMCIFwriter(inputfile=self.inputfile, outputfile=filename + ".pdb")
-        w.run(format_type="pdb")
-        self.inputfile = filename + ".pdb"
+        self.inputfile = filename + "_new.pdb"
+        w = MMCIFwriter(inputfile=self.inputfile_back, outputfile=self.inputfile)
+        w.run(format_type="pdb", override=override)
 
     def _run(self, hbplus_bin, clean_bin=None, run_clean=True,
              clean_output=True, hydro_pdb_out=False):
@@ -252,6 +250,7 @@ class HBPLUSgenerator(object):
 
         # mv the automatically generated file -> to the provided outputfile
         if hydro_pdb_out:
+            # this means all we care about is the '*.h.pdb' file
             if output_hbplus_h != self.outputfile:
                 shutil.copyfile(output_hbplus_h, self.outputfile)
         else:
@@ -273,8 +272,12 @@ class HBPLUSgenerator(object):
             lazy_file_remover("./hbdebug.dat")
             lazy_file_remover("./fort.15")
 
-    def run(self, override=False, run_clean=False, clean_output=True,
-            hydro_pdb_out=False):
+    def run(self, run_clean=False, hydro_pdb_out=False, override=False,
+            clean_output=True, save_new_input=False):
+
+        # generate outputfile if missing
+        if not self.outputfile:
+            self._generate_output(hydro_pdb_out=hydro_pdb_out)
 
         if not os.path.exists(self.outputfile) or override:
             if os.path.isfile(config.hbplus_bin):
@@ -290,9 +293,19 @@ class HBPLUSgenerator(object):
             else:
                 raise IOError('HBPLUS executables are not available...')
 
-            # run hbplus and generate output
+            # inputfile needs to be in PDB format
+            filename, extension = os.path.splitext(self.inputfile)
+            if extension == '.cif':
+                self._generate_pdb(override=override)
+
+            # run hbplus and generate output - also clean unnecessary output
             self._run(hbplus_bin, clean_bin, run_clean=run_clean,
                       clean_output=clean_output, hydro_pdb_out=hydro_pdb_out)
+
+            # clean the new PDB input file generated
+            if not save_new_input:
+                if self.inputfile != self.inputfile_back:
+                    lazy_file_remover(self.inputfile)
 
         else:
             flash('HBPLUS for {} already available...'.format(self.outputfile))

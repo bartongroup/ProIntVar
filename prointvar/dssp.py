@@ -365,7 +365,8 @@ class DSSPgenerator(object):
     def __init__(self, inputfile, outputfile=None, verbose=False):
         """
         :param inputfile: Needs to point to a valid PDB or mmCIF file.
-        :param outputfile: if not provided will use the same file name and <.dssp> extension
+        :param outputfile: if not provided will use the same file name and
+          <.dssp> extension
         :param verbose: boolean
         """
         self.inputfile = inputfile
@@ -373,22 +374,19 @@ class DSSPgenerator(object):
         self.verbose = verbose
         self.data = None
 
-        # generate outputfile if missing
-        self._generate_output()
-
-        if not os.path.isfile(inputfile):
-            raise IOError("{} not available or could not be read...".format(inputfile))
+        if not os.path.isfile(self.inputfile):
+            raise IOError("{} not available or could not be read..."
+                          "".format(self.inputfile))
 
         # inputfile needs to be in PDB or mmCIF format
-        filename, extension = os.path.splitext(inputfile)
+        filename, extension = os.path.splitext(self.inputfile)
         if extension not in ['.pdb', '.ent', '.cif']:
             raise ValueError("{} is expected to be in mmCIF or PDB format..."
-                             "".format(inputfile))
+                             "".format(self.inputfile))
 
     def _generate_output(self):
-        if not self.outputfile:
-            filename, extension = os.path.splitext(self.inputfile)
-            self.outputfile = filename + ".dssp"
+        filename, extension = os.path.splitext(self.inputfile)
+        self.outputfile = filename + ".dssp"
 
     def _run(self, dssp_bin):
         cmd = "{} -i {} -o {}".format(dssp_bin, self.inputfile, self.outputfile)
@@ -397,6 +395,10 @@ class DSSPgenerator(object):
             raise IOError("DSSP output not generated for {}".format(self.outputfile))
 
     def run(self, override=False):
+        # generate outputfile if missing
+        if not self.outputfile:
+            self._generate_output()
+
         if not os.path.exists(self.outputfile) or override:
             if os.path.isfile(config.dssp_bin):
                 dssp_bin = config.dssp_bin

@@ -1005,20 +1005,23 @@ class MMCIFwriter(object):
         self.verbose = verbose
         self.data = None
 
-        # generate outputfile if missing
-        if self.outputfile is None:
-            self._generate_output()
-
         if inputfile is not None and not os.path.isfile(inputfile):
             raise IOError("{} not available or could not be read...".format(inputfile))
 
-    def _generate_output(self):
+    def _generate_output(self, format_type="cif"):
         if not self.outputfile:
             filename, extension = os.path.splitext(self.inputfile)
-            self.outputfile = filename + "_filtered.cif"
+            self.outputfile = filename + ".cif"
+            if format_type == "pdb":
+                self.outputfile = filename + ".cif"
 
     def run(self, data=None, chain=None, res=None, atom=None, lines=None, category='label',
             override=False, format_type="mmcif", pro_format=False):
+
+        # generate outputfile if missing
+        if self.outputfile is None:
+            self._generate_output(format_type=format_type)
+
         # writes a new mmCIF with selected chains, residues, atoms, or lines
         if data is None:
             r = MMCIFreader(inputfile=self.inputfile)
