@@ -187,7 +187,8 @@ def table_merger(mmcif_table=None, dssp_table=None, sifts_table=None):
 
 
 def table_generator(uniprot_id=None, pdb_id=None, chain=None, res=None,
-                    site=None, atom=None, lines=None, bio=True, add_dssp=True):
+                    site=None, atom=None, lines=None, bio=True, add_dssp=True,
+                    dssp_unbound=False, override=False):
     """
     Simplifies the process of generating tables and merging them.
     
@@ -200,6 +201,8 @@ def table_generator(uniprot_id=None, pdb_id=None, chain=None, res=None,
     :param lines: 'ATOM' or 'HETATM' or None (both)
     :param bio: boolean for using AsymUnits or BioUnits
     :param add_dssp: boolean
+    :param dssp_unbound: (boolean) if true runs both DSSP bound and unbound
+    :param override: boolean
     """
 
     # generates the tables for the uniprot_id, pdb_id
@@ -239,24 +242,44 @@ def table_generator(uniprot_id=None, pdb_id=None, chain=None, res=None,
 
         # DSSP table
         if add_dssp:
+            # (default) bound DSSP
             if bio:
                 outputdssp = "{}{}{}_bio.dssp" \
                             "".format(config.db_root, config.db_dssp_generated, pdb_id)
             else:
                 outputdssp = "{}{}{}.dssp" \
                             "".format(config.db_root, config.db_dssp_generated, pdb_id)
-            w = DSSPgenerator(inputcif, outputdssp)
-            w.run()
+            if not outputdssp or override:
+                w = DSSPgenerator(inputcif, outputdssp)
+                w.run(override=override)
             if os.path.exists(outputdssp):
                 r = DSSPreader(outputdssp)
-                try:
-                    dssp_table = r.residues(add_ss_reduced=True, add_rsa_class=True)
-                except IndexError:
-                    print(outputdssp)
-                    raise IndexError
-                dssp_table = get_dssp_selected_from_table(dssp_table, chain_full=chain, res=res)
+                dssp_table = r.residues(add_ss_reduced=True, add_rsa_class=True)
+                dssp_table = get_dssp_selected_from_table(dssp_table,
+                                                          chain_full=chain, res=res)
             else:
                 dssp_table = None
+
+            if dssp_unbound and dssp_table is not None:
+                # unbound DSSP
+                if bio:
+                    outputdssp_unb = "{}{}{}_bio_unbound.dssp" \
+                                     "".format(config.db_root, config.db_dssp_generated, pdb_id)
+                else:
+                    outputdssp_unb = "{}{}{}_unbound.dssp" \
+                                     "".format(config.db_root, config.db_dssp_generated, pdb_id)
+
+                if not outputdssp_unb or override:
+                    w = DSSPgenerator(inputcif, outputdssp_unb)
+                    w.run(override=override, run_unbound=dssp_unbound)
+                if os.path.exists(outputdssp_unb):
+                    r = DSSPreader(outputdssp_unb)
+                    dssp_unb_table = r.residues(add_ss_reduced=True, add_rsa_class=True,
+                                                reset_res_id=True)
+                    dssp_unb_table = get_dssp_selected_from_table(dssp_unb_table,
+                                                                  chain_full=chain, res=res)
+                    # merge bound and unbound
+                    dssp_table = dssp_dssp_table_merger(dssp_table, dssp_unb_table)
         else:
             dssp_table = None
 
@@ -344,12 +367,14 @@ class TableMerger(object):
         return self.merged_table
 
     def run(self, uniprot_id=None, pdb_id=None, chain=None, res=None, site=None,
-            atom=None, lines=None, bio=True, add_dssp=True, outputfile=None, override=False):
+            atom=None, lines=None, bio=True, add_dssp=True, dssp_unbound=False,
+            outputfile=None, override=False):
         """Generates the tables, merges and stores"""
 
         self.mmcif_table, self.dssp_table, self.sifts_table = \
             table_generator(uniprot_id=uniprot_id, pdb_id=pdb_id, chain=chain, res=res,
-                            site=site, atom=atom, lines=lines, bio=bio, add_dssp=add_dssp)
+                            site=site, atom=atom, lines=lines, bio=bio, add_dssp=add_dssp,
+                            dssp_unbound=dssp_unbound, override=override)
         self.merged_table = self.merge(outputfile=outputfile, override=override)
 
         if self.store:

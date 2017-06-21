@@ -124,6 +124,7 @@ class TestMerger(unittest.TestCase):
         d = DSSPreader(cls.outputdssp_A)
         cls.dssp_unbound = d.residues(add_full_chain=True, add_ss_reduced=True,
                                       add_rsa=True, add_rsa_class=True)
+        os.remove(cls.outputdssp_A)
 
         d = SIFTSreader(cls.inputsifts)
         cls.sifts = d.read(add_regions=True, add_dbs=False)
@@ -331,6 +332,23 @@ class TestMerger(unittest.TestCase):
         self.assertEqual('118', table.loc[329, 'RES'])
         self.assertEqual('VAL', table.loc[329, 'PDB_dbResName'])
         self.assertEqual('V', table.loc[329, 'UniProt_dbResName'])
+
+    def test_table_generator_full_dssp(self):
+        mmcif_table, dssp_table, sifts_table = \
+            self.generator(uniprot_id=None, pdb_id=self.pdbid, chain=None,
+                           res=None, site=None, atom=('CA',), lines=None,
+                           bio=False, add_dssp=True, dssp_unbound=True)
+
+        table = self.table_merger(mmcif_table, dssp_table, sifts_table)
+        self.assertIn('CHAIN_FULL', table)
+        self.assertIn('CHAIN_FULL_UNB', table)
+        self.assertIn('RSA', table)
+        self.assertIn('RSA_UNB', table)
+        # values
+        self.assertEqual(80.488, table.loc[648, 'RSA'])
+        self.assertEqual(80.488, table.loc[648, 'RSA_UNB'])
+        self.assertEqual(63.314, table.loc[649, 'RSA'])
+        self.assertEqual(74.556, table.loc[649, 'RSA_UNB'])
 
     def test_table_merger_get_filename(self):
         filename = self.merger()._get_filename(pdb_id=self.pdbid, bio=True)
