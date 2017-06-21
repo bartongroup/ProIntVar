@@ -47,10 +47,10 @@ class TestDSSP(unittest.TestCase):
 
         self.pdbid = '2pah'
         self.inputcif = "{}{}{}.cif".format(c.db_root, c.db_cif, self.pdbid)
-        self.inputdssp = "{}{}{}.dssp".format(c.db_root, c.tmp_dir_local, self.pdbid)
+        self.inputdssp = "{}{}{}.dssp".format(c.db_root, c.db_dssp_generated, self.pdbid)
 
         self.inputbiocif = "{}{}{}.cif".format(c.db_root, c.db_cif_biounit, self.pdbid)
-        self.inputbiodssp = "{}{}{}_bio.dssp".format(c.db_root, c.tmp_dir_local, self.pdbid)
+        self.inputbiodssp = "{}{}{}_bio.dssp".format(c.db_root, c.db_dssp_generated, self.pdbid)
 
         self.emptyfile = "{}{}{}.tmp".format(c.db_root, c.tmp_dir_local, self.pdbid)
         self.notfound = ""
@@ -273,6 +273,16 @@ class TestDSSP(unittest.TestCase):
         data = reader.read(add_rsa=True)
         data = self.add_rsa_class(data)
         self.assertEqual('Surface', data.loc[2, 'RSA_CLASS'])
+
+    def test_generator_run_unbound(self):
+        if os.path.isfile(self.inputcif):
+            filename, extension = os.path.splitext(self.inputdssp)
+            g = self.generator(self.inputcif, filename + '_unbound.dssp')
+            g.run(run_unbound=True, override=True)
+            self.assertTrue(os.path.isfile(filename + '_unbound.dssp'))
+        else:
+            raise IOError("%s" % self.inputcif)
+
 
 if __name__ == '__main__':
     suite = unittest.TestLoader().loadTestsFromTestCase(TestDSSP)

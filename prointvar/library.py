@@ -53,7 +53,7 @@ mmcif_types = {
 }
 
 dssp_types = {
-    'LINE': str,
+    'LINE': int,
     'RES': str,
     'CHAIN': str,
     'CHAIN_FULL': str,

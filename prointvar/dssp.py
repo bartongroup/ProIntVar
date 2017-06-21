@@ -13,7 +13,7 @@ Fábio Madeira, 2017+
 import os
 import json
 import pandas as pd
-
+from io import StringIO
 from string import digits
 from string import ascii_uppercase
 
@@ -24,8 +24,7 @@ from prointvar.utils import flash
 from prointvar.utils import compute_rsa
 from prointvar.utils import get_rsa_class
 from prointvar.utils import row_selector
-# TODO FIX
-from prointvar.utils import logging_out
+from prointvar.utils import lazy_file_remover
 from prointvar.library import dssp_types
 
 from prointvar.config import config
@@ -72,7 +71,8 @@ Model (i.e. theoretical) structure.
 
 
 def parse_dssp_from_file(inputfile, excluded=(), add_full_chain=True, add_ss_reduced=False,
-                         add_rsa=True, method="Sander", add_rsa_class=False, verbose=False):
+                         add_rsa=True, method="Sander", add_rsa_class=False,
+                         reset_res_id=False, verbose=False):
     """
     Parse lines of the DSSP file to get entries for every Residue
     in each CHAIN. The hierachy is maintained. CHAIN->RESIDUE->[...].
@@ -84,6 +84,7 @@ def parse_dssp_from_file(inputfile, excluded=(), add_full_chain=True, add_ss_red
     :param add_rsa: boolean
     :param add_rsa_class: boolean
     :param method: name of the method
+    :param reset_res_id: boolean
     :param verbose: boolean
     :return: returns a pandas DataFrame
     """
@@ -115,6 +116,17 @@ def parse_dssp_from_file(inputfile, excluded=(), add_full_chain=True, add_ss_red
     if not os.path.isfile(inputfile):
         raise IOError("{} not available or could not be read...".format(inputfile))
 
+    lines = []
+    parse = False
+    with open(inputfile) as inlines:
+        for line in inlines:
+            line = line.rstrip()
+            if parse:
+                lines.append(line)
+            if line.startswith("  #"):
+                parse = True
+    lines = "\n".join(lines)
+
     # column width descriptors
     header = ("LINE", "RES", "CHAIN", "AA", "SS", "STRUCTURE",
               "BP1", "BP2", "BP2_CHAIN", "ACC",
@@ -131,7 +143,7 @@ def parse_dssp_from_file(inputfile, excluded=(), add_full_chain=True, add_ss_red
               (115, 123), (123, 130), (130, 137))
 
     all_str = {key: str for key in header}
-    table = pd.read_fwf(inputfile, skiprows=28, names=header, colspecs=widths,
+    table = pd.read_fwf(StringIO(lines), names=header, colspecs=widths, # skiprows=28
                         compression=None, converters=all_str, keep_default_na=False)
 
     # table modular extensions
@@ -151,6 +163,11 @@ def parse_dssp_from_file(inputfile, excluded=(), add_full_chain=True, add_ss_red
     # drop missing residues ("!")  and chain breaks ("!*")
     table = table[table['AA'] != '!']
     table = table[table['AA'] != '!*']
+
+    if reset_res_id:
+        table.reset_index(inplace=True)
+        table = table.drop(['index'], axis=1)
+        table['LINE'] = table.index + 1
 
     if excluded is not None:
         assert type(excluded) is tuple
@@ -336,7 +353,8 @@ class DSSPreader(object):
         return self.residues(**kwargs)
 
     def residues(self, excluded=None, add_full_chain=True, add_ss_reduced=False,
-                 add_rsa=True, method="Sander", add_rsa_class=False):
+                 add_rsa=True, method="Sander", add_rsa_class=False,
+                 reset_res_id=False):
         if excluded is None:
             excluded = self.excluded
         self.data = parse_dssp_from_file(self.inputfile, excluded=excluded,
@@ -344,6 +362,7 @@ class DSSPreader(object):
                                          add_ss_reduced=add_ss_reduced,
                                          add_rsa=add_rsa, method=method,
                                          add_rsa_class=add_rsa_class,
+                                         reset_res_id=reset_res_id,
                                          verbose=self.verbose)
         return self.data
 
@@ -384,22 +403,88 @@ class DSSPgenerator(object):
             raise ValueError("{} is expected to be in mmCIF or PDB format..."
                              "".format(self.inputfile))
 
-    def _generate_output(self):
+    def _generate_output(self, run_unbound=False):
         filename, extension = os.path.splitext(self.inputfile)
-        self.outputfile = filename + ".dssp"
+        if run_unbound:
+            self.outputfile = filename + "_unbound.dssp"
+        else:
+            self.outputfile = filename + ".dssp"
 
-    def _run(self, dssp_bin):
-        cmd = "{} -i {} -o {}".format(dssp_bin, self.inputfile, self.outputfile)
-        os.system(cmd)
-        if not os.path.isfile(self.outputfile):
-            raise IOError("DSSP output not generated for {}".format(self.outputfile))
+    def _run(self, dssp_bin, run_unbound=False, override=False, save_new_input=False,
+             clean_output=True, category='label'):
+        """
+        If run_unbound=True, the structure is split into its chains and dssp run for
+        each independently.
+        """
 
-    def run(self, override=False):
+        if not run_unbound:
+            cmd = "{} -i {} -o {}".format(dssp_bin, self.inputfile, self.outputfile)
+            os.system(cmd)
+            if not os.path.isfile(self.outputfile):
+                raise IOError("DSSP output not generated for {}".format(self.outputfile))
+        else:
+            # read the file and get available chains
+            r = MMCIFreader(inputfile=self.inputfile)
+            data = r.atoms(add_res_full=False, add_contacts=False, format_type=None)
+            chains = [k for k in data.loc[:, '{}_asym_id'.format(category)].unique()]
+            new_inputs = []
+            new_outputs = []
+            for chain in chains:
+                # since len(chain) > 1 (e.g. 'AA' or 'BA') are repetitions and are skipped
+                if len(chain) == 1:
+                    # write out the new cif file with the current chain
+                    filename, extension = os.path.splitext(self.inputfile)
+                    outputpdb = filename + '_{}.pdb'.format(chain)
+                    new_inputs.append(outputpdb)
+                    if not os.path.isfile(outputpdb) or override:
+                        w = MMCIFwriter(inputfile=None, outputfile=outputpdb)
+                        try:
+                            w.run(data=data, chain=(chain,), res=None, atom=None,
+                                  lines=('ATOM', ), override=override, format_type="pdb")
+                        except ValueError:
+                            # skipping only HETATM chains or (generally) empty tables
+                            continue
+                    else:
+                        flash("PDB for {} already available...".format(outputpdb))
+                    # generating the dssp output for the current chain
+                    filename, extension = os.path.splitext(self.outputfile)
+                    outputdssp = filename + '_{}.dssp'.format(chain)
+                    new_outputs.append(outputdssp)
+                    if not os.path.isfile(outputdssp) or override:
+                        d = DSSPgenerator(outputpdb, outputdssp)
+                        d.run(override=override, run_unbound=False, save_new_input=False)
+                    else:
+                        flash("DSSP for {} already available...".format(outputdssp))
+
+            # concat the DSSP output to a single file
+            lines = ["  # DSSP generated by ProIntVar\n"]
+            for outputdssp in new_outputs:
+                parse = False
+                with open(outputdssp, 'r') as inlines:
+                    for line in inlines:
+                        if parse:
+                            lines.append(line)
+                        if line.startswith("  #"):
+                            parse = True
+
+                if clean_output:
+                    lazy_file_remover(outputdssp)
+
+            with open(self.outputfile, 'w') as outlines:
+                outlines.write(''.join(lines))
+
+            if not save_new_input:
+                for outputpdb in new_inputs:
+                    lazy_file_remover(outputpdb)
+
+    def run(self, run_unbound=False, override=False, save_new_input=False,
+            clean_output=True):
+
         # generate outputfile if missing
         if not self.outputfile:
-            self._generate_output()
+            self._generate_output(run_unbound=run_unbound)
 
-        if not os.path.exists(self.outputfile) or override:
+        if not os.path.exists(self.outputfile) or override or run_unbound:
             if os.path.isfile(config.dssp_bin):
                 dssp_bin = config.dssp_bin
             elif os.path.isfile(config.dssp_bin_local):
@@ -408,65 +493,12 @@ class DSSPgenerator(object):
                 raise IOError('DSSP executable is not available...')
 
             # run dssp and generate output
-            self._run(dssp_bin)
-
+            self._run(dssp_bin, run_unbound=run_unbound, override=override,
+                      save_new_input=save_new_input, clean_output=clean_output)
         else:
             flash('DSSP for {} already available...'.format(self.outputfile))
         return
 
-
-def dssp_runner_split_chains(values, bio=False, override=False, logger=None, verbose=False):
-    """
-    Runs DSSP for mmCIF files (Asymmetric Units or BioUnits). The difference here
-    is that this splits the mmCIF in its chains and runs dssp for each chain independently.
-
-    :param values: List of PDB IDs
-    :param bio: (boolean) use standard mmCIF files or the BioUnits
-    :param override: boolean
-    :param logger: standard logger or None
-    :param verbose: boolean
-    :return: (side effects) computes DSSP and generates new files <pdbid>_<chainid>.dssp
-    """
-
-    for pdbid in values:
-        if bio:
-            inputcif = "{}{}{}.cif".format(config.db_root, config.db_cif_biounit, pdbid)
-        else:
-            inputcif = "{}{}{}.cif".format(config.db_root, config.db_cif, pdbid)
-
-        # read cif file and get available chains
-        r = MMCIFreader(inputcif)
-        data = r.read(add_res_full=False, add_contacts=False)
-        chains = [k for k in data.loc[:, 'label_asym_id'].unique()]
-        for chain in chains:
-            # since len(chain) > 1 (e.g. 'AA' or 'BA') are repetitions these are skipped here
-            if len(chain) == 1:
-                # write out the new cif file with the current chain
-                filename, extension = os.path.splitext(inputcif)
-                outputcif = filename + '_{}.cif'.format(chain)
-                if not os.path.isfile(outputcif) or override:
-                    message = "Generating mmCIF for {}_{}...".format(pdbid, chain)
-                    logging_out(message, 'info', logger, verbose)
-                    w = MMCIFwriter(inputcif, outputcif)
-                    w.run(data=data, chain=(chain,), res=None, atom=None, lines=None,
-                          override=override)
-                    message = "Generated mmCIF for {}_{}...".format(pdbid, chain)
-                    logging_out(message, 'info', logger, verbose)
-                else:
-                    message = "mmCIF for {}_{} already available...".format(pdbid, chain)
-                    logging_out(message, 'info', logger, verbose)
-                # generating the dssp output for the current chain
-                outputdssp = "{}{}{}_{}.dssp".format(config.db_root, config.db_dssp_generated, pdbid, chain)
-                if not os.path.isfile(outputdssp) or override:
-                    message = "Generating DSSP for {}_{}...".format(pdbid, chain)
-                    logging_out(message, 'info', logger, verbose)
-                    DSSPgenerator(outputcif, outputdssp, verbose=verbose).run(override=override)
-                    message = "Generated DSSP for {}_{}...".format(pdbid, chain)
-                    logging_out(message, 'info', logger, verbose)
-                else:
-                    message = "DSSP for {}_{} already available...".format(pdbid, chain)
-                    logging_out(message, 'info', logger, verbose)
-    return
 
 if __name__ == '__main__':
     pass
