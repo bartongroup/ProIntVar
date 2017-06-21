@@ -26,7 +26,8 @@ from prointvar.mmcif import (MMCIFreader, MMCIFwriter, parse_mmcif_atoms_from_fi
                              get_mmcif_res_split, get_atom_line, write_pdb_from_table,
                              add_mmcif_atom_altloc, residues_aggregation,
                              remove_multiple_altlocs, add_mmcif_new_pro_ids,
-                             remove_partial_residues)
+                             remove_partial_residues,
+                             fix_label_alt_id, fix_pdb_ins_code, fix_type_symbol)
 
 from prointvar.config import config as c
 root = os.path.abspath(os.path.dirname(__file__))
@@ -81,6 +82,9 @@ class TestMMCIF(unittest.TestCase):
         self.remove_altloc = remove_multiple_altlocs
         self.add_mmcif_new_pro_ids = add_mmcif_new_pro_ids
         self.remove_partial_residues = remove_partial_residues
+        self.fix_label_alt_id = fix_label_alt_id
+        self.fix_pdb_ins_code = fix_pdb_ins_code
+        self.fix_type_symbol = fix_type_symbol
 
     def tearDown(self):
         """Remove testing framework."""
@@ -114,6 +118,9 @@ class TestMMCIF(unittest.TestCase):
         self.remove_altloc = None
         self.add_mmcif_new_pro_ids = None
         self.remove_partial_residues = None
+        self.fix_label_alt_id = None
+        self.fix_pdb_ins_code = None
+        self.fix_type_symbol = None
 
     def test_file_not_found_reader(self):
         with self.assertRaises(IOError):
@@ -598,6 +605,27 @@ class TestMMCIF(unittest.TestCase):
         # counting the number of atoms in res with label_seq_id = '25'
         self.assertEqual(8, list(data.label_seq_id.tolist()).count('25'))
 
+    def test_fix_label_alt_id(self):
+        reader = self.reader(self.inputpdb2)
+        data = reader.atoms(format_type='pdb')
+        data = self.fix_label_alt_id(data)
+        self.assertEqual(1, data.loc[0, 'id'])
+        self.assertEqual('N', data.loc[0, 'label_atom_id'])
+        self.assertEqual('A', data.loc[0, 'label_alt_id'])
+
+    def test_fix_pdb_ins_code(self):
+        reader = self.reader(self.inputpdb2)
+        data = reader.atoms(format_type='pdb')
+        data = self.fix_pdb_ins_code(data)
+        self.assertEqual(1, data.loc[0, 'id'])
+        self.assertEqual('?', data.loc[0, 'pdbx_PDB_ins_code'])
+
+    def test_fix_type_symbol(self):
+        reader = self.reader(self.inputpdb2)
+        data = reader.atoms(format_type='pdb')
+        data = self.fix_type_symbol(data)
+        self.assertEqual(1, data.loc[0, 'id'])
+        self.assertEqual('N', data.loc[0, 'type_symbol'])
 
 if __name__ == '__main__':
     suite = unittest.TestLoader().loadTestsFromTestCase(TestMMCIF)
