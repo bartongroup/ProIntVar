@@ -158,37 +158,44 @@ def dssp_dssp_table_merger(bound_table, unbound_table):
     return table
 
 
-def table_merger(mmcif_table=None, dssp_table=None, sifts_table=None):
+def table_merger(mmcif_table=None, dssp_table=None, sifts_table=None,
+                 contacts_table=None):
     """
     Merges the tables provided using appropriate columns.
     
     :param mmcif_table: (optional) mmCIF pandas DataFrame
     :param dssp_table: (optional) DSSP pandas DataFrame
     :param sifts_table: (optional) SIFTS pandas DataFrame
+    :param contacts_table: (optional) Arpeggio pandas DataFrame
     :return: merged pandas DataFrame
     """
 
-    if mmcif_table is not None and dssp_table is not None and sifts_table is not None:
-        mmcif_table = mmcif_dssp_table_merger(mmcif_table, dssp_table)
-        table = mmcif_sifts_table_merger(mmcif_table, sifts_table)
-
-    elif mmcif_table is not None and dssp_table is not None:
-        table = mmcif_dssp_table_merger(mmcif_table, dssp_table)
-
-    elif mmcif_table is not None and sifts_table is not None:
-        table = mmcif_sifts_table_merger(mmcif_table, sifts_table)
-
-    elif dssp_table is not None and sifts_table is not None:
-        table = dssp_sifts_table_merger(dssp_table, sifts_table)
-    else:
+    available = [mmcif_table, dssp_table, sifts_table, contacts_table]
+    available = [k for k in available if k is not None]
+    if len(available) < 2:
         return TableMergerError('Nothing to merge...')
+
+    table = None
+    if mmcif_table is not None:
+        if dssp_table is not None:
+            mmcif_table = mmcif_dssp_table_merger(mmcif_table, dssp_table)
+        if sifts_table is not None:
+            mmcif_table = mmcif_sifts_table_merger(mmcif_table, sifts_table)
+        # if contacts_table is not None:
+        #     mmcif_table = contacts_mmcif_table_merger(contacts_table, mmcif_table)
+        table = mmcif_table
+
+    elif dssp_table is not None:
+        if sifts_table is not None:
+            dssp_table = dssp_sifts_table_merger(dssp_table, sifts_table)
+        table = dssp_table
 
     return table
 
 
 def table_generator(uniprot_id=None, pdb_id=None, chain=None, res=None,
-                    site=None, atom=None, lines=None, bio=True, add_dssp=True,
-                    dssp_unbound=False, override=False):
+                    site=None, atom=None, lines=None, bio=True, dssp=True,
+                    dssp_unbound=False, contacts=False, override=False):
     """
     Simplifies the process of generating tables and merging them.
     
@@ -200,8 +207,9 @@ def table_generator(uniprot_id=None, pdb_id=None, chain=None, res=None,
     :param atom: (tuple) atom IDs or None
     :param lines: 'ATOM' or 'HETATM' or None (both)
     :param bio: boolean for using AsymUnits or BioUnits
-    :param add_dssp: boolean
+    :param dssp: boolean
     :param dssp_unbound: (boolean) if true runs both DSSP bound and unbound
+    :param contacts: boolean
     :param override: boolean
     """
 
@@ -241,14 +249,14 @@ def table_generator(uniprot_id=None, pdb_id=None, chain=None, res=None,
                                                     uniprot=uniprot_id, site=site)
 
         # DSSP table
-        if add_dssp:
+        if dssp:
             # (default) bound DSSP
             if bio:
                 outputdssp = "{}{}{}_bio.dssp" \
-                            "".format(config.db_root, config.db_dssp_generated, pdb_id)
+                             "".format(config.db_root, config.db_dssp_generated, pdb_id)
             else:
                 outputdssp = "{}{}{}.dssp" \
-                            "".format(config.db_root, config.db_dssp_generated, pdb_id)
+                             "".format(config.db_root, config.db_dssp_generated, pdb_id)
             if not outputdssp or override:
                 w = DSSPgenerator(inputcif, outputdssp)
                 w.run(override=override)
@@ -283,7 +291,12 @@ def table_generator(uniprot_id=None, pdb_id=None, chain=None, res=None,
         else:
             dssp_table = None
 
-        return mmcif_table, dssp_table, sifts_table
+        if contacts:
+            contacts_table = None
+        else:
+            contacts_table = None
+
+        return mmcif_table, dssp_table, sifts_table, contacts_table
 
     else:
         raise ValueError('No UniProt ID or PDB ID provided...')
@@ -291,68 +304,36 @@ def table_generator(uniprot_id=None, pdb_id=None, chain=None, res=None,
 
 class TableMerger(object):
     def __init__(self, mmcif_table=None, dssp_table=None, sifts_table=None,
-                 store=True, verbose=False):
+                 contacts_table=None, store=True, verbose=False):
 
         self.mmcif_table = mmcif_table
         self.dssp_table = dssp_table
         self.sifts_table = sifts_table
+        self.contacts_table = contacts_table
         self.store = store
         self.merged_table = None
         self.filename = None
         self.verbose = verbose
 
-    # TODO move out these private methods
-    def _dump_merged_table(self, outputfile, override=False):
-        if not os.path.isfile(outputfile) or override:
-            self.merged_table.to_pickle(outputfile)
-            if self.verbose:
-                flash('{} stored locally...'.format(outputfile))
-        else:
-            flash('{} already available...'.format(outputfile))
-
-    def _load_merged_table(self, inputfile):
-        if os.path.isfile(inputfile):
-            if self.verbose:
-                flash('{} is already available...'.format(inputfile))
-            self.merged_table = pd.read_pickle(inputfile)
-            return self.merged_table
-        else:
-            raise IOError("{} not available or could not be read..."
-                          "".format(inputfile))
-
     @staticmethod
     def _get_filename(uniprot_id=None, pdb_id=None, chain=None, res=None,
-                      site=None, atom=None, lines=None, bio=True, add_dssp=True):
+                      site=None, atom=None, lines=None,
+                      bio=False, dssp=False, contacts=False):
 
-        if uniprot_id is not None and pdb_id is None and chain is None:
-            name = "{}".format(uniprot_id)
-        elif uniprot_id is not None and pdb_id is not None and chain is None:
-            name = "{}_{}".format(uniprot_id, pdb_id)
-        elif uniprot_id is None and pdb_id is not None and chain is None:
-            name = "{}".format(pdb_id)
-        elif uniprot_id is None and pdb_id is not None and chain is not None:
-            name = "{}_{}".format(pdb_id, "_".join(list(chain)))
-        elif uniprot_id is None and pdb_id is not None and chain is not None and \
-                res is not None:
-            name = "{}_{}_{}".format(pdb_id, "_".join(list(chain)), "_".join(list(res)))
-        elif uniprot_id is not None and pdb_id is not None and chain is not None and \
-                site is not None:
-            name = "{}_{}_{}_{}".format(uniprot_id, "_".join(list(site)),
-                                        pdb_id, "_".join(list(chain)))
-        elif uniprot_id is not None and pdb_id is not None and chain is not None and \
-                site is None:
-            name = "{}_{}_{}".format(uniprot_id, pdb_id, "_".join(list(chain)))
-        elif uniprot_id is not None and pdb_id is None and chain is None and \
-                site is not None:
-            name = "{}_{}".format(uniprot_id, "_".join(list(site)))
-        else:
+        if uniprot_id is None and pdb_id is None:
             raise ValueError('No UniProt ID or PDB ID provided...')
-        # TODO use pickled dir?
-        # db_pickle
+
+        name = [uniprot_id, pdb_id, chain, res, site, atom, lines]
+        name = '_'.join(['-'.join([v for v in k]) if type(k) is tuple else k
+                         for k in name if k is not None])
+        if dssp:
+            name += "_dssp"
         if bio:
-            filename = "{}{}{}_bio.pkl".format(config.db_root, config.tmp_dir_local, name)
-        else:
-            filename = "{}{}{}.pkl".format(config.db_root, config.tmp_dir_local, name)
+            name += "_bio"
+        if contacts:
+            name += "_cont"
+
+        filename = "{}{}{}.pkl".format(config.db_root, config.db_pickle, name)
         return filename
 
     def merge(self, outputfile=None, override=False):
@@ -360,21 +341,25 @@ class TableMerger(object):
 
         self.merged_table = table_merger(mmcif_table=self.mmcif_table,
                                          dssp_table=self.dssp_table,
-                                         sifts_table=self.sifts_table)
+                                         sifts_table=self.sifts_table,
+                                         contacts_table=self.contacts_table)
         if self.store and outputfile is not None:
             self.filename = outputfile
-            self._dump_merged_table(self.filename, override=override)
+            dump_merged_table(self.merged_table, self.filename,
+                              override=override, verbose=self.verbose)
         return self.merged_table
 
     def run(self, uniprot_id=None, pdb_id=None, chain=None, res=None, site=None,
-            atom=None, lines=None, bio=True, add_dssp=True, dssp_unbound=False,
-            outputfile=None, override=False):
+            atom=None, lines=None, bio=False, dssp=False, dssp_unbound=False,
+            contacts=False, outputfile=None, override=False):
         """Generates the tables, merges and stores"""
 
-        self.mmcif_table, self.dssp_table, self.sifts_table = \
+        self.mmcif_table, self.dssp_table, self.sifts_table, self.contacts_table = \
             table_generator(uniprot_id=uniprot_id, pdb_id=pdb_id, chain=chain, res=res,
-                            site=site, atom=atom, lines=lines, bio=bio, add_dssp=add_dssp,
-                            dssp_unbound=dssp_unbound, override=override)
+                            site=site, atom=atom, lines=lines, bio=bio, dssp=dssp,
+                            dssp_unbound=dssp_unbound, contacts=contacts,
+                            override=override)
+
         self.merged_table = self.merge(outputfile=outputfile, override=override)
 
         if self.store:
@@ -384,13 +369,15 @@ class TableMerger(object):
                 self.filename = self._get_filename(uniprot_id=uniprot_id, pdb_id=pdb_id,
                                                    chain=chain, res=res, site=site,
                                                    atom=atom, lines=lines,
-                                                   bio=bio, add_dssp=add_dssp)
-            self._dump_merged_table(self.filename, override=override)
+                                                   bio=bio, dssp=dssp, contacts=contacts)
+            dump_merged_table(self.merged_table, self.filename,
+                              override=override, verbose=self.verbose)
 
         return self.merged_table
 
     def load(self, uniprot_id=None, pdb_id=None, chain=None, res=None,
-             site=None, atom=None, lines=None, bio=True, add_dssp=True, inputfile=None):
+             site=None, atom=None, lines=None, bio=False, dssp=False,
+             contacts=False, inputfile=None):
         """Loads a merged table"""
 
         if inputfile is not None:
@@ -399,9 +386,46 @@ class TableMerger(object):
             self.filename = self._get_filename(uniprot_id=uniprot_id, pdb_id=pdb_id,
                                                chain=chain, res=res, site=site,
                                                atom=atom, lines=lines,
-                                               bio=bio, add_dssp=add_dssp)
-        self.merged_table = self._load_merged_table(self.filename)
+                                               bio=bio, dssp=dssp, contacts=contacts)
+        self.merged_table = load_merged_table(self.filename, verbose=self.verbose)
         return self.merged_table
+
+
+def dump_merged_table(data, outputfile, override=False, verbose=False):
+    """
+    Dumps the table to a file.
+
+    :param data: pandas DataFrame object - merged table
+    :param outputfile: path to the pickled file
+    :param override: boolean
+    :param verbose: boolean
+    :return: (side-effects) writes a picked object to a file
+    """
+    if not os.path.isfile(outputfile) or override:
+        data.to_pickle(outputfile)
+        if verbose:
+            flash('{} stored locally...'.format(outputfile))
+    else:
+        if verbose:
+            flash('{} already available...'.format(outputfile))
+
+
+def load_merged_table(inputfile, verbose=False):
+    """
+    Loads a table from a file.
+
+    :param inputfile: path to the pickled file
+    :param verbose: boolean
+    :return: returns a picked object to a file
+    """
+    if os.path.isfile(inputfile):
+        if verbose:
+            flash('{} is already available...'.format(inputfile))
+        merged_table = pd.read_pickle(inputfile)
+        return merged_table
+    else:
+        raise IOError("{} not available or could not be read..."
+                      "".format(inputfile))
 
 
 if __name__ == '__main__':

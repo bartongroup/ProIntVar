@@ -20,14 +20,17 @@ from prointvar.mmcif import MMCIFreader, MMCIFwriter, get_mmcif_selected_from_ta
 
 from prointvar.merger import (TableMerger, table_merger,
                               mmcif_dssp_table_merger, mmcif_sifts_table_merger,
-                              dssp_sifts_table_merger, table_generator, dssp_dssp_table_merger)
+                              dssp_sifts_table_merger, table_generator, dssp_dssp_table_merger,
+                              load_merged_table, dump_merged_table)
 
 from prointvar.config import config as c
 root = os.path.abspath(os.path.dirname(__file__))
 c.db_root = "{}/testdata/".format(root)
+c.db_pickle = "tmp/".format(root)
 
 
 @patch("prointvar.config.config.db_root", c.db_root)
+@patch("prointvar.config.config.db_pickle", c.db_pickle)
 class TestMerger(unittest.TestCase):
     """Test the Merger methods."""
 
@@ -57,6 +60,8 @@ class TestMerger(unittest.TestCase):
         self.merger = TableMerger
         self.table_merger = table_merger
         self.generator = table_generator
+        self.dump_merged_table = dump_merged_table
+        self.load_merged_table = load_merged_table
 
     def tearDown(self):
         """Remove testing framework."""
@@ -82,6 +87,8 @@ class TestMerger(unittest.TestCase):
         self.merger = None
         self.table_merger = None
         self.generator = None
+        self.dump_merged_table = None
+        self.load_merged_table = None
 
     @classmethod
     def setUpClass(cls):
@@ -290,12 +297,12 @@ class TestMerger(unittest.TestCase):
         self.assertEqual('V', table.loc[329, 'UniProt_dbResName'])
 
     def test_table_generator(self):
-        mmcif_table, dssp_table, sifts_table = \
+        mmcif_table, dssp_table, sifts_table, contacts_table = \
             self.generator(uniprot_id=None, pdb_id=self.pdbid, chain=None,
                            res=None, site=None, atom=('CA',), lines=None,
-                           bio=False, add_dssp=True)
+                           bio=False, dssp=True)
 
-        table = self.table_merger(mmcif_table, dssp_table, sifts_table)
+        table = self.table_merger(mmcif_table, dssp_table, sifts_table, contacts_table)
         # Chain level
         self.assertIn('label_asym_id', table)
         self.assertIn('CHAIN_FULL', table)
@@ -312,12 +319,12 @@ class TestMerger(unittest.TestCase):
         self.assertEqual('V', table.loc[0, 'UniProt_dbResName'])
 
     def test_table_generator_bio(self):
-        mmcif_table, dssp_table, sifts_table = \
+        mmcif_table, dssp_table, sifts_table, contacts_table = \
             self.generator(uniprot_id=None, pdb_id=self.pdbid, chain=None,
                            res=None, site=None, atom=('CA',), lines=None,
-                           bio=True, add_dssp=True)
+                           bio=True, dssp=True)
 
-        table = self.table_merger(mmcif_table, dssp_table, sifts_table)
+        table = self.table_merger(mmcif_table, dssp_table, sifts_table, contacts_table)
         # Chain level
         self.assertIn('label_asym_id', table)
         self.assertIn('CHAIN_FULL', table)
@@ -334,12 +341,12 @@ class TestMerger(unittest.TestCase):
         self.assertEqual('V', table.loc[329, 'UniProt_dbResName'])
 
     def test_table_generator_full_dssp(self):
-        mmcif_table, dssp_table, sifts_table = \
+        mmcif_table, dssp_table, sifts_table, contacts_table = \
             self.generator(uniprot_id=None, pdb_id=self.pdbid, chain=None,
                            res=None, site=None, atom=('CA',), lines=None,
-                           bio=False, add_dssp=True, dssp_unbound=True)
+                           bio=False, dssp=True, dssp_unbound=True)
 
-        table = self.table_merger(mmcif_table, dssp_table, sifts_table)
+        table = self.table_merger(mmcif_table, dssp_table, sifts_table, contacts_table)
         self.assertIn('CHAIN_FULL', table)
         self.assertIn('CHAIN_FULL_UNB', table)
         self.assertIn('RSA', table)
@@ -354,18 +361,17 @@ class TestMerger(unittest.TestCase):
         filename = self.merger()._get_filename(pdb_id=self.pdbid, bio=True)
         self.assertTrue(os.path.exists(filename))
 
-    def test_table_merger_private_dump(self):
-        filename = self.merger()._get_filename(pdb_id=self.pdbid, bio=True)
-        if os.path.exists(filename):
-            os.remove(filename)
+    def test_table_merger_dump(self):
+        filename = self.merger()._get_filename(pdb_id=self.pdbid, bio=True,
+                                               lines=('ATOM', ))
         t = self.merger(self.mmcif_bio, self.dssp_bio, self.sifts)
         t.merge()
-        # alternatively
-        # t = self.merger(self.mmcif_bio, self.dssp_bio, self.sifts).merge(outputfile=filename)
-        t._dump_merged_table(outputfile=filename)
+        self.dump_merged_table(t.merged_table, outputfile=filename)
+        self.assertTrue(os.path.exists(filename))
+        os.remove(filename)
 
     def test_table_merger_run(self):
-        table = self.merger().run(pdb_id=self.pdbid, atom=('CA',), bio=True)
+        table = self.merger().run(pdb_id=self.pdbid, atom=('CA',), bio=True, dssp=True)
         # Chain level
         self.assertIn('label_asym_id', table)
         self.assertIn('CHAIN_FULL', table)
@@ -380,24 +386,16 @@ class TestMerger(unittest.TestCase):
         self.assertEqual('118', table.loc[329, 'RES'])
         self.assertEqual('VAL', table.loc[329, 'PDB_dbResName'])
         self.assertEqual('V', table.loc[329, 'UniProt_dbResName'])
-
-    def test_table_merger_private_load(self):
-        filename = self.merger()._get_filename(pdb_id=self.pdbid, bio=True)
-        if not os.path.exists(filename):
-            t = self.merger(self.mmcif_bio, self.dssp_bio, self.sifts)
-            t.merge()
-            t._dump_merged_table(outputfile=filename)
-        table = self.merger()._load_merged_table(filename)
-        self.assertIn('label_asym_id', table)
-        self.assertIn('CHAIN_FULL', table)
-        self.assertIn('PDB_entityId', table)
+        filename = self.merger()._get_filename(pdb_id=self.pdbid, atom=('CA',),
+                                               bio=True, dssp=True)
+        os.remove(filename)
 
     def test_table_merger_load(self):
         filename = self.merger()._get_filename(pdb_id=self.pdbid, bio=True)
         if not os.path.exists(filename):
             t = self.merger(self.mmcif_bio, self.dssp_bio, self.sifts)
             t.merge()
-            t._dump_merged_table(outputfile=filename)
+            self.dump_merged_table(t.merged_table, outputfile=filename)
         t = self.merger()
         table = t.load(pdb_id=self.pdbid, bio=True)
         # Chain level
