@@ -28,6 +28,7 @@ setup(
         "console_scripts": [
             "ProIntVar-Core-config-setup=prointvar.config:config_setup",
             "ProIntVar-Core-config-load=prointvar.config:config_load",
+            "ProIntVar=cli.main:cli",
         ]
     },
 
