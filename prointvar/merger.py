@@ -194,7 +194,7 @@ def table_merger(mmcif_table=None, dssp_table=None, sifts_table=None,
 
 
 def table_generator(uniprot_id=None, pdb_id=None, chain=None, res=None,
-                    site=None, atom=None, lines=None, bio=True, dssp=True,
+                    site=None, atom=None, lines=None, bio=True, sifts=True, dssp=True,
                     dssp_unbound=False, contacts=False, override=False):
     """
     Simplifies the process of generating tables and merging them.
@@ -207,6 +207,7 @@ def table_generator(uniprot_id=None, pdb_id=None, chain=None, res=None,
     :param atom: (tuple) atom IDs or None
     :param lines: 'ATOM' or 'HETATM' or None (both)
     :param bio: boolean for using AsymUnits or BioUnits
+    :param sifts: boolean
     :param dssp: boolean
     :param dssp_unbound: (boolean) if true runs both DSSP bound and unbound
     :param contacts: boolean
@@ -241,12 +242,15 @@ def table_generator(uniprot_id=None, pdb_id=None, chain=None, res=None,
                                                     atom=atom, lines=lines, category='auth')
 
         # SIFTS table
-        inputsifts = "{}{}{}.xml".format(config.db_root, config.db_sifts_xml, pdb_id)
+        if sifts:
+            inputsifts = "{}{}{}.xml".format(config.db_root, config.db_sifts_xml, pdb_id)
 
-        r = SIFTSreader(inputsifts)
-        sifts_table = r.residues(add_regions=True, add_dbs=False)
-        sifts_table = get_sifts_selected_from_table(sifts_table, chain=chain, res=res,
-                                                    uniprot=uniprot_id, site=site)
+            r = SIFTSreader(inputsifts)
+            sifts_table = r.residues(add_regions=True, add_dbs=False)
+            sifts_table = get_sifts_selected_from_table(sifts_table, chain=chain, res=res,
+                                                        uniprot=uniprot_id, site=site)
+        else:
+            sifts_table = None
 
         # DSSP table
         if dssp:
@@ -318,7 +322,7 @@ class TableMerger(object):
     @staticmethod
     def _get_filename(uniprot_id=None, pdb_id=None, chain=None, res=None,
                       site=None, atom=None, lines=None,
-                      bio=False, dssp=False, contacts=False):
+                      bio=False, dssp=False, sifts=True, contacts=False):
 
         if uniprot_id is None and pdb_id is None:
             raise ValueError('No UniProt ID or PDB ID provided...')
@@ -326,6 +330,8 @@ class TableMerger(object):
         name = [uniprot_id, pdb_id, chain, res, site, atom, lines]
         name = '_'.join(['-'.join([v for v in k]) if type(k) is tuple else k
                          for k in name if k is not None])
+        if sifts:
+            name += "_sifts"
         if dssp:
             name += "_dssp"
         if bio:
@@ -350,14 +356,14 @@ class TableMerger(object):
         return self.merged_table
 
     def run(self, uniprot_id=None, pdb_id=None, chain=None, res=None, site=None,
-            atom=None, lines=None, bio=False, dssp=False, dssp_unbound=False,
+            atom=None, lines=None, bio=False, sifts=True, dssp=False, dssp_unbound=False,
             contacts=False, outputfile=None, override=False):
         """Generates the tables, merges and stores"""
 
         self.mmcif_table, self.dssp_table, self.sifts_table, self.contacts_table = \
             table_generator(uniprot_id=uniprot_id, pdb_id=pdb_id, chain=chain, res=res,
-                            site=site, atom=atom, lines=lines, bio=bio, dssp=dssp,
-                            dssp_unbound=dssp_unbound, contacts=contacts,
+                            site=site, atom=atom, lines=lines, bio=bio, sifts=sifts,
+                            dssp=dssp, dssp_unbound=dssp_unbound, contacts=contacts,
                             override=override)
 
         self.merged_table = self.merge(outputfile=outputfile, override=override)
@@ -368,16 +374,16 @@ class TableMerger(object):
             else:
                 self.filename = self._get_filename(uniprot_id=uniprot_id, pdb_id=pdb_id,
                                                    chain=chain, res=res, site=site,
-                                                   atom=atom, lines=lines,
-                                                   bio=bio, dssp=dssp, contacts=contacts)
+                                                   atom=atom, lines=lines, bio=bio,
+                                                   sifts=sifts, dssp=dssp, contacts=contacts)
             dump_merged_table(self.merged_table, self.filename,
                               override=override, verbose=self.verbose)
 
         return self.merged_table
 
     def load(self, uniprot_id=None, pdb_id=None, chain=None, res=None,
-             site=None, atom=None, lines=None, bio=False, dssp=False,
-             contacts=False, inputfile=None):
+             site=None, atom=None, lines=None, bio=False, sifts=True,
+             dssp=False, contacts=False, inputfile=None):
         """Loads a merged table"""
 
         if inputfile is not None:
@@ -385,8 +391,8 @@ class TableMerger(object):
         else:
             self.filename = self._get_filename(uniprot_id=uniprot_id, pdb_id=pdb_id,
                                                chain=chain, res=res, site=site,
-                                               atom=atom, lines=lines,
-                                               bio=bio, dssp=dssp, contacts=contacts)
+                                               atom=atom, lines=lines, bio=bio,
+                                               sifts=sifts, dssp=dssp, contacts=contacts)
         self.merged_table = load_merged_table(self.filename, verbose=self.verbose)
         return self.merged_table
 
