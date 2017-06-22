@@ -24,7 +24,6 @@ from prointvar.mmcif import MMCIFreader
 from prointvar.mmcif import get_mmcif_selected_from_table
 from prointvar.arpeggio import ARPEGGIOreader
 from prointvar.arpeggio import ARPEGGIOgenerator
-from prointvar.arpeggio import get_arpeggio_selected_from_table
 from prointvar.fetchers import fetch_best_structures_pdbe
 
 from prointvar.utils import flash
@@ -249,8 +248,9 @@ def table_merger(mmcif_table=None, dssp_table=None, sifts_table=None,
 
 
 def table_generator(uniprot_id=None, pdb_id=None, chain=None, res=None,
-                    site=None, atom=None, lines=None, bio=True, sifts=True, dssp=True,
-                    dssp_unbound=False, contacts=False, override=False):
+                    site=None, atom=None, lines=None, bio=True, sifts=True,
+                    dssp=True, dssp_unbound=False, contacts=False,
+                    residue_agg=False, override=False):
     """
     Simplifies the process of generating tables and merging them.
     
@@ -266,7 +266,9 @@ def table_generator(uniprot_id=None, pdb_id=None, chain=None, res=None,
     :param dssp: boolean
     :param dssp_unbound: (boolean) if true runs both DSSP bound and unbound
     :param contacts: boolean
+    :param residue_agg: boolean
     :param override: boolean
+    :returns: mmcif, sifts, dssp and contacts tables
     """
 
     # generates the tables for the uniprot_id, pdb_id
@@ -296,10 +298,10 @@ def table_generator(uniprot_id=None, pdb_id=None, chain=None, res=None,
         if contacts:
             mmcif_table = r.atoms(add_atom_altloc=True, add_new_pro_id=True,
                                   remove_altloc=True, remove_partial_res=True,
-                                  category='auth')
+                                  category='auth', residue_agg=residue_agg)
         else:
             mmcif_table = r.atoms(add_atom_altloc=True, add_new_pro_id=True,
-                                  category='auth')
+                                  category='auth', residue_agg=residue_agg)
 
         mmcif_table = get_mmcif_selected_from_table(mmcif_table, chain=chain, res_full=res,
                                                     atom=atom, lines=lines, category='auth')
@@ -377,14 +379,10 @@ def table_generator(uniprot_id=None, pdb_id=None, chain=None, res=None,
                     g.run(override=override)
             if os.path.exists(outputarp):
                 r = ARPEGGIOreader(inputfile=outputarp)
-                contacts_table = r.contacts(collapsed_cont=True, col_method="full",
+                contacts_table = r.contacts(residue_agg=residue_agg,
+                                            collapsed_cont=True, col_method="full",
                                             ignore_consecutive=False, numb_res=3,
                                             parse_special=True)
-                # assumes the interaction side is A->B and selection is made of A side
-                contacts_table = get_arpeggio_selected_from_table(contacts_table,
-                                                                  chain_A=chain,
-                                                                  res_full_A=res,
-                                                                  atom_A=atom)
             else:
                 contacts_table = None
         else:

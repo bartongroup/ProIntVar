@@ -510,6 +510,29 @@ class TestMerger(unittest.TestCase):
         self.assertTrue('203', table.loc[0, 'label_seq_id_full_A'])
         self.assertTrue(3.109, table.loc[0, 'DIST'])
 
+    def test_table_merger_contacts_mmcif_bio_sifts_dssp_residue_agg(self):
+        mmcif_table, dssp_table, sifts_table, contacts_table = \
+            self.generator(uniprot_id=None, pdb_id=self.pdbid, chain=None,
+                           res=None, site=None, atom=None, lines=None,
+                           bio=True, sifts=True, dssp=True, dssp_unbound=True,
+                           contacts=True, residue_agg=True)
+
+        table = self.table_merger(mmcif_table, dssp_table, sifts_table, contacts_table)
+        self.assertIn('CHAIN_A', list(table))
+        self.assertIn('CHAIN_B', list(table))
+        self.assertIn('label_asym_id_A', list(table))
+        self.assertIn('label_asym_id_B', list(table))
+        self.assertIn('label_seq_id_full_A', list(table))
+        self.assertIn('label_seq_id_full_B', list(table))
+        self.assertIn('Cartn_x_A', list(table))
+        self.assertIn('Cartn_x_A', list(table))
+        self.assertIn('RSA_A', list(table))
+        self.assertIn('RSA_B', list(table))
+        self.assertIn('UniProt_dbAccessionId_A', list(table))
+        self.assertIn('UniProt_dbAccessionId_B', list(table))
+        self.assertTrue('366', table.loc[0, 'RES_FULL_A'])
+        self.assertTrue(1.694, table.loc[0, 'VDW_DIST'])
+        self.assertIn('Amide-Amide', table.loc[0, 'Int_Types'])
 
 if __name__ == '__main__':
     suite = unittest.TestLoader().loadTestsFromTestCase(TestMerger)
