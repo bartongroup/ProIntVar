@@ -757,11 +757,6 @@ class ARPEGGIOgenerator(object):
                 arpeggio_bin = config.arpeggio_bin
                 python_exe = config.python_exe
                 python_path = config.python_path
-            elif (os.path.isfile(config.python_exe_local) and
-                    os.path.exists(config.arpeggio_bin_local)):
-                arpeggio_bin = config.arpeggio_bin_local
-                python_exe = config.python_exe_local
-                python_path = config.python_path_local
             else:
                 raise IOError('ARPEGGIO executable is not available...')
 

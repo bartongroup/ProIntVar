@@ -72,8 +72,6 @@ class REDUCEgenerator(object):
         if not os.path.exists(self.outputfile) or override:
             if os.path.isfile(config.reduce_bin):
                 reduce_bin = config.reduce_bin
-            elif os.path.isfile(config.reduce_bin_local):
-                reduce_bin = config.reduce_bin_local
             else:
                 raise IOError('REDUCE executables are not available...')
 

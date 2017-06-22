@@ -289,9 +289,9 @@ def table_generator(uniprot_id=None, pdb_id=None, chain=None, res=None,
 
         # mmCIF table
         if bio:
-            inputcif = "{}{}{}.cif".format(config.db_root, config.db_cif_biounit, pdb_id)
+            inputcif = "{}{}{}_bio.cif".format(config.db_root, config.db_pdbx, pdb_id)
         else:
-            inputcif = "{}{}{}.cif".format(config.db_root, config.db_cif, pdb_id)
+            inputcif = "{}{}{}.cif".format(config.db_root, config.db_pdbx, pdb_id)
 
         r = MMCIFreader(inputcif)
 
@@ -308,7 +308,7 @@ def table_generator(uniprot_id=None, pdb_id=None, chain=None, res=None,
 
         # SIFTS table
         if sifts:
-            inputsifts = "{}{}{}.xml".format(config.db_root, config.db_sifts_xml, pdb_id)
+            inputsifts = "{}{}{}.xml".format(config.db_root, config.db_sifts, pdb_id)
 
             r = SIFTSreader(inputsifts)
             sifts_table = r.residues(add_regions=True, add_dbs=False)
@@ -322,10 +322,10 @@ def table_generator(uniprot_id=None, pdb_id=None, chain=None, res=None,
             # (default) bound DSSP
             if bio:
                 outputdssp = "{}{}{}_bio.dssp" \
-                             "".format(config.db_root, config.db_dssp_generated, pdb_id)
+                             "".format(config.db_root, config.db_dssp, pdb_id)
             else:
                 outputdssp = "{}{}{}.dssp" \
-                             "".format(config.db_root, config.db_dssp_generated, pdb_id)
+                             "".format(config.db_root, config.db_dssp, pdb_id)
             if not os.path.isfile(outputdssp) or override:
                 w = DSSPgenerator(inputcif, outputdssp)
                 w.run(override=override)
@@ -341,10 +341,10 @@ def table_generator(uniprot_id=None, pdb_id=None, chain=None, res=None,
                 # unbound DSSP
                 if bio:
                     outputdssp_unb = "{}{}{}_bio_unbound.dssp" \
-                                     "".format(config.db_root, config.db_dssp_generated, pdb_id)
+                                     "".format(config.db_root, config.db_dssp, pdb_id)
                 else:
                     outputdssp_unb = "{}{}{}_unbound.dssp" \
-                                     "".format(config.db_root, config.db_dssp_generated, pdb_id)
+                                     "".format(config.db_root, config.db_dssp, pdb_id)
 
                 if not os.path.isfile(outputdssp_unb) or override:
                     w = DSSPgenerator(inputcif, outputdssp_unb)
@@ -364,10 +364,10 @@ def table_generator(uniprot_id=None, pdb_id=None, chain=None, res=None,
         if contacts:
             if bio:
                 outputarp = "{}{}{}_bio.contacts" \
-                                 "".format(config.db_root, config.db_contacts_generated, pdb_id)
+                                 "".format(config.db_root, config.db_contacts, pdb_id)
             else:
                 outputarp = "{}{}{}.contacts" \
-                                 "".format(config.db_root, config.db_contacts_generated, pdb_id)
+                                 "".format(config.db_root, config.db_contacts, pdb_id)
 
             if not os.path.isfile(outputarp) or override:
                 g = ARPEGGIOgenerator(inputfile=inputcif, outputfile=outputarp)
@@ -427,7 +427,7 @@ class TableMerger(object):
         if contacts:
             name += "_cont"
 
-        filename = "{}{}{}.pkl".format(config.db_root, config.db_pickle, name)
+        filename = "{}{}{}.pkl".format(config.db_root, config.db_pickled, name)
         return filename
 
     def merge(self, outputfile=None, override=False):

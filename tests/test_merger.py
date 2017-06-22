@@ -28,11 +28,9 @@ from prointvar.merger import (TableMerger, table_merger,
 from prointvar.config import config as c
 root = os.path.abspath(os.path.dirname(__file__))
 c.db_root = "{}/testdata/".format(root)
-c.db_pickle = "tmp/".format(root)
 
 
 @patch("prointvar.config.config.db_root", c.db_root)
-@patch("prointvar.config.config.db_pickle", c.db_pickle)
 class TestMerger(unittest.TestCase):
     """Test the Merger methods."""
 
@@ -102,16 +100,16 @@ class TestMerger(unittest.TestCase):
         super(TestMerger, cls).setUpClass()
 
         cls.pdbid = '2pah'
-        cls.inputcif = "{}{}{}.cif".format(c.db_root, c.db_cif, cls.pdbid)
-        cls.inputdssp = "{}{}{}.dssp".format(c.db_root, c.db_dssp_generated, cls.pdbid)
+        cls.inputcif = "{}{}{}.cif".format(c.db_root, c.db_pdbx, cls.pdbid)
+        cls.inputdssp = "{}{}{}.dssp".format(c.db_root, c.db_dssp, cls.pdbid)
 
-        cls.inputbiocif = "{}{}{}.cif".format(c.db_root, c.db_cif_biounit, cls.pdbid)
-        cls.inputbiodssp = "{}{}{}_bio.dssp".format(c.db_root, c.db_dssp_generated, cls.pdbid)
+        cls.inputbiocif = "{}{}{}_bio.cif".format(c.db_root, c.db_pdbx, cls.pdbid)
+        cls.inputbiodssp = "{}{}{}_bio.dssp".format(c.db_root, c.db_dssp, cls.pdbid)
 
-        cls.inputsifts = "{}{}{}.xml".format(c.db_root, c.db_sifts_xml, cls.pdbid)
+        cls.inputsifts = "{}{}{}.xml".format(c.db_root, c.db_sifts, cls.pdbid)
 
         cls.inputcontacts = "{}{}{}.contacts" \
-                            "".format(c.db_root, c.db_contacts_generated, cls.pdbid)
+                            "".format(c.db_root, c.db_contacts, cls.pdbid)
 
         d = MMCIFreader(cls.inputcif)
         cls.mmcif = d.atoms(add_res_full=True)
@@ -128,11 +126,11 @@ class TestMerger(unittest.TestCase):
         cls.dssp_bio = d.residues(add_rsa_class=True, add_ss_reduced=True)
 
         # chain A only: unbound
-        cls.outputcif_A = "{}{}{}_A.cif".format(c.db_root, c.db_cif, cls.pdbid)
+        cls.outputcif_A = "{}{}{}_A.cif".format(c.db_root, c.db_pdbx, cls.pdbid)
         w = MMCIFwriter(inputfile=cls.inputcif,
                         outputfile=cls.outputcif_A)
         w.run(chain=('A',))
-        cls.outputdssp_A = "{}{}{}_A.dssp".format(c.db_root, c.db_dssp_generated, cls.pdbid)
+        cls.outputdssp_A = "{}{}{}_A.dssp".format(c.db_root, c.db_dssp, cls.pdbid)
         d = DSSPgenerator(inputfile=cls.outputcif_A,
                           outputfile=cls.outputdssp_A)
         d.run()

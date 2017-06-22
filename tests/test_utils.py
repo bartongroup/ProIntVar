@@ -83,7 +83,6 @@ def response_mocker(kwargs, base_url, endpoint_url, status=200,
     return response
 
 
-@patch("prointvar.config.config.tmp_dir", "/tmp/")
 class TestUTILS(unittest.TestCase):
     """Test the utility methods."""
 

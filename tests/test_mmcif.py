@@ -54,13 +54,13 @@ class TestMMCIF(unittest.TestCase):
 
         self.pdbid = '2pah'
         self.pdbid2 = '1ejg'
-        self.inputcif = "{}{}{}.cif".format(c.db_root, c.db_cif, self.pdbid)
-        self.inputbiocif = "{}{}{}.cif".format(c.db_root, c.db_cif_biounit, self.pdbid)
-        self.outputcif = "{}{}{}.cif".format(c.db_root, c.tmp_dir_local, self.pdbid)
-        self.inputpdb = "{}{}{}.pdb".format(c.db_root, c.db_cif, self.pdbid)
-        self.inputpdb2 = "{}{}{}.pdb".format(c.db_root, c.db_cif, self.pdbid2)
-        self.outputpdb = "{}{}{}.pdb".format(c.db_root, c.tmp_dir_local, self.pdbid)
-        self.emptyfile = "{}{}{}.tmp".format(c.db_root, c.tmp_dir_local, self.pdbid)
+        self.inputcif = "{}{}{}.cif".format(c.db_root, c.db_pdbx, self.pdbid)
+        self.inputbiocif = "{}{}{}_bio.cif".format(c.db_root, c.db_pdbx, self.pdbid)
+        self.outputcif = "{}{}{}.cif".format(c.db_root, c.db_tmp, self.pdbid)
+        self.inputpdb = "{}{}{}.pdb".format(c.db_root, c.db_pdbx, self.pdbid)
+        self.inputpdb2 = "{}{}{}.pdb".format(c.db_root, c.db_pdbx, self.pdbid2)
+        self.outputpdb = "{}{}{}.pdb".format(c.db_root, c.db_tmp, self.pdbid)
+        self.emptyfile = "{}{}{}.tmp".format(c.db_root, c.db_tmp, self.pdbid)
         self.notfound = ""
         self.excluded = ()
 

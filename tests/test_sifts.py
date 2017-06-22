@@ -46,8 +46,8 @@ class TestSIFTS(unittest.TestCase):
         """Initialize the framework for testing."""
 
         self.pdbid = '2pah'
-        self.inputsifts = "{}{}{}.xml".format(c.db_root, c.db_sifts_xml, self.pdbid)
-        self.emptyfile = "{}{}{}.tmp".format(c.db_root, c.tmp_dir_local, self.pdbid)
+        self.inputsifts = "{}{}{}.xml".format(c.db_root, c.db_sifts, self.pdbid)
+        self.emptyfile = "{}{}{}.tmp".format(c.db_root, c.db_tmp, self.pdbid)
         self.notfound = ""
         self.excluded = ()
 

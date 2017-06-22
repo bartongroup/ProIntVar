@@ -285,11 +285,6 @@ class HBPLUSgenerator(object):
                 clean_bin = None
                 if run_clean and os.path.isfile(config.clean_bin):
                     clean_bin = config.clean_bin
-            elif os.path.isfile(config.hbplus_bin_local):
-                hbplus_bin = config.hbplus_bin_local
-                clean_bin = None
-                if run_clean and os.path.isfile(config.clean_bin_local):
-                    clean_bin = config.clean_bin_local
             else:
                 raise IOError('HBPLUS executables are not available...')
 

@@ -20,7 +20,7 @@ test = /test/value
 
 
 @patch("prointvar.config.config.db_root", "/root/")
-@patch("prointvar.config.config.tmp_dir", "/tmp/")
+@patch("prointvar.config.config.db_tmp", "/tmp/")
 class TestUTILS(unittest.TestCase):
     """Test the Config methods."""
 
@@ -40,8 +40,8 @@ class TestUTILS(unittest.TestCase):
         config = self.config
         self.assertTrue(hasattr(config, 'db_root'))
         self.assertEqual(config.db_root, "/root/")
-        self.assertTrue(hasattr(config, 'tmp_dir'))
-        self.assertEqual(config.tmp_dir, "/tmp/")
+        self.assertTrue(hasattr(config, 'db_tmp'))
+        self.assertEqual(config.db_tmp, "/tmp/")
         self.assertFalse(hasattr(config, 'test'))
 
     def test_updating_config_defaults(self):
@@ -58,19 +58,19 @@ class TestUTILS(unittest.TestCase):
     def test_loading_config_from_file(self):
         # using mocking config in this case
         didnt_exist = False
-        if not os.path.exists(self.config.tmp_dir):
+        if not os.path.exists(self.config.db_tmp):
             didnt_exist = True
-            os.makedirs(self.config.tmp_dir)
-        new_config_file = "{}mock_config.ini".format(self.config.tmp_dir)
+            os.makedirs(self.config.db_tmp)
+        new_config_file = "{}mock_config.ini".format(self.config.db_tmp)
         with open(new_config_file, 'w') as out:
             out.write(mock_config)
         config = self.defaults(config_file=new_config_file)
         self.assertFalse(hasattr(config, 'some_name'))
         self.assertTrue(hasattr(config, 'test'))
         self.assertEqual(config.test, "/test/value")
-        os.remove("{}mock_config.ini".format(self.config.tmp_dir))
+        os.remove("{}mock_config.ini".format(self.config.db_tmp))
         if didnt_exist:
-            os.removedirs(self.config.tmp_dir)
+            os.removedirs(self.config.db_tmp)
 
 
 if __name__ == '__main__':

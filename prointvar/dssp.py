@@ -487,8 +487,6 @@ class DSSPgenerator(object):
         if not os.path.exists(self.outputfile) or override or run_unbound:
             if os.path.isfile(config.dssp_bin):
                 dssp_bin = config.dssp_bin
-            elif os.path.isfile(config.dssp_bin_local):
-                dssp_bin = config.dssp_bin_local
             else:
                 raise IOError('DSSP executable is not available...')
 
