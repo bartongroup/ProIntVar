@@ -21,8 +21,8 @@ def cli():
               multiple=False, help='The output file to open.',
               required=False)
 def mmcif2pdb(inputfile, outputfile=None):
-    from prointvar.mmcif import MMCIFwriter
-    w = MMCIFwriter(inputfile=inputfile, outputfile=outputfile)
+    from prointvar.pdbx import PDBXwriter
+    w = PDBXwriter(inputfile=inputfile, outputfile=outputfile)
     w.run(format_type='pdb')
 
 
@@ -40,11 +40,11 @@ def mmcif2pdb(inputfile, outputfile=None):
               multiple=False, help='', default=False, is_flag=True,
               required=False)
 def mmcif_clean(inputfile, outputfile=None, rm_hydrogens=False, rm_altlocs=False):
-    from prointvar.mmcif import MMCIFwriter, MMCIFreader
-    r = MMCIFreader(inputfile=inputfile)
+    from prointvar.pdbx import PDBXwriter, PDBXreader
+    r = PDBXreader(inputfile=inputfile)
     data = r.atoms(format_type='mmcif',
                    remove_hydrogens=rm_hydrogens, remove_altloc=rm_altlocs)
-    w = MMCIFwriter(inputfile=None, outputfile=outputfile)
+    w = PDBXwriter(inputfile=None, outputfile=outputfile)
     w.run(data, format_type='mmcif')
 
 
@@ -72,12 +72,12 @@ def mmcif_clean(inputfile, outputfile=None, rm_hydrogens=False, rm_altlocs=False
               default=False, is_flag=True, required=False)
 def pdb_clean(inputfile, outputfile=None, rm_hydrogens=False, rm_altlocs=False,
               rm_partial_res=False, override=False, pro_format=False):
-    from prointvar.mmcif import MMCIFwriter, MMCIFreader
-    r = MMCIFreader(inputfile=inputfile)
+    from prointvar.pdbx import PDBXwriter, PDBXreader
+    r = PDBXreader(inputfile=inputfile)
     data = r.atoms(format_type='pdb',
                    remove_hydrogens=rm_hydrogens, remove_altloc=rm_altlocs,
                    remove_partial_res=rm_partial_res)
-    w = MMCIFwriter(inputfile=None, outputfile=outputfile)
+    w = PDBXwriter(inputfile=None, outputfile=outputfile)
     w.run(data, format_type='pdb', override=override, pro_format=pro_format)
 
 

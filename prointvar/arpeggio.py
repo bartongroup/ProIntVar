@@ -10,13 +10,13 @@ Needs the Edited Arpeggio Fork from: https://github.com/biomadeira/arpeggio
 Propositions for things to work:
 - Generate new PDB file from mmCIF and (even) PDB so that some issues (below) are cleared
     - Remove alternative locations and reset the atom sequential id
-      MMCIFreader(<...>).atoms(remove_altloc=True, reset_atom_id=True)
+      PDBXreader(<...>).atoms(remove_altloc=True, reset_atom_id=True)
 
     - Chain IDs need to be a single character so it is safer to run with category='auth'
-      MMCIFwriter(<...>).run(category='auth')
+      PDBXwriter(<...>).run(category='auth')
 
     - Remove hydrogens
-      MMCIFreader(<...>).atoms(remove_hydrogens=True)
+      PDBXreader(<...>).atoms(remove_hydrogens=True)
 
 Fábio Madeira, 2017+
 
@@ -30,8 +30,8 @@ from operator import attrgetter
 from collections import Counter
 from collections import namedtuple
 
-from prointvar.mmcif import MMCIFwriter
-from prointvar.mmcif import MMCIFreader
+from prointvar.pdbx import PDBXwriter
+from prointvar.pdbx import PDBXreader
 from prointvar.reduce import REDUCEgenerator
 from prointvar.hbplus import HBPLUSgenerator
 
@@ -657,8 +657,8 @@ class ARPEGGIOgenerator(object):
     def _generate_pdb(self, override=False, pro_format=False):
         filename, extension = os.path.splitext(self.inputfile)
         self.inputfile = filename + "_new.pdb"
-        w = MMCIFwriter(inputfile=None, outputfile=self.inputfile)
-        r = MMCIFreader(inputfile=self.inputfile_back)
+        w = PDBXwriter(inputfile=None, outputfile=self.inputfile)
+        r = PDBXreader(inputfile=self.inputfile_back)
         data = r.atoms(remove_altloc=True, reset_atom_id=True, add_new_pro_id=True,
                        remove_partial_res=True, format_type=None)
         w.run(data=data, format_type="pdb", category="auth",

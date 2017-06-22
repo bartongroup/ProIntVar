@@ -4,7 +4,7 @@
 
 """
 
-This defines the methods that work with SIFTS files.
+This defines the methods that work with PDB/mmCIF files.
 
 Fábio Madeira, 2017+
 
@@ -899,7 +899,7 @@ def get_atom_line(data, index, atom_number, pro_format=False,
     return _PDB_FORMAT % values
 
 
-class MMCIFreader(object):
+class PDBXreader(object):
     def __init__(self, inputfile, verbose=False):
         """
         :param inputfile: Needs to point to a valid mmCIF file.
@@ -992,7 +992,7 @@ class MMCIFreader(object):
             flash('No mmCIF data parsed...')
 
 
-class MMCIFwriter(object):
+class PDBXwriter(object):
     def __init__(self, inputfile=None, outputfile=None, verbose=False):
         """
         :param inputfile: Needs to point to a valid mmCIF file.
@@ -1024,7 +1024,7 @@ class MMCIFwriter(object):
 
         # writes a new mmCIF with selected chains, residues, atoms, or lines
         if data is None:
-            r = MMCIFreader(inputfile=self.inputfile)
+            r = PDBXreader(inputfile=self.inputfile)
             # guess the input format as 'format_type' refers to the output format
             try:
                 data = r.atoms(excluded=(), format_type="mmcif")

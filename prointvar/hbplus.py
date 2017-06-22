@@ -15,7 +15,7 @@ import json
 import shutil
 import pandas as pd
 
-from prointvar.mmcif import MMCIFwriter
+from prointvar.pdbx import PDBXwriter
 
 from prointvar.utils import flash
 from prointvar.utils import row_selector
@@ -213,7 +213,7 @@ class HBPLUSgenerator(object):
     def _generate_pdb(self, override=False):
         filename, extension = os.path.splitext(self.inputfile)
         self.inputfile = filename + "_new.pdb"
-        w = MMCIFwriter(inputfile=self.inputfile_back, outputfile=self.inputfile)
+        w = PDBXwriter(inputfile=self.inputfile_back, outputfile=self.inputfile)
         w.run(format_type="pdb", override=override)
 
     def _run(self, hbplus_bin, clean_bin=None, run_clean=True,

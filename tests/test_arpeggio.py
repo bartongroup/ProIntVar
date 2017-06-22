@@ -17,7 +17,7 @@ try:
 except ImportError:
     from unittest.mock import patch
 
-from prointvar.mmcif import MMCIFreader, MMCIFwriter
+from prointvar.pdbx import PDBXreader, PDBXwriter
 
 from prointvar.arpeggio import (ARPEGGIOreader, ARPEGGIOgenerator,
                                 parse_arpeggio_from_file,
@@ -158,11 +158,11 @@ class TestARPEGGIO(unittest.TestCase):
             self.assertFalse(os.path.isfile(inputarpeggio), msg)
 
         inputpdb_new = "{}{}{}_new.pdb".format(c.db_root, c.db_pdbx, pdbid)
-        r = MMCIFreader(inputpdb)
+        r = PDBXreader(inputpdb)
         data = r.atoms(format_type="pdb", remove_altloc=True,
                        remove_hydrogens=True, reset_atom_id=True,
                        remove_partial_res=True)
-        w = MMCIFwriter(inputfile=None, outputfile=inputpdb_new)
+        w = PDBXwriter(inputfile=None, outputfile=inputpdb_new)
         w.run(data, format_type='pdb')
 
         self.generator(inputpdb_new,

@@ -18,16 +18,16 @@ try:
 except ImportError:
     from unittest.mock import patch
 
-from prointvar.mmcif import (MMCIFreader, MMCIFwriter, parse_mmcif_atoms_from_file,
-                             parse_mmcif_categories_from_file,
-                             write_mmcif_from_table, get_mmcif_selected_from_table,
-                             get_contact_indexes_from_table, add_mmcif_contacts,
-                             add_mmcif_res_full, parse_pdb_atoms_from_file,
-                             get_mmcif_res_split, get_atom_line, write_pdb_from_table,
-                             add_mmcif_atom_altloc, residues_aggregation,
-                             remove_multiple_altlocs, add_mmcif_new_pro_ids,
-                             remove_partial_residues,
-                             fix_label_alt_id, fix_pdb_ins_code, fix_type_symbol)
+from prointvar.pdbx import (PDBXreader, PDBXwriter, parse_mmcif_atoms_from_file,
+                            parse_mmcif_categories_from_file,
+                            write_mmcif_from_table, get_mmcif_selected_from_table,
+                            get_contact_indexes_from_table, add_mmcif_contacts,
+                            add_mmcif_res_full, parse_pdb_atoms_from_file,
+                            get_mmcif_res_split, get_atom_line, write_pdb_from_table,
+                            add_mmcif_atom_altloc, residues_aggregation,
+                            remove_multiple_altlocs, add_mmcif_new_pro_ids,
+                            remove_partial_residues,
+                            fix_label_alt_id, fix_pdb_ins_code, fix_type_symbol)
 
 from prointvar.config import config as c
 root = os.path.abspath(os.path.dirname(__file__))
@@ -46,8 +46,8 @@ def captured_output():
 
 
 @patch("prointvar.config.config.db_root", c.db_root)
-class TestMMCIF(unittest.TestCase):
-    """Test the DSSP parser methods."""
+class TestPDBX(unittest.TestCase):
+    """Test the PDBx parser methods."""
 
     def setUp(self):
         """Initialize the framework for testing."""
@@ -66,8 +66,8 @@ class TestMMCIF(unittest.TestCase):
 
         self.parser = parse_mmcif_atoms_from_file
         self.parser_pdb = parse_pdb_atoms_from_file
-        self.reader = MMCIFreader
-        self.writer = MMCIFwriter
+        self.reader = PDBXreader
+        self.writer = PDBXwriter
         self.writer_method = write_mmcif_from_table
         self.filter = get_mmcif_selected_from_table
         self.contacts = get_contact_indexes_from_table
@@ -628,5 +628,5 @@ class TestMMCIF(unittest.TestCase):
         self.assertEqual('N', data.loc[0, 'type_symbol'])
 
 if __name__ == '__main__':
-    suite = unittest.TestLoader().loadTestsFromTestCase(TestMMCIF)
+    suite = unittest.TestLoader().loadTestsFromTestCase(TestPDBX)
     unittest.TextTestRunner(verbosity=2).run(suite)

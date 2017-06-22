@@ -11,7 +11,7 @@ Fábio Madeira, 2017+
 
 import os
 
-from prointvar.mmcif import MMCIFwriter
+from prointvar.pdbx import PDBXwriter
 
 from prointvar.utils import flash
 from prointvar.utils import lazy_file_remover
@@ -50,7 +50,7 @@ class REDUCEgenerator(object):
     def _generate_pdb(self, override=False):
         filename, extension = os.path.splitext(self.inputfile)
         self.inputfile = filename + "_new.pdb"
-        w = MMCIFwriter(inputfile=self.inputfile_back, outputfile=self.inputfile)
+        w = PDBXwriter(inputfile=self.inputfile_back, outputfile=self.inputfile)
         w.run(format_type="pdb", override=override)
 
     def _run(self, reduce_bin, clean_output=False):

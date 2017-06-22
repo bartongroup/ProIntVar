@@ -16,7 +16,7 @@ except ImportError:
 
 from prointvar.dssp import DSSPreader, DSSPgenerator
 from prointvar.sifts import SIFTSreader
-from prointvar.mmcif import MMCIFreader, MMCIFwriter, get_mmcif_selected_from_table
+from prointvar.pdbx import PDBXreader, PDBXwriter, get_mmcif_selected_from_table
 from prointvar.arpeggio import ARPEGGIOreader
 
 from prointvar.merger import (TableMerger, table_merger,
@@ -111,12 +111,12 @@ class TestMerger(unittest.TestCase):
         cls.inputcontacts = "{}{}{}.contacts" \
                             "".format(c.db_root, c.db_contacts, cls.pdbid)
 
-        d = MMCIFreader(cls.inputcif)
+        d = PDBXreader(cls.inputcif)
         cls.mmcif = d.atoms(add_res_full=True)
         cls.mmcif = get_mmcif_selected_from_table(cls.mmcif, atom=('CA',))
         cls.mmcif = TestMerger.mmcif
 
-        d = MMCIFreader(cls.inputbiocif)
+        d = PDBXreader(cls.inputbiocif)
         cls.mmcif_bio = d.atoms(add_res_full=True)
         cls.mmcif_bio = get_mmcif_selected_from_table(cls.mmcif_bio, atom=('CA',))
 
@@ -127,8 +127,8 @@ class TestMerger(unittest.TestCase):
 
         # chain A only: unbound
         cls.outputcif_A = "{}{}{}_A.cif".format(c.db_root, c.db_pdbx, cls.pdbid)
-        w = MMCIFwriter(inputfile=cls.inputcif,
-                        outputfile=cls.outputcif_A)
+        w = PDBXwriter(inputfile=cls.inputcif,
+                       outputfile=cls.outputcif_A)
         w.run(chain=('A',))
         cls.outputdssp_A = "{}{}{}_A.dssp".format(c.db_root, c.db_dssp, cls.pdbid)
         d = DSSPgenerator(inputfile=cls.outputcif_A,

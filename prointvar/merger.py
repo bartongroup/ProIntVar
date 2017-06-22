@@ -20,8 +20,8 @@ from prointvar.dssp import DSSPreader
 from prointvar.dssp import get_dssp_selected_from_table
 from prointvar.sifts import SIFTSreader
 from prointvar.sifts import get_sifts_selected_from_table
-from prointvar.mmcif import MMCIFreader
-from prointvar.mmcif import get_mmcif_selected_from_table
+from prointvar.pdbx import PDBXreader
+from prointvar.pdbx import get_mmcif_selected_from_table
 from prointvar.arpeggio import ARPEGGIOreader
 from prointvar.arpeggio import ARPEGGIOgenerator
 from prointvar.fetchers import fetch_best_structures_pdbe
@@ -293,7 +293,7 @@ def table_generator(uniprot_id=None, pdb_id=None, chain=None, res=None,
         else:
             inputcif = "{}{}{}.cif".format(config.db_root, config.db_pdbx, pdb_id)
 
-        r = MMCIFreader(inputcif)
+        r = PDBXreader(inputcif)
 
         if contacts:
             mmcif_table = r.atoms(add_atom_altloc=True, add_new_pro_id=True,
@@ -373,7 +373,7 @@ def table_generator(uniprot_id=None, pdb_id=None, chain=None, res=None,
                 g = ARPEGGIOgenerator(inputfile=inputcif, outputfile=outputarp)
                 if bio:
                     # write new PDB file used by arpeggio using 'pro_format' defined in
-                    # mmcif.py ('write_pdb_from_table' method)
+                    # pdbx.py ('write_pdb_from_table' method)
                     g.run(override=override, pro_format=True)
                 else:
                     g.run(override=override)

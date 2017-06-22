@@ -17,8 +17,8 @@ from io import StringIO
 from string import digits
 from string import ascii_uppercase
 
-from prointvar.mmcif import MMCIFreader
-from prointvar.mmcif import MMCIFwriter
+from prointvar.pdbx import PDBXreader
+from prointvar.pdbx import PDBXwriter
 
 from prointvar.utils import flash
 from prointvar.utils import compute_rsa
@@ -424,7 +424,7 @@ class DSSPgenerator(object):
                 raise IOError("DSSP output not generated for {}".format(self.outputfile))
         else:
             # read the file and get available chains
-            r = MMCIFreader(inputfile=self.inputfile)
+            r = PDBXreader(inputfile=self.inputfile)
             data = r.atoms(add_res_full=False, add_contacts=False, format_type=None)
             chains = [k for k in data.loc[:, '{}_asym_id'.format(category)].unique()]
             new_inputs = []
@@ -437,7 +437,7 @@ class DSSPgenerator(object):
                     outputpdb = filename + '_{}.pdb'.format(chain)
                     new_inputs.append(outputpdb)
                     if not os.path.isfile(outputpdb) or override:
-                        w = MMCIFwriter(inputfile=None, outputfile=outputpdb)
+                        w = PDBXwriter(inputfile=None, outputfile=outputpdb)
                         try:
                             w.run(data=data, chain=(chain,), res=None, atom=None,
                                   lines=('ATOM', ), override=override, format_type="pdb")
