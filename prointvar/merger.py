@@ -123,7 +123,7 @@ def dssp_dssp_table_merger(bound_table, unbound_table):
     """
 
     # assumes a pre-merge with mmcif was performed, and that bound dssp is observed
-    if ('label_seq_id' in bound_table and 'label_asym_id' in bound_table and
+    if ('auth_seq_id_full' in bound_table and 'label_asym_id' in bound_table and
             'RES' in unbound_table and 'CHAIN_FULL' in unbound_table and
             'RES' in bound_table and 'CHAIN_FULL' in bound_table):
 
@@ -135,7 +135,7 @@ def dssp_dssp_table_merger(bound_table, unbound_table):
         unbound_table.columns = ['{}_UNB'.format(k) for k in unbound_table]
 
         table = bound_table.merge(unbound_table, how='left',
-                                  left_on=['label_seq_id', 'label_asym_id'],
+                                  left_on=['auth_seq_id_full', 'label_asym_id'],
                                   right_on=['RES_UNB', 'CHAIN_FULL_UNB'])
     # bare minimal columns needed
     elif ('RES' in bound_table and 'CHAIN_FULL' in bound_table and
@@ -261,7 +261,7 @@ def table_generator(uniprot_id=None, pdb_id=None, chain=None, res=None,
             else:
                 outputdssp = "{}{}{}.dssp" \
                              "".format(config.db_root, config.db_dssp_generated, pdb_id)
-            if not outputdssp or override:
+            if not os.path.isfile(outputdssp) or override:
                 w = DSSPgenerator(inputcif, outputdssp)
                 w.run(override=override)
             if os.path.exists(outputdssp):
@@ -281,7 +281,7 @@ def table_generator(uniprot_id=None, pdb_id=None, chain=None, res=None,
                     outputdssp_unb = "{}{}{}_unbound.dssp" \
                                      "".format(config.db_root, config.db_dssp_generated, pdb_id)
 
-                if not outputdssp_unb or override:
+                if not os.path.isfile(outputdssp_unb) or override:
                     w = DSSPgenerator(inputcif, outputdssp_unb)
                     w.run(override=override, run_unbound=dssp_unbound)
                 if os.path.exists(outputdssp_unb):
