@@ -17,10 +17,12 @@ except ImportError:
 from prointvar.dssp import DSSPreader, DSSPgenerator
 from prointvar.sifts import SIFTSreader
 from prointvar.mmcif import MMCIFreader, MMCIFwriter, get_mmcif_selected_from_table
+from prointvar.arpeggio import ARPEGGIOreader
 
 from prointvar.merger import (TableMerger, table_merger,
                               mmcif_dssp_table_merger, mmcif_sifts_table_merger,
-                              dssp_sifts_table_merger, table_generator, dssp_dssp_table_merger,
+                              dssp_sifts_table_merger, table_generator,
+                              dssp_dssp_table_merger, contacts_mmcif_table_merger,
                               load_merged_table, dump_merged_table)
 
 from prointvar.config import config as c
@@ -52,11 +54,13 @@ class TestMerger(unittest.TestCase):
         self.dssp_bio = TestMerger.dssp_bio
         self.dssp_unbound = TestMerger.dssp_unbound
         self.sifts = TestMerger.sifts
+        self.contacts = TestMerger.contacts
 
         self.mmcif_sifts = mmcif_sifts_table_merger
         self.mmcif_dssp = mmcif_dssp_table_merger
         self.dssp_sifts = dssp_sifts_table_merger
         self.dssp_dssp = dssp_dssp_table_merger
+        self.contacts_mmcif = contacts_mmcif_table_merger
         self.merger = TableMerger
         self.table_merger = table_merger
         self.generator = table_generator
@@ -79,11 +83,13 @@ class TestMerger(unittest.TestCase):
         self.dssp_bio = None
         self.dssp_unbound = None
         self.sifts = None
+        self.contacts= None
 
         self.mmcif_sifts = None
         self.mmcif_dssp = None
         self.dssp_sifts = None
         self.dssp_dssp = None
+        self.contacts_mmcif = None
         self.merger = None
         self.table_merger = None
         self.generator = None
@@ -103,6 +109,9 @@ class TestMerger(unittest.TestCase):
         cls.inputbiodssp = "{}{}{}_bio.dssp".format(c.db_root, c.db_dssp_generated, cls.pdbid)
 
         cls.inputsifts = "{}{}{}.xml".format(c.db_root, c.db_sifts_xml, cls.pdbid)
+
+        cls.inputcontacts = "{}{}{}.contacts" \
+                            "".format(c.db_root, c.db_contacts_generated, cls.pdbid)
 
         d = MMCIFreader(cls.inputcif)
         cls.mmcif = d.atoms(add_res_full=True)
@@ -135,6 +144,12 @@ class TestMerger(unittest.TestCase):
 
         d = SIFTSreader(cls.inputsifts)
         cls.sifts = d.read(add_regions=True, add_dbs=False)
+
+        r = ARPEGGIOreader(cls.inputcontacts)
+        cls.contacts = r.contacts(residue_agg=True, agg_method="minimum",
+                                  collapsed_cont=True, col_method="full",
+                                  int_filter=True, int_mode='inter-chain',
+                                  parse_special=True)
 
     @classmethod
     def tearDownClass(cls):
@@ -423,6 +438,57 @@ class TestMerger(unittest.TestCase):
         self.assertEqual(79.618, table.loc[314, 'RSA_UNB'])
         self.assertEqual(58.0, table.loc[314, 'ACC'])
         self.assertEqual(125.0, table.loc[314, 'ACC_UNB'])
+
+    def test_contacts_mmcif_merger(self):
+        table = self.contacts_mmcif(self.contacts, self.mmcif, suffix='A')
+        self.assertIn('CHAIN_A', list(table))
+        self.assertIn('label_asym_id_A', list(table))
+        self.assertIn('label_seq_id_full_A', list(table))
+        self.assertTrue('366', table.loc[0, 'RES_FULL_A'])
+        self.assertTrue(1.694, table.loc[0, 'VDW_DIST'])
+
+    def test_contacts_mmcif_merger_both_sides(self):
+        table = self.contacts_mmcif(self.contacts, self.mmcif, suffix='A')
+        table = self.contacts_mmcif(table, self.mmcif, suffix='B')
+        self.assertIn('CHAIN_A', list(table))
+        self.assertIn('CHAIN_B', list(table))
+        self.assertIn('label_asym_id_A', list(table))
+        self.assertIn('label_asym_id_B', list(table))
+        self.assertIn('label_seq_id_full_A', list(table))
+        self.assertIn('label_seq_id_full_B', list(table))
+        self.assertTrue('366', table.loc[0, 'RES_FULL_A'])
+        self.assertTrue(1.694, table.loc[0, 'VDW_DIST'])
+
+    def test_table_generator_contacts_mmcif(self):
+        mmcif_table, dssp_table, sifts_table, contacts_table = \
+            self.generator(uniprot_id=None, pdb_id=self.pdbid, chain=None,
+                           res=None, site=None, atom=('CA',), lines=None,
+                           bio=False, sifts=False, dssp=False, dssp_unbound=False,
+                           contacts=True)
+        table = self.contacts_mmcif(contacts_table, mmcif_table, suffix='A')
+        self.assertIn('CHAIN_A', list(table))
+        self.assertIn('label_asym_id_A', list(table))
+        self.assertIn('label_seq_id_full_A', list(table))
+        self.assertTrue('366', table.loc[0, 'RES_FULL_A'])
+        self.assertTrue(1.694, table.loc[0, 'VDW_DIST'])
+
+    def test_table_merger_contacts_mmcif(self):
+        mmcif_table, dssp_table, sifts_table, contacts_table = \
+            self.generator(uniprot_id=None, pdb_id=self.pdbid, chain=None,
+                           res=None, site=None, atom=('CA',), lines=None,
+                           bio=False, sifts=False, dssp=False, dssp_unbound=False,
+                           contacts=True)
+
+        table = self.table_merger(mmcif_table, dssp_table, sifts_table, contacts_table)
+        self.assertIn('CHAIN_A', list(table))
+        self.assertIn('CHAIN_B', list(table))
+        self.assertIn('label_asym_id_A', list(table))
+        self.assertIn('label_asym_id_B', list(table))
+        self.assertIn('label_seq_id_full_A', list(table))
+        self.assertIn('label_seq_id_full_B', list(table))
+        self.assertTrue('366', table.loc[0, 'RES_FULL_A'])
+        self.assertTrue(1.694, table.loc[0, 'VDW_DIST'])
+        print(table.loc[0, :])
 
 if __name__ == '__main__':
     suite = unittest.TestLoader().loadTestsFromTestCase(TestMerger)

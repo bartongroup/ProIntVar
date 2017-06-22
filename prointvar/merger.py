@@ -22,6 +22,9 @@ from prointvar.sifts import SIFTSreader
 from prointvar.sifts import get_sifts_selected_from_table
 from prointvar.mmcif import MMCIFreader
 from prointvar.mmcif import get_mmcif_selected_from_table
+from prointvar.arpeggio import ARPEGGIOreader
+from prointvar.arpeggio import ARPEGGIOgenerator
+from prointvar.arpeggio import get_arpeggio_selected_from_table
 from prointvar.fetchers import fetch_best_structures_pdbe
 
 from prointvar.utils import flash
@@ -158,6 +161,51 @@ def dssp_dssp_table_merger(bound_table, unbound_table):
     return table
 
 
+def contacts_mmcif_table_merger(contacts_table, mmcif_table, suffix='A'):
+    """
+    Merge the Contacts and mmCIF tables. Suffix is used to select the 'side'
+      (there's 'A' and 'B', as in A-B interactions) of the contacts table,
+       which should be used to merge. This is also used to rename the columns
+       added to the contacts table.
+
+    :param contacts_table: Arpeggio pandas DataFrame
+    :param mmcif_table: mmCIF pandas DataFrame
+    :param suffix: (str) add to the new columns added to the contacts_table
+    :return: merged pandas DataFrame
+    """
+
+    if ('new_seq_id' in mmcif_table and 'new_asym_id' in mmcif_table and
+            'RES_FULL_{}'.format(suffix) in contacts_table and
+            'CHAIN_{}'.format(suffix) in contacts_table):
+
+        new_col_names = {k: '{}_{}'.format(k, suffix) for k in list(mmcif_table)}
+        mmcif_table = mmcif_table.rename(columns=new_col_names)
+
+        table = contacts_table.merge(mmcif_table, how='left',
+                                     right_on=['new_seq_id_{}'.format(suffix),
+                                               'new_asym_id_{}'.format(suffix)],
+                                     left_on=['RES_FULL_{}'.format(suffix),
+                                              'CHAIN_{}'.format(suffix)])
+
+    elif ('auth_seq_id_full' in mmcif_table and 'label_asym_id' in mmcif_table and
+            'RES_FULL_{}'.format(suffix) in contacts_table and
+            'CHAIN_{}'.format(suffix) in contacts_table):
+
+        new_col_names = {k: '{}_{}'.format(k, suffix) for k in list(mmcif_table)}
+        mmcif_table = mmcif_table.rename(columns=new_col_names)
+
+        table = contacts_table.merge(mmcif_table, how='inner',
+                                     right_on=['auth_seq_id_full_{}'.format(suffix),
+                                               'label_asym_id_{}'.format(suffix)],
+                                     left_on=['RES_FULL_{}'.format(suffix),
+                                              'CHAIN_{}'.format(suffix)])
+                                     # suffixes=('_{}'.format(suffix), '')
+    else:
+        raise TableMergerError('Not possible to merge the Contacts and mmCIF tables! '
+                               'Some of the necessary columns are missing...')
+    return table
+
+
 def table_merger(mmcif_table=None, dssp_table=None, sifts_table=None,
                  contacts_table=None):
     """
@@ -181,9 +229,14 @@ def table_merger(mmcif_table=None, dssp_table=None, sifts_table=None,
             mmcif_table = mmcif_dssp_table_merger(mmcif_table, dssp_table)
         if sifts_table is not None:
             mmcif_table = mmcif_sifts_table_merger(mmcif_table, sifts_table)
-        # if contacts_table is not None:
-        #     mmcif_table = contacts_mmcif_table_merger(contacts_table, mmcif_table)
-        table = mmcif_table
+        if contacts_table is not None:
+            contacts_table = contacts_mmcif_table_merger(contacts_table, mmcif_table,
+                                                         suffix='A')
+            contacts_table = contacts_mmcif_table_merger(contacts_table, mmcif_table,
+                                                         suffix='B')
+            table = contacts_table
+        else:
+            table = mmcif_table
 
     elif dssp_table is not None:
         if sifts_table is not None:
@@ -295,8 +348,31 @@ def table_generator(uniprot_id=None, pdb_id=None, chain=None, res=None,
         else:
             dssp_table = None
 
+        # Contacts (Arpeggio) table
         if contacts:
-            contacts_table = None
+            if bio:
+                outputarp = "{}{}{}_bio.contacts" \
+                                 "".format(config.db_root, config.db_contacts_generated, pdb_id)
+            else:
+                outputarp = "{}{}{}.contacts" \
+                                 "".format(config.db_root, config.db_contacts_generated, pdb_id)
+
+            if not os.path.isfile(outputarp) or override:
+                g = ARPEGGIOgenerator(inputfile=inputcif, outputfile=outputarp)
+                g.run(override=override)
+            if os.path.exists(outputarp):
+                r = ARPEGGIOreader(inputfile=outputarp)
+                contacts_table = r.contacts(residue_agg=True, agg_method="minimum",
+                                            collapsed_cont=True, col_method="full",
+                                            int_filter=True, int_mode='inter-chain',
+                                            ignore_consecutive=False, numb_res=3,
+                                            parse_special=True)
+                # assumes the interaction side is A->B and selection is made of A side
+                contacts_table = get_arpeggio_selected_from_table(contacts_table,
+                                                                  chain_A=chain,
+                                                                  res_full_A=res)
+            else:
+                contacts_table = None
         else:
             contacts_table = None
 
