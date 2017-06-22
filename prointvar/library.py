@@ -197,7 +197,11 @@ arpeggio_col_renames = {
     "HYDROPHOBIC": "Hydrophobic-Bond",
     "CARBONYL": "Carbonyl-Bond",
     "POLAR": "Polar-Bond",
-    "WEAK_POLAR": "Weak-Polar-Bond"
+    "WEAK_POLAR": "Weak-Polar-Bond",
+    "Amide-Amide": "Amide-Amide",
+    "Amide-Aromatic": "Amide-Aromatic",
+    "Aromatic-Aromatic": "Aromatic-Aromatic",
+    "Atom-Ring": "Atom-Ring",
 }
 
 # working species in Ensembl Variants, as of November 2014

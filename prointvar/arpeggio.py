@@ -374,7 +374,8 @@ def add_contact_info(data, info, col_name="Amide-Amide", int_type="res-res"):
 
 def get_arpeggio_selected_from_table(data, chain_A=None, chain_B=None,
                                      res_A=None, res_B=None,
-                                     res_full_A=None, res_full_B=None):
+                                     res_full_A=None, res_full_B=None,
+                                     atom_A=None, atom_B=None):
     """
     Utility that filters a pandas DataFrame by the input tuples.
 
@@ -385,6 +386,8 @@ def get_arpeggio_selected_from_table(data, chain_A=None, chain_B=None,
     :param res_B: (tuple) res IDs or None (acceptor)
     :param res_full_A: (tuple) res IDs + inscode or None (donor)
     :param res_full_B: (tuple) res IDs + inscode or None (acceptor)
+    :param atom_A: (tuple) atom IDs or None (donor)
+    :param atom_B: (tuple) atom IDs or None (acceptor)
     :return: returns a modified pandas DataFrame
     """
 
@@ -408,6 +411,12 @@ def get_arpeggio_selected_from_table(data, chain_A=None, chain_B=None,
 
     if res_full_B is not None:
         table = row_selector(table, 'RES_FULL_B', res_full_B, method="isin")
+
+    if atom_A is not None:
+        table = row_selector(table, 'ATOM_A', atom_A, method="isin")
+
+    if atom_B is not None:
+        table = row_selector(table, 'ATOM_B', atom_B, method="isin")
 
     return table
 
@@ -502,12 +511,14 @@ def collapsed_contacts(data, col_method='full'):
                          ''.format(col_method))
     # rename the columns
     table = table.rename(columns=arpeggio_col_renames)
-    col_names = list(arpeggio_col_renames.values())
+    col_names = [k for k in list(arpeggio_col_renames.values()) if k in table]
     if col_method == 'minimal':
         col_min = (
             "Steric-Clash",  "VDW-Bond", "Hydrogen-Bond", "Halogen-Bond", "Ionic-Bond",
-            "Aromatic-Bond", "Hydrophobic-Bond", "Carbonyl-Bond", "Polar-Bond"
+            "Aromatic-Bond", "Hydrophobic-Bond", "Carbonyl-Bond", "Polar-Bond",
+            "Amide-Amide", "Amide-Aromatic", "Aromatic-Aromatic", "Atom-Ring",
         )
+        col_min = [k for k in col_min if k in table]
         excluded = [k for k in col_names if k not in col_min]
         col_names = list(col_min)
         table = table.drop(excluded, axis=1)
@@ -515,10 +526,10 @@ def collapsed_contacts(data, col_method='full'):
     int_types = []
     for ix in table.index:
         try:
-            agg = [k for k in col_names if bool(table.loc[ix, k])]
+            agg = [k for k in col_names if k in table if bool(table.loc[ix, k])]
         except ValueError:
             # checking on a pre-aggregated entry (i.e. agg_method=='unique')
-            agg = [k for k in col_names if bool(table.loc[ix, k].any())]
+            agg = [k for k in col_names if k in table if bool(table.loc[ix, k].any())]
         int_types.append(agg)
     assert len(table) == len(int_types)
     table['Int_Types'] = int_types
@@ -643,14 +654,15 @@ class ARPEGGIOgenerator(object):
         filename, extension = os.path.splitext(self.inputfile)
         self.outputfile = filename + ".contacts"
 
-    def _generate_pdb(self, override=False):
+    def _generate_pdb(self, override=False, pro_format=False):
         filename, extension = os.path.splitext(self.inputfile)
         self.inputfile = filename + "_new.pdb"
         w = MMCIFwriter(inputfile=None, outputfile=self.inputfile)
         r = MMCIFreader(inputfile=self.inputfile_back)
-        data = r.atoms(remove_altloc=True, reset_atom_id=True,
+        data = r.atoms(remove_altloc=True, reset_atom_id=True, add_new_pro_id=True,
                        remove_partial_res=True, format_type=None)
-        w.run(data=data, format_type="pdb", category="auth", override=override)
+        w.run(data=data, format_type="pdb", category="auth",
+              override=override, pro_format=pro_format)
 
     def _generate_pdb_with_hydrogens(self, hydro_method="hbplus", override=False):
         if hydro_method == "hbplus":
@@ -734,7 +746,7 @@ class ARPEGGIOgenerator(object):
             lazy_file_remover(output_specific_polarmatch)
 
     def run(self, hydro_method="arpeggio", override=False,
-            clean_output=True, save_new_input=False):
+            clean_output=True, save_new_input=False, pro_format=False):
 
         # generate outputfile if missing
         if not self.outputfile:
@@ -755,7 +767,7 @@ class ARPEGGIOgenerator(object):
 
             # inputfile needs to be in PDB format
             filename, extension = os.path.splitext(self.inputfile)
-            self._generate_pdb(override=override)
+            self._generate_pdb(override=override, pro_format=pro_format)
 
             # get PDB with explicit hydrogen atoms
             self.inputfile_h = filename + ".h.pdb"
