@@ -65,18 +65,19 @@ def mmcif_sifts_table_merger(mmcif_table, sifts_table):
     return table
 
 
-def mmcif_dssp_table_merger(mmcif_table, dssp_table):
+def mmcif_dssp_table_merger(mmcif_table, dssp_table, pro_format=False):
     """
     Merge the mmCIF and DSSP tables.
     
     :param mmcif_table: mmCIF pandas DataFrame
     :param dssp_table: DSSP pandas DataFrame
+    :param pro_format: boolean
     :return: merged pandas DataFrame
     """
 
     # bare minimal columns needed
     if ('new_seq_id' in mmcif_table and 'new_asym_id' in mmcif_table and
-            'RES' in dssp_table and 'CHAIN' in dssp_table):
+            'RES' in dssp_table and 'CHAIN' in dssp_table and pro_format):
 
         table = mmcif_table.merge(dssp_table, how='left',
                                   left_on=['new_seq_id', 'new_asym_id'],
@@ -185,7 +186,8 @@ def contacts_mmcif_table_merger(contacts_table, mmcif_table, suffix='A'):
                                      right_on=['new_seq_id_{}'.format(suffix),
                                                'new_asym_id_{}'.format(suffix)],
                                      left_on=['RES_FULL_{}'.format(suffix),
-                                              'CHAIN_{}'.format(suffix)])
+                                              'CHAIN_{}'.format(suffix)],
+                                     suffixes=('', '_{}'.format(suffix)))
 
     elif ('auth_seq_id_full' in mmcif_table and 'label_asym_id' in mmcif_table and
             'RES_FULL_{}'.format(suffix) in contacts_table and
@@ -198,8 +200,8 @@ def contacts_mmcif_table_merger(contacts_table, mmcif_table, suffix='A'):
                                      right_on=['auth_seq_id_full_{}'.format(suffix),
                                                'label_asym_id_{}'.format(suffix)],
                                      left_on=['RES_FULL_{}'.format(suffix),
-                                              'CHAIN_{}'.format(suffix)])
-                                     # suffixes=('_{}'.format(suffix), '')
+                                              'CHAIN_{}'.format(suffix)],
+                                     suffixes=('', '_{}'.format(suffix)))
     else:
         raise TableMergerError('Not possible to merge the Contacts and mmCIF tables! '
                                'Some of the necessary columns are missing...')
@@ -290,7 +292,15 @@ def table_generator(uniprot_id=None, pdb_id=None, chain=None, res=None,
             inputcif = "{}{}{}.cif".format(config.db_root, config.db_cif, pdb_id)
 
         r = MMCIFreader(inputcif)
-        mmcif_table = r.atoms(add_res_full=True, add_contacts=False)
+
+        if contacts:
+            mmcif_table = r.atoms(add_atom_altloc=True, add_new_pro_id=True,
+                                  remove_altloc=True, remove_partial_res=True,
+                                  category='auth')
+        else:
+            mmcif_table = r.atoms(add_atom_altloc=True, add_new_pro_id=True,
+                                  category='auth')
+
         mmcif_table = get_mmcif_selected_from_table(mmcif_table, chain=chain, res_full=res,
                                                     atom=atom, lines=lines, category='auth')
 
@@ -359,18 +369,22 @@ def table_generator(uniprot_id=None, pdb_id=None, chain=None, res=None,
 
             if not os.path.isfile(outputarp) or override:
                 g = ARPEGGIOgenerator(inputfile=inputcif, outputfile=outputarp)
-                g.run(override=override)
+                if bio:
+                    # write new PDB file used by arpeggio using 'pro_format' defined in
+                    # mmcif.py ('write_pdb_from_table' method)
+                    g.run(override=override, pro_format=True)
+                else:
+                    g.run(override=override)
             if os.path.exists(outputarp):
                 r = ARPEGGIOreader(inputfile=outputarp)
-                contacts_table = r.contacts(residue_agg=True, agg_method="minimum",
-                                            collapsed_cont=True, col_method="full",
-                                            int_filter=True, int_mode='inter-chain',
+                contacts_table = r.contacts(collapsed_cont=True, col_method="full",
                                             ignore_consecutive=False, numb_res=3,
                                             parse_special=True)
                 # assumes the interaction side is A->B and selection is made of A side
                 contacts_table = get_arpeggio_selected_from_table(contacts_table,
                                                                   chain_A=chain,
-                                                                  res_full_A=res)
+                                                                  res_full_A=res,
+                                                                  atom_A=atom)
             else:
                 contacts_table = None
         else:
