@@ -29,10 +29,13 @@ def cli():
 @click.option('-o', '--output', 'outputfile', type=str,
               multiple=False, help='The output file to open.',
               required=False)
-def mmcif2pdb(inputfile, outputfile=None):
+@click.option('--override', 'override',
+              multiple=False, help='Overrides any existing file, if available.',
+              default=False, is_flag=True, required=False)
+def mmcif2pdb(inputfile, outputfile=None, override=False):
     from prointvar.pdbx import PDBXwriter
     w = PDBXwriter(inputfile=inputfile, outputfile=outputfile)
-    w.run(format_type='pdb')
+    w.run(format_type='pdb', override=override)
 
 
 @cli.command('mmcif_clean')
@@ -43,18 +46,26 @@ def mmcif2pdb(inputfile, outputfile=None):
               multiple=False, help='The output file to open.',
               required=False)
 @click.option('--remove_hydrogens', 'rm_hydrogens',
-              multiple=False, help='', default=False, is_flag=True,
-              required=False)
+              multiple=False, help='Removes hydrogens.',
+              default=False, is_flag=True, required=False)
 @click.option('--remove_altlocs', 'rm_altlocs',
-              multiple=False, help='', default=False, is_flag=True,
-              required=False)
-def mmcif_clean(inputfile, outputfile=None, rm_hydrogens=False, rm_altlocs=False):
+              multiple=False, help='Removes alternative locations.',
+              default=False, is_flag=True, required=False)
+@click.option('--remove_partial_res', 'rm_partial_res',
+              multiple=False, help='Removes incomplete residues.',
+              default=False, is_flag=True, required=False)
+@click.option('--override', 'override',
+              multiple=False, help='Overrides any existing file, if available.',
+              default=False, is_flag=True, required=False)
+def mmcif_clean(inputfile, outputfile=None, rm_hydrogens=False, rm_altlocs=False,
+              rm_partial_res=False, override=False):
     from prointvar.pdbx import PDBXwriter, PDBXreader
     r = PDBXreader(inputfile=inputfile)
     data = r.atoms(format_type='mmcif',
-                   remove_hydrogens=rm_hydrogens, remove_altloc=rm_altlocs)
+                   remove_hydrogens=rm_hydrogens, remove_altloc=rm_altlocs,
+                   remove_partial_res=rm_partial_res)
     w = PDBXwriter(inputfile=None, outputfile=outputfile)
-    w.run(data, format_type='mmcif')
+    w.run(data, format_type='mmcif', override=override)
 
 
 @cli.command('pdb_clean')
@@ -65,16 +76,16 @@ def mmcif_clean(inputfile, outputfile=None, rm_hydrogens=False, rm_altlocs=False
               multiple=False, help='The output file to open.',
               required=False)
 @click.option('--remove_hydrogens', 'rm_hydrogens',
-              multiple=False, help='',
+              multiple=False, help='Removes hydrogens.',
               default=False, is_flag=True, required=False)
 @click.option('--remove_altlocs', 'rm_altlocs',
-              multiple=False, help='',
+              multiple=False, help='Removes alternative locations.',
               default=False, is_flag=True, required=False)
 @click.option('--remove_partial_res', 'rm_partial_res',
-              multiple=False, help='',
+              multiple=False, help='Removes incomplete residues.',
               default=False, is_flag=True, required=False)
 @click.option('--override', 'override',
-              multiple=False, help='',
+              multiple=False, help='Overrides any existing file, if available.',
               default=False, is_flag=True, required=False)
 @click.option('--pro_format', 'pro_format',
               multiple=False, help='',
