@@ -21,7 +21,14 @@ try:
 except ImportError:
     from unittest.mock import patch
 
-from prointvar.fetchers import fetch_best_structures_pdbe
+from prointvar.fetchers import (fetch_best_structures_pdbe,
+                                fetch_summary_properties_pdbe,
+                                fetch_preferred_assembly_id,
+                                download_structure_from_pdbe,
+                                download_sifts_from_ebi,
+                                download_data_from_uniprot,
+                                download_alignment_from_cath,
+                                download_alignment_from_pfam)
 
 from prointvar.config import config as c
 root = os.path.abspath(os.path.dirname(__file__))
@@ -29,6 +36,11 @@ c.db_root = "{}/testdata/".format(root)
 
 
 @patch("prointvar.config.config.db_root", c.db_root)
+@patch("prointvar.config.config.db_pdbx", 'tmp/')
+@patch("prointvar.config.config.db_sifts", 'tmp/')
+@patch("prointvar.config.config.db_uniprot", 'tmp/')
+@patch("prointvar.config.config.db_cath", 'tmp/')
+@patch("prointvar.config.config.db_pfam", 'tmp/')
 class TestFetchers(unittest.TestCase):
     """Test the DSSP parser methods."""
 
@@ -36,17 +48,97 @@ class TestFetchers(unittest.TestCase):
         """Initialize the framework for testing."""
 
         self.uniprotid = "P00439"
+        self.pdbid = "2pah"
+        self.cathid = "1.50.10.100_1318"
+        self.pfamid = "PF08124"
         self.fetch_best_structures_pdbe = fetch_best_structures_pdbe
+        self.fetch_summary_properties_pdbe = fetch_summary_properties_pdbe
+        self.fetch_preferred_assembly_id = fetch_preferred_assembly_id
+        self.download_structure_from_pdbe = download_structure_from_pdbe
+        self.download_sifts_from_ebi = download_sifts_from_ebi
+        self.download_data_from_uniprot = download_data_from_uniprot
+        self.download_alignment_from_cath = download_alignment_from_cath
+        self.download_alignment_from_pfam = download_alignment_from_pfam
 
     def tearDown(self):
         """Remove testing framework."""
 
         self.uniprotid = None
+        self.pdbid = None
+        self.cathid = None
+        self.pfamid = None
         self.fetch_best_structures_pdbe = None
+        self.fetch_summary_properties_pdbe = None
+        self.fetch_preferred_assembly_id = None
+        self.download_structure_from_pdbe = None
+        self.download_sifts_from_ebi = None
+        self.download_data_from_uniprot = None
+        self.download_alignment_from_cath = None
+        self.download_alignment_from_pfam = None
 
     def test_best_structure_pdbe(self):
         r = self.fetch_best_structures_pdbe(self.uniprotid)
         self.assertTrue(r.ok)
+
+    def test_best_structure_pdbe_cached(self):
+        pickled = "{}{}{}_bs.pkl".format(c.db_root, c.db_pickled, self.uniprotid)
+        self.assertFalse(os.path.isfile(pickled))
+        r = self.fetch_best_structures_pdbe(self.uniprotid, cached=True)
+        self.assertTrue(r.ok)
+        self.assertTrue(os.path.isfile(pickled))
+        os.remove(pickled)
+
+    def test_summary_properties_pdbe(self):
+        r = self.fetch_summary_properties_pdbe(self.pdbid)
+        self.assertTrue(r.ok)
+
+    def test_summary_properties_cached(self):
+        pickled = "{}{}{}_sp.pkl".format(c.db_root, c.db_pickled, self.pdbid)
+        self.assertFalse(os.path.isfile(pickled))
+        r = self.fetch_summary_properties_pdbe(self.pdbid, cached=True)
+        self.assertTrue(r.ok)
+        self.assertTrue(os.path.isfile(pickled))
+        os.remove(pickled)
+
+    def test_preferred_assembly_pdbe(self):
+        r = self.fetch_preferred_assembly_id(self.pdbid)
+        self.assertEqual("1", r)
+
+    def test_download_structure_from_pdbe_pdb(self):
+        self.download_structure_from_pdbe(self.pdbid, pdb=True)
+        os.remove("{}{}{}.pdb".format(c.db_root, c.db_pdbx, self.pdbid))
+
+    def test_download_structure_from_pdbe_mmcif(self):
+        self.download_structure_from_pdbe(self.pdbid, pdb=False)
+        os.remove("{}{}{}.cif".format(c.db_root, c.db_pdbx, self.pdbid))
+
+    def test_download_structure_from_pdbe_mmcif_bio(self):
+        self.download_structure_from_pdbe(self.pdbid, pdb=False, bio=True)
+        os.remove("{}{}{}_bio.cif".format(c.db_root, c.db_pdbx, self.pdbid))
+
+    def test_download_sifts_from_ebi(self):
+        self.download_sifts_from_ebi(self.pdbid)
+        os.remove("{}{}{}.xml".format(c.db_root, c.db_sifts, self.pdbid))
+
+    def test_download_data_from_uniprot_fasta(self):
+        self.download_data_from_uniprot(self.uniprotid, file_format="fasta")
+        os.remove("{}{}{}.fasta".format(c.db_root, c.db_uniprot, self.uniprotid))
+
+    def test_download_data_from_uniprot_gff(self):
+        self.download_data_from_uniprot(self.uniprotid, file_format="gff")
+        os.remove("{}{}{}.gff".format(c.db_root, c.db_uniprot, self.uniprotid))
+
+    def test_download_data_from_uniprot_txt(self):
+        self.download_data_from_uniprot(self.uniprotid, file_format="txt")
+        os.remove("{}{}{}.txt".format(c.db_root, c.db_uniprot, self.uniprotid))
+
+    def test_download_alignment_from_cath(self):
+        self.download_alignment_from_cath(self.cathid)
+        os.remove("{}{}{}.fasta".format(c.db_root, c.db_cath, self.cathid))
+
+    def test_download_alignment_from_pfam(self):
+        self.download_alignment_from_pfam(self.pfamid)
+        os.remove("{}{}{}.sth".format(c.db_root, c.db_pfam, self.pfamid))
 
 
 if __name__ == '__main__':
