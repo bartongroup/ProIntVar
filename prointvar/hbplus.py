@@ -179,7 +179,7 @@ class HBPLUSreader(object):
             flash('No HBPLUS data parsed...')
 
 
-class HBPLUSgenerator(object):
+class HBPLUSrunner(object):
     def __init__(self, inputfile, outputfile=None, verbose=False):
         """
         :param inputfile: Needs to point to a valid PDB or mmCIF file.

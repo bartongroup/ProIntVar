@@ -14,7 +14,7 @@ try:
 except ImportError:
     from unittest.mock import patch
 
-from prointvar.reduce import REDUCEgenerator
+from prointvar.reduce import REDUCErunner
 
 from prointvar.config import config as c
 
@@ -37,7 +37,7 @@ class TestREDUCE(unittest.TestCase):
         self.notfound = ""
         self.excluded = ()
 
-        self.generator = REDUCEgenerator
+        self.generator = REDUCErunner
 
     def tearDown(self):
         """Remove testing framework."""

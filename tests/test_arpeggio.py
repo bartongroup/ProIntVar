@@ -19,7 +19,7 @@ except ImportError:
 
 from prointvar.pdbx import PDBXreader, PDBXwriter
 
-from prointvar.arpeggio import (ARPEGGIOreader, ARPEGGIOgenerator,
+from prointvar.arpeggio import (ARPEGGIOreader, ARPEGGIOrunner,
                                 parse_arpeggio_from_file,
                                 get_arpeggio_selected_from_table,
                                 add_arpeggio_res_split,
@@ -71,7 +71,7 @@ class TestARPEGGIO(unittest.TestCase):
 
         self.parser = parse_arpeggio_from_file
         self.reader = ARPEGGIOreader
-        self.generator = ARPEGGIOgenerator
+        self.generator = ARPEGGIOrunner
         self.filter = get_arpeggio_selected_from_table
         self.add_arpeggio_res_split = add_arpeggio_res_split
         self.interaction_modes = interaction_modes

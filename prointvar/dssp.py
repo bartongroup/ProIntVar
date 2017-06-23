@@ -380,7 +380,7 @@ class DSSPreader(object):
             flash('No DSSP data parsed...')
 
 
-class DSSPgenerator(object):
+class DSSPrunner(object):
     def __init__(self, inputfile, outputfile=None, verbose=False):
         """
         :param inputfile: Needs to point to a valid PDB or mmCIF file.
@@ -451,7 +451,7 @@ class DSSPgenerator(object):
                     outputdssp = filename + '_{}.dssp'.format(chain)
                     new_outputs.append(outputdssp)
                     if not os.path.isfile(outputdssp) or override:
-                        d = DSSPgenerator(outputpdb, outputdssp)
+                        d = DSSPrunner(outputpdb, outputdssp)
                         d.run(override=override, run_unbound=False, save_new_input=False)
                     else:
                         flash("DSSP for {} already available...".format(outputdssp))

@@ -15,7 +15,7 @@ from __future__ import print_function
 import os
 import pandas as pd
 
-from prointvar.dssp import DSSPgenerator
+from prointvar.dssp import DSSPrunner
 from prointvar.dssp import DSSPreader
 from prointvar.dssp import get_dssp_selected_from_table
 from prointvar.sifts import SIFTSreader
@@ -23,7 +23,7 @@ from prointvar.sifts import get_sifts_selected_from_table
 from prointvar.pdbx import PDBXreader
 from prointvar.pdbx import get_mmcif_selected_from_table
 from prointvar.arpeggio import ARPEGGIOreader
-from prointvar.arpeggio import ARPEGGIOgenerator
+from prointvar.arpeggio import ARPEGGIOrunner
 from prointvar.fetchers import fetch_best_structures_pdbe
 
 from prointvar.utils import flash
@@ -327,7 +327,7 @@ def table_generator(uniprot_id=None, pdb_id=None, chain=None, res=None,
                 outputdssp = "{}{}{}.dssp" \
                              "".format(config.db_root, config.db_dssp, pdb_id)
             if not os.path.isfile(outputdssp) or override:
-                w = DSSPgenerator(inputcif, outputdssp)
+                w = DSSPrunner(inputcif, outputdssp)
                 w.run(override=override)
             if os.path.exists(outputdssp):
                 r = DSSPreader(outputdssp)
@@ -347,7 +347,7 @@ def table_generator(uniprot_id=None, pdb_id=None, chain=None, res=None,
                                      "".format(config.db_root, config.db_dssp, pdb_id)
 
                 if not os.path.isfile(outputdssp_unb) or override:
-                    w = DSSPgenerator(inputcif, outputdssp_unb)
+                    w = DSSPrunner(inputcif, outputdssp_unb)
                     w.run(override=override, run_unbound=dssp_unbound)
                 if os.path.exists(outputdssp_unb):
                     r = DSSPreader(outputdssp_unb)
@@ -370,7 +370,7 @@ def table_generator(uniprot_id=None, pdb_id=None, chain=None, res=None,
                                  "".format(config.db_root, config.db_contacts, pdb_id)
 
             if not os.path.isfile(outputarp) or override:
-                g = ARPEGGIOgenerator(inputfile=inputcif, outputfile=outputarp)
+                g = ARPEGGIOrunner(inputfile=inputcif, outputfile=outputarp)
                 if bio:
                     # write new PDB file used by arpeggio using 'pro_format' defined in
                     # pdbx.py ('write_pdb_from_table' method)

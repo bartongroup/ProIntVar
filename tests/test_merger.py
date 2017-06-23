@@ -14,7 +14,7 @@ try:
 except ImportError:
     from unittest.mock import patch
 
-from prointvar.dssp import DSSPreader, DSSPgenerator
+from prointvar.dssp import DSSPreader, DSSPrunner
 from prointvar.sifts import SIFTSreader
 from prointvar.pdbx import PDBXreader, PDBXwriter, get_mmcif_selected_from_table
 from prointvar.arpeggio import ARPEGGIOreader
@@ -131,8 +131,8 @@ class TestMerger(unittest.TestCase):
                        outputfile=cls.outputcif_A)
         w.run(chain=('A',))
         cls.outputdssp_A = "{}{}{}_A.dssp".format(c.db_root, c.db_dssp, cls.pdbid)
-        d = DSSPgenerator(inputfile=cls.outputcif_A,
-                          outputfile=cls.outputdssp_A)
+        d = DSSPrunner(inputfile=cls.outputcif_A,
+                       outputfile=cls.outputdssp_A)
         d.run()
         os.remove(cls.outputcif_A)
         d = DSSPreader(cls.outputdssp_A)

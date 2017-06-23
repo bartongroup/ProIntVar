@@ -17,7 +17,7 @@ try:
 except ImportError:
     from unittest.mock import patch
 
-from prointvar.dssp import (DSSPreader, DSSPgenerator,
+from prointvar.dssp import (DSSPreader, DSSPrunner,
                             parse_dssp_from_file, get_dssp_selected_from_table,
                             add_dssp_full_chain, add_dssp_rsa, add_dssp_rsa_class,
                             add_dssp_ss_reduced)
@@ -58,7 +58,7 @@ class TestDSSP(unittest.TestCase):
 
         self.parser = parse_dssp_from_file
         self.reader = DSSPreader
-        self.generator = DSSPgenerator
+        self.generator = DSSPrunner
         self.filter = get_dssp_selected_from_table
         self.add_full_chain = add_dssp_full_chain
         self.add_rsa = add_dssp_rsa

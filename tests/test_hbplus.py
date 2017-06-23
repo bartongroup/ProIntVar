@@ -17,7 +17,7 @@ try:
 except ImportError:
     from unittest.mock import patch
 
-from prointvar.hbplus import (HBPLUSreader, HBPLUSgenerator,
+from prointvar.hbplus import (HBPLUSreader, HBPLUSrunner,
                               parse_hb2_from_file,
                               get_hbplus_selected_from_table)
 
@@ -55,7 +55,7 @@ class TestHBPLUS(unittest.TestCase):
 
         self.parser = parse_hb2_from_file
         self.reader = HBPLUSreader
-        self.generator = HBPLUSgenerator
+        self.generator = HBPLUSrunner
         self.filter = get_hbplus_selected_from_table
 
     def tearDown(self):

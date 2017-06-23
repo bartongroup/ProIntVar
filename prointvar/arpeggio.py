@@ -32,8 +32,8 @@ from collections import namedtuple
 
 from prointvar.pdbx import PDBXwriter
 from prointvar.pdbx import PDBXreader
-from prointvar.reduce import REDUCEgenerator
-from prointvar.hbplus import HBPLUSgenerator
+from prointvar.reduce import REDUCErunner
+from prointvar.hbplus import HBPLUSrunner
 
 from prointvar.utils import flash
 from prointvar.utils import lazy_file_remover
@@ -625,7 +625,7 @@ class ARPEGGIOreader(object):
             flash('No ARPEGGIO data parsed...')
 
 
-class ARPEGGIOgenerator(object):
+class ARPEGGIOrunner(object):
     def __init__(self, inputfile, outputfile=None, verbose=False):
         """
         :param inputfile: Needs to point to a valid PDB or mmCIF file.
@@ -666,10 +666,10 @@ class ARPEGGIOgenerator(object):
 
     def _generate_pdb_with_hydrogens(self, hydro_method="hbplus", override=False):
         if hydro_method == "hbplus":
-            w = HBPLUSgenerator(inputfile=self.inputfile, outputfile=self.inputfile_h)
+            w = HBPLUSrunner(inputfile=self.inputfile, outputfile=self.inputfile_h)
             w.run(hydro_pdb_out=True, override=override)
         elif hydro_method == "reduce":
-            w = REDUCEgenerator(inputfile=self.inputfile, outputfile=self.inputfile_h)
+            w = REDUCErunner(inputfile=self.inputfile, outputfile=self.inputfile_h)
             w.run(override=override)
         else:
             raise ValueError('Method {} is not currently implemented...'

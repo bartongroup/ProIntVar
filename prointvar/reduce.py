@@ -19,7 +19,7 @@ from prointvar.utils import lazy_file_remover
 from prointvar.config import config
 
 
-class REDUCEgenerator(object):
+class REDUCErunner(object):
     def __init__(self, inputfile, outputfile=None, verbose=False):
         """
         :param inputfile: Needs to point to a valid PDB or mmCIF file.
