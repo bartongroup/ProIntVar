@@ -2,6 +2,7 @@
 # -*- coding: utf-8 -*-
 
 import click
+import click_log
 
 from prointvar.fetchers import fetch_best_structures_pdbe
 from prointvar.fetchers import download_structure_from_pdbe
@@ -151,6 +152,8 @@ def file_downloader(ids, pdb=False, mmcif=False, bio=False, sifts=False,
 
 @cli.command('download')
 @click.argument('ids', nargs=-1, required=True)
+@click_log.init("biodownloader")
+@click_log.simple_verbosity_option()
 @click.option('--pdb', 'pdb', multiple=False,
               help='Structure in PDB format (expects PDB ID).',
               default=False, is_flag=True, required=False)

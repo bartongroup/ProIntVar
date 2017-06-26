@@ -13,18 +13,20 @@ Fábio Madeira, 2017+
 import os
 import json
 import shlex
+import logging
 import pandas as pd
 from io import StringIO
 from scipy.spatial import cKDTree
 from string import ascii_uppercase
 from collections import OrderedDict
 
-from prointvar.utils import flash
 from prointvar.utils import row_selector
 from prointvar.utils import string_split
 from prointvar.utils import get_new_pro_ids
 from prointvar.library import mmcif_types
 from prointvar.library import aa_default_atoms
+
+logger = logging.getLogger("prointvar")
 
 _PDB_FORMAT = "%s%5i %-4s%c%3s %c%4s%c   %8.3f%8.3f%8.3f%s%6.2f      %4s%2s%2s\n"
 
@@ -33,8 +35,7 @@ def parse_mmcif_atoms_from_file(inputfile, excluded=(), add_res_full=True,
                                 add_contacts=False, dist=5, first_model=True,
                                 add_atom_altloc=False, remove_altloc=False,
                                 remove_hydrogens=True, reset_atom_id=True,
-                                add_new_pro_id=False, remove_partial_res=True,
-                                verbose=False):
+                                add_new_pro_id=False, remove_partial_res=True):
     """
     Parse mmCIF ATOM and HETATM lines.
 
@@ -51,12 +52,10 @@ def parse_mmcif_atoms_from_file(inputfile, excluded=(), add_res_full=True,
     :param reset_atom_id: boolean
     :param add_new_pro_id: (boolean) used for chain_id mapping
     :param remove_partial_res: (boolean) removes amino acids with missing atoms
-    :param verbose: boolean
     :return: returns a pandas DataFrame
     """
 
-    if verbose:
-        flash("Parsing mmCIF atoms from lines...")
+    logger.info("Parsing mmCIF atoms from lines...")
 
     # example lines with some problems
     """
@@ -108,30 +107,38 @@ def parse_mmcif_atoms_from_file(inputfile, excluded=(), add_res_full=True,
     # table modular extensions
     if add_contacts:
         table = add_mmcif_contacts(table, dist=dist)
+        logger.info("PDBx added contact indexes...")
 
     if add_res_full:
         table = add_mmcif_res_full(table)
+        logger.info("PDBx added full res (res + ins_code)...")
 
     if add_atom_altloc:
         table = add_mmcif_atom_altloc(table)
+        logger.info("PDBx added full atom (atom + altloc)...")
 
     if add_new_pro_id:
         table = add_mmcif_new_pro_ids(table)
+        logger.info("PDBx added 'new' chain and res ids...")
 
     if remove_altloc:
         table = remove_multiple_altlocs(table)
         reset_atom_id = True
+        logger.info("PDBx removed altlocs...")
 
     if remove_hydrogens:
         table = row_selector(table, key='type_symbol', value='H', method='diffs')
+        logger.info("PDBx removed existing hydrogens...")
 
     if remove_partial_res:
         table = remove_partial_residues(table)
+        logger.info("PDBx removed imcomplete residues...")
 
     if reset_atom_id:
         table.reset_index(inplace=True)
         table = table.drop(['index'], axis=1)
         table['id'] = table.index + 1
+        logger.info("PDBx reset atom numbers...")
 
     # enforce some specific column types
     for col in table:
@@ -152,7 +159,7 @@ def parse_pdb_atoms_from_file(inputfile, excluded=(), add_contacts=False,
                               dist=5, first_model=True, add_atom_altloc=False,
                               remove_altloc=False, remove_hydrogens=True,
                               reset_atom_id=True, add_new_pro_id=False,
-                              remove_partial_res=True, verbose=False):
+                              remove_partial_res=True):
     """
     Parse PDB ATOM and HETATM lines.
 
@@ -167,12 +174,10 @@ def parse_pdb_atoms_from_file(inputfile, excluded=(), add_contacts=False,
     :param reset_atom_id: boolean
     :param add_new_pro_id: (boolean) used for chain_id mapping
     :param remove_partial_res: (boolean) removes amino acids with missing atoms
-    :param verbose: boolean
     :return: returns a pandas DataFrame
     """
 
-    if verbose:
-        flash("Parsing PDB atoms from lines...")
+    logger.info("Parsing PDB atoms from lines...")
 
     # example lines
     """
@@ -241,27 +246,34 @@ def parse_pdb_atoms_from_file(inputfile, excluded=(), add_contacts=False,
     # table modular extensions
     if add_contacts:
         table = add_mmcif_contacts(table, dist=dist)
+        logger.info("PDBx added contact indexes...")
 
     if add_atom_altloc:
         table = add_mmcif_atom_altloc(table)
+        logger.info("PDBx added full atom (atom + alt_loc)...")
 
     if add_new_pro_id:
         table = add_mmcif_new_pro_ids(table)
+        logger.info("PDBx added 'new' chain and res ids...")
 
     if remove_altloc:
         table = remove_multiple_altlocs(table)
         reset_atom_id = True
+        logger.info("PDBx removed altlocs...")
 
     if remove_hydrogens:
         table = row_selector(table, key='type_symbol', value='H', method='diffs')
+        logger.info("PDBx removed existing hydrogens...")
 
     if remove_partial_res:
         table = remove_partial_residues(table)
+        logger.info("PDBx removed imcomplete residues...")
 
     if reset_atom_id:
         table.reset_index(inplace=True)
         table = table.drop(['index'], axis=1)
         table['id'] = table.index + 1
+        logger.info("PDBx reset atom numbers...")
 
     # enforce some specific column types
     for col in table:
@@ -296,19 +308,17 @@ def _tokenize(handle):
                 yield token
 
 
-def parse_mmcif_categories_from_file(inputfile, excluded=(), category=None, verbose=False):
+def parse_mmcif_categories_from_file(inputfile, excluded=(), category=None):
     """
     Generic method that gets all categories and fields (except for the .atom_site*)
 
     :param inputfile: path to the mmCIF file
     :param excluded: option to exclude mmCIF categories
     :param category: data category to be parsed (otherwise all)
-    :param verbose: boolean
     :return: returns a nested dictionary
     """
 
-    if verbose:
-        flash("Parsing mmCIF categories from lines...")
+    logger.info("Parsing mmCIF categories from lines...")
 
     if not os.path.isfile(inputfile):
         raise IOError("{} not available or could not be read...".format(inputfile))
@@ -385,21 +395,27 @@ def get_mmcif_selected_from_table(data, chain=None, res=None, res_full=None, com
     table = data
     if chain is not None:
         table = row_selector(table, '{}_asym_id'.format(category), chain, method="isin")
+        logger.info("PDBx table filtered by {}_asym_id...".format(category))
 
     if res is not None:
         table = row_selector(table, '{}_seq_id'.format(category), res, method="isin")
+        logger.info("PDBx table filtered by {}_seq_id...".format(category))
 
     if res_full is not None:
         table = row_selector(table, '{}_seq_id_full'.format(category), res_full, method="isin")
+        logger.info("PDBx table filtered by {}_seq_id_full...".format(category))
 
     if comp is not None:
         table = row_selector(table, '{}_comp_id'.format(category), comp, method="isin")
+        logger.info("PDBx table filtered by {}_comp_id...".format(category))
 
     if atom is not None:
         table = row_selector(table, '{}_atom_id'.format(category), atom, method="isin")
+        logger.info("PDBx table filtered by {}_atom_id...".format(category))
 
     if lines is not None:
         table = row_selector(table, 'group_PDB', lines, method="isin")
+        logger.info("PDBx table filtered by group_PDB...")
 
     return table
 
@@ -454,7 +470,7 @@ def write_mmcif_from_table(outputfile, data, override=False):
         with open(outputfile, 'w') as outlines:
             outlines.write("\n".join(atom_lines))
     else:
-        flash('mmCIF for {} already available...'.format(outputfile))
+        logger.info('mmCIF for {} already available...'.format(outputfile))
     return
 
 
@@ -484,7 +500,7 @@ def write_pdb_from_table(outputfile, data, override=False, pro_format=False):
         with open(outputfile, 'w') as outlines:
             outlines.write("".join(atom_lines))
     else:
-        flash('PDB for {} already available...'.format(outputfile))
+        logger.info('PDB for {} already available...'.format(outputfile))
     return
 
 
@@ -900,13 +916,11 @@ def get_atom_line(data, index, atom_number, pro_format=False,
 
 
 class PDBXreader(object):
-    def __init__(self, inputfile, verbose=False):
+    def __init__(self, inputfile):
         """
         :param inputfile: Needs to point to a valid mmCIF file.
-        :param verbose: boolean
         """
         self.inputfile = inputfile
-        self.verbose = verbose
         self.data = None
         # defaults
         self.excluded = ("Cartn_x_esd", "Cartn_y_esd", "Cartn_z_esd",
@@ -947,8 +961,7 @@ class PDBXreader(object):
                                                     remove_hydrogens=remove_hydrogens,
                                                     reset_atom_id=reset_atom_id,
                                                     add_new_pro_id=add_new_pro_id,
-                                                    remove_partial_res=remove_partial_res,
-                                                    verbose=self.verbose)
+                                                    remove_partial_res=remove_partial_res)
 
         elif format_type == "pdb":
             self.data = parse_pdb_atoms_from_file(self.inputfile, excluded=excluded,
@@ -959,8 +972,7 @@ class PDBXreader(object):
                                                   remove_hydrogens=remove_hydrogens,
                                                   reset_atom_id=reset_atom_id,
                                                   add_new_pro_id=add_new_pro_id,
-                                                  remove_partial_res=remove_partial_res,
-                                                  verbose=self.verbose)
+                                                  remove_partial_res=remove_partial_res)
         else:
             message = 'The provided format {} is not implemented...'.format(format_type)
             raise ValueError(message)
@@ -975,7 +987,7 @@ class PDBXreader(object):
         if excluded is None:
             excluded = ('_atom_site', '_entity_poly_seq', '_pdbx_poly_seq_scheme')
         self.data = parse_mmcif_categories_from_file(self.inputfile, excluded=excluded,
-                                                     category=category, verbose=self.verbose)
+                                                     category=category)
         return self.data
 
     def to_json(self, pretty=True):
@@ -989,20 +1001,18 @@ class PDBXreader(object):
             else:
                 return json.dumps(data)
         else:
-            flash('No mmCIF data parsed...')
+            logger.info('No mmCIF data parsed...')
 
 
 class PDBXwriter(object):
-    def __init__(self, inputfile=None, outputfile=None, verbose=False):
+    def __init__(self, inputfile=None, outputfile=None):
         """
         :param inputfile: Needs to point to a valid mmCIF file.
         :param outputfile: if not provided will use the same file name and
             <_filtered.cif> extension
-        :param verbose: boolean
         """
         self.inputfile = inputfile
         self.outputfile = outputfile
-        self.verbose = verbose
         self.data = None
 
         if inputfile is not None and not os.path.isfile(inputfile):

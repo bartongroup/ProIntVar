@@ -13,30 +13,30 @@ Fábio Madeira, 2017+
 import os
 import json
 import shutil
+import logging
 import pandas as pd
 
 from prointvar.pdbx import PDBXwriter
 
-from prointvar.utils import flash
 from prointvar.utils import row_selector
 from prointvar.utils import lazy_file_remover
 from prointvar.library import hbplus_types
 
 from prointvar.config import config
 
+logger = logging.getLogger("prointvar")
 
-def parse_hb2_from_file(inputfile, excluded=(), verbose=False):
+
+def parse_hb2_from_file(inputfile, excluded=()):
     """
     Parse lines of the HBPLUS file to get entries for ...
 
     :param inputfile: path to the HBPLUS file
     :param excluded: option to exclude HBPLUS columns
-    :param verbose: boolean
     :return: returns a pandas DataFrame
     """
 
-    if verbose:
-        flash("Parsing HBPLUS from lines...")
+    logger.info("Parsing HBPLUS from lines...")
 
     # example lines with some problems
     """
@@ -82,6 +82,7 @@ def parse_hb2_from_file(inputfile, excluded=(), verbose=False):
     table.is_copy = False
     table['RES_D'] = table.apply(fix_res_id, axis=1, args=('RES_D',))
     table['RES_A'] = table.apply(fix_res_id, axis=1, args=('RES_A',))
+    logger.info("HBPLUS fixed residue ID...")
 
     # fix insertion codes
     table.INSCODE_D[table.INSCODE_D == "-"] = "?"
@@ -127,27 +128,29 @@ def get_hbplus_selected_from_table(data, chain_A=None, chain_D=None,
     table = data
     if chain_D is not None:
         table = row_selector(table, 'CHAIN_D', chain_D, method="isin")
+        logger.info("HBPLUS table filtered by CHAIN_D...")
 
     if chain_A is not None:
         table = row_selector(table, 'CHAIN_A', chain_A, method="isin")
+        logger.info("HBPLUS table filtered by CHAIN_A...")
 
     if res_D is not None:
         table = row_selector(table, 'RES_D', res_D, method="isin")
+        logger.info("HBPLUS table filtered by RES_D...")
 
     if res_A is not None:
         table = row_selector(table, 'RES_A', res_A, method="isin")
+        logger.info("HBPLUS table filtered by RES_A...")
 
     return table
 
 
 class HBPLUSreader(object):
-    def __init__(self, inputfile, verbose=False):
+    def __init__(self, inputfile):
         """
         :param inputfile: Needs to point to a valid HBPLUS file.
-        :param verbose: boolean
         """
         self.inputfile = inputfile
-        self.verbose = verbose
         self.data = None
         self.excluded = ("NUM_AAS", "DIST_CA-CA", "ANGLE_D-H-A",
                          "DIST_H-A", "ANGLE_H-A-AA", "ANGLE_D-A-AA")
@@ -161,8 +164,7 @@ class HBPLUSreader(object):
     def residues(self, excluded=None):
         if excluded is None:
             excluded = self.excluded
-        self.data = parse_hb2_from_file(self.inputfile, excluded=excluded,
-                                        verbose=self.verbose)
+        self.data = parse_hb2_from_file(self.inputfile, excluded=excluded)
         return self.data
 
     def to_json(self, pretty=True):
@@ -176,21 +178,19 @@ class HBPLUSreader(object):
             else:
                 return json.dumps(data)
         else:
-            flash('No HBPLUS data parsed...')
+            logger.info('No HBPLUS data parsed...')
 
 
 class HBPLUSrunner(object):
-    def __init__(self, inputfile, outputfile=None, verbose=False):
+    def __init__(self, inputfile, outputfile=None):
         """
         :param inputfile: Needs to point to a valid PDB or mmCIF file.
         :param outputfile: if not provided will use the same file name and
           <.hb2> extension
-        :param verbose: boolean
         """
         self.inputfile = inputfile
         self.inputfile_back = inputfile
         self.outputfile = outputfile
-        self.verbose = verbose
         self.data = None
 
         if not os.path.isfile(self.inputfile):
@@ -303,7 +303,7 @@ class HBPLUSrunner(object):
                     lazy_file_remover(self.inputfile)
 
         else:
-            flash('HBPLUS for {} already available...'.format(self.outputfile))
+            logger.info('HBPLUS for {} already available...'.format(self.outputfile))
         return
 
 

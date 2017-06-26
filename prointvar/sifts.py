@@ -12,17 +12,19 @@ Fábio Madeira, 2017+
 
 import os
 import json
+import logging
 import pandas as pd
 from lxml import etree
 from collections import OrderedDict
 
-from prointvar.utils import flash
 from prointvar.utils import row_selector
 from prointvar.library import sifts_types
 
+logger = logging.getLogger("prointvar")
 
-def parse_sifts_residues_from_file(inputfile, excluded=(), add_regions=True, add_dbs=False,
-                                   verbose=False):
+
+def parse_sifts_residues_from_file(inputfile, excluded=(),
+                                   add_regions=True, add_dbs=False):
     """
     Parses the residue fields of a SIFTS XML file.
 
@@ -30,12 +32,10 @@ def parse_sifts_residues_from_file(inputfile, excluded=(), add_regions=True, add
     :param excluded: option to exclude SIFTS dbSources
     :param add_regions: boolean
     :param add_dbs: boolean
-    :param verbose: boolean
     :return: returns a pandas DataFrame
     """
 
-    if verbose:
-        flash("Parsing SIFTS residues from lines...")
+    logger.info("Parsing SIFTS residues from lines...")
 
     # example lines with some problems
     """
@@ -230,18 +230,16 @@ def parse_sifts_residues_from_file(inputfile, excluded=(), add_regions=True, add
     return table
 
 
-def parse_sifts_dbs_from_file(inputfile, excluded=(), verbose=False):
+def parse_sifts_dbs_from_file(inputfile, excluded=()):
     """
     Parses the residue fields of a SIFTS XML file.
 
     :param inputfile: path to the SIFTS file
     :param excluded: option to exclude SIFTS dbSources
-    :param verbose: boolean
     :return: returns a nested dictionary
     """
 
-    if verbose:
-        flash("Parsing SIFTS dbs from lines...")
+    logger.info("Parsing SIFTS dbs from lines...")
 
     if not os.path.isfile(inputfile):
         raise IOError("{} not available or could not be read...".format(inputfile))
@@ -271,18 +269,16 @@ def parse_sifts_dbs_from_file(inputfile, excluded=(), verbose=False):
     return sifts_object
 
 
-def parse_sifts_regions_from_file(inputfile, excluded=(), verbose=False):
+def parse_sifts_regions_from_file(inputfile, excluded=()):
     """
     Parses the residue fields of a SIFTS XML file.
 
     :param inputfile: path to the SIFTS file
     :param excluded: option to exclude SIFTS dbSources
-    :param verbose: boolean
     :return: returns a nested dictionary
     """
 
-    if verbose:
-        flash("Parsing SIFTS regions from lines...")
+    logger.info("Parsing SIFTS regions from lines...")
 
     if not os.path.isfile(inputfile):
         raise IOError("{} not available or could not be read...".format(inputfile))
@@ -365,30 +361,33 @@ def get_sifts_selected_from_table(data, chain=None, chain_auth=None, res=None,
     table = data
     if chain is not None:
         table = row_selector(table, 'PDB_entityId', chain, method="isin")
+        logger.info("SIFTS table filtered by PDB_entityId...")
 
     if chain_auth is not None:
         table = row_selector(table, 'PDB_dbChainId', chain_auth, method="isin")
+        logger.info("SIFTS table filtered by PDB_dbChainId...")
 
     if res is not None:
         table = row_selector(table, 'PDB_dbResNum', res, method="isin")
+        logger.info("SIFTS table filtered by PDB_dbResNum...")
 
     if uniprot is not None:
         table = row_selector(table, 'UniProt_dbAccessionId', uniprot, method="isin")
+        logger.info("SIFTS table filtered by UniProt_dbAccessionId...")
 
     if site is not None:
         table = row_selector(table, 'UniProt_dbResNum', site, method="isin")
+        logger.info("SIFTS table filtered by UniProt_dbResNum...")
 
     return table
 
 
 class SIFTSreader(object):
-    def __init__(self, inputfile, verbose=False):
+    def __init__(self, inputfile):
         """
         :param inputfile: Needs to point to a valid SIFTS file.
-        :param verbose: boolean
         """
         self.inputfile = inputfile
-        self.verbose = verbose
         self.data = None
         self.excluded = ("InterPro", "GO", "EC", "NCBI")
 
@@ -402,22 +401,19 @@ class SIFTSreader(object):
         if excluded is None:
             excluded = self.excluded
         self.data = parse_sifts_residues_from_file(self.inputfile, excluded=excluded,
-                                                   add_regions=add_regions, add_dbs=add_dbs,
-                                                   verbose=self.verbose)
+                                                   add_regions=add_regions, add_dbs=add_dbs)
         return self.data
 
     def regions(self, excluded=None):
         if excluded is None:
             excluded = self.excluded
-        self.data = parse_sifts_regions_from_file(self.inputfile, excluded=excluded,
-                                                  verbose=self.verbose)
+        self.data = parse_sifts_regions_from_file(self.inputfile, excluded=excluded)
         return self.data
 
     def dbs(self, excluded=None):
         if excluded is None:
             excluded = self.excluded
-        self.data = parse_sifts_dbs_from_file(self.inputfile, excluded=excluded,
-                                              verbose=self.verbose)
+        self.data = parse_sifts_dbs_from_file(self.inputfile, excluded=excluded)
         return self.data
 
     def to_json(self, pretty=True):
@@ -431,7 +427,7 @@ class SIFTSreader(object):
             else:
                 return json.dumps(data)
         else:
-            flash('No SIFTS data parsed...')
+            logger.info('No SIFTS data parsed...')
 
 
 if __name__ == '__main__':

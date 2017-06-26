@@ -25,6 +25,7 @@ Fábio Madeira, 2017+
 import os
 import json
 import shutil
+import logging
 import pandas as pd
 from operator import attrgetter
 from collections import Counter
@@ -35,7 +36,6 @@ from prointvar.pdbx import PDBXreader
 from prointvar.reduce import REDUCErunner
 from prointvar.hbplus import HBPLUSrunner
 
-from prointvar.utils import flash
 from prointvar.utils import lazy_file_remover
 from prointvar.utils import row_selector
 from prointvar.utils import string_split
@@ -44,9 +44,11 @@ from prointvar.library import arpeggio_col_renames
 
 from prointvar.config import config
 
+logger = logging.getLogger("prointvar")
+
 
 def parse_arpeggio_from_file(inputfile, excluded=(), add_res_split=True,
-                             parse_special=False, verbose=False):
+                             parse_special=False):
     """
     Parse lines of the ARPEGGIO *contacts* file to get entries from...
 
@@ -54,12 +56,10 @@ def parse_arpeggio_from_file(inputfile, excluded=(), add_res_split=True,
     :param excluded: option to exclude ARPEGGIO columns
     :param add_res_split: (boolean) splits ENTRY_* into 'CHAIN', 'ATOM', 'RES', 'INSCODE'
     :param parse_special: (boolean) tries to parse special contact types
-    :param verbose: boolean
     :return: returns a pandas DataFrame
     """
 
-    if verbose:
-        flash("Parsing ARPEGGIO from lines...")
+    logger.info("Parsing ARPEGGIO from lines...")
 
     # example lines
     # format documentation at https://github.com/biomadeira/arpeggio
@@ -90,10 +90,12 @@ def parse_arpeggio_from_file(inputfile, excluded=(), add_res_split=True,
     # split ENTRIES into CHAIN, RES, and ATOM
     if add_res_split:
         table = add_arpeggio_res_split(table)
+        logger.info("Added Arpeggio full chain, res and atom information...")
 
     if parse_special:
         # tries to parse *.amam, *.amri, *.ari and *.ri
         table = add_special_cont_types(inputfile, table)
+        logger.info("Parsed special contact-types...")
 
     if excluded is not None:
         assert type(excluded) is tuple
@@ -396,27 +398,35 @@ def get_arpeggio_selected_from_table(data, chain_A=None, chain_B=None,
 
     if chain_A is not None:
         table = row_selector(table, 'CHAIN_A', chain_A, method="isin")
+        logger.info("Arpeggio table filtered by CHAIN_A...")
 
     if chain_B is not None:
         table = row_selector(table, 'CHAIN_B', chain_B, method="isin")
+        logger.info("Arpeggio table filtered by CHAIN_B...")
 
     if res_A is not None:
         table = row_selector(table, 'RES_A', res_A, method="isin")
+        logger.info("Arpeggio table filtered by RES_A...")
 
     if res_B is not None:
         table = row_selector(table, 'RES_B', res_B, method="isin")
+        logger.info("Arpeggio table filtered by RES_B...")
 
     if res_full_A is not None:
         table = row_selector(table, 'RES_FULL_A', res_full_A, method="isin")
+        logger.info("Arpeggio table filtered by RES_FULL_A...")
 
     if res_full_B is not None:
         table = row_selector(table, 'RES_FULL_B', res_full_B, method="isin")
+        logger.info("Arpeggio table filtered by RES_FULL_B...")
 
     if atom_A is not None:
         table = row_selector(table, 'ATOM_A', atom_A, method="isin")
+        logger.info("Arpeggio table filtered by ATOM_A...")
 
     if atom_B is not None:
         table = row_selector(table, 'ATOM_B', atom_B, method="isin")
+        logger.info("Arpeggio table filtered by ATOM_B...")
 
     return table
 
@@ -563,18 +573,16 @@ def ignore_consecutive_residues(data, numb_res=3):
     else:
         message = ("Warning: Atoms in consecutive residues were not removed as there are "
                    "some with insertion codes. These are not handled at this time...")
-        flash(message)
+        logger.debug(message)
     return table
 
 
 class ARPEGGIOreader(object):
-    def __init__(self, inputfile, verbose=False):
+    def __init__(self, inputfile):
         """
         :param inputfile: Needs to point to a valid ARPEGGIO file.
-        :param verbose: boolean
         """
         self.inputfile = inputfile
-        self.verbose = verbose
         self.data = None
         self.excluded = ("ENTRY_A", "ENTRY_B", "ENTITIES")
 
@@ -595,8 +603,7 @@ class ARPEGGIOreader(object):
             excluded = self.excluded
         self.data = parse_arpeggio_from_file(self.inputfile, excluded=excluded,
                                              add_res_split=add_res_split,
-                                             parse_special=parse_special,
-                                             verbose=self.verbose)
+                                             parse_special=parse_special)
         if ignore_consecutive:
             self.data = ignore_consecutive_residues(self.data, numb_res=numb_res)
 
@@ -622,21 +629,19 @@ class ARPEGGIOreader(object):
             else:
                 return json.dumps(data)
         else:
-            flash('No ARPEGGIO data parsed...')
+            logger.info('No ARPEGGIO data parsed...')
 
 
 class ARPEGGIOrunner(object):
-    def __init__(self, inputfile, outputfile=None, verbose=False):
+    def __init__(self, inputfile, outputfile=None):
         """
         :param inputfile: Needs to point to a valid PDB or mmCIF file.
         :param outputfile: if not provided will use the same file name and
           <.contacts> extension
-        :param verbose: boolean
         """
         self.inputfile = inputfile
         self.inputfile_back = inputfile
         self.outputfile = outputfile
-        self.verbose = verbose
         self.data = None
         self.inputfile_h = None
 
@@ -781,7 +786,7 @@ class ARPEGGIOrunner(object):
                     lazy_file_remover(self.inputfile_h)
 
         else:
-            flash('ARPEGGIO for {} already available...'.format(self.outputfile))
+            logger.info('ARPEGGIO for {} already available...'.format(self.outputfile))
         return
 
 

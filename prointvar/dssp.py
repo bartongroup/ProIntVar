@@ -12,6 +12,7 @@ Fábio Madeira, 2017+
 
 import os
 import json
+import logging
 import pandas as pd
 from io import StringIO
 from string import digits
@@ -20,7 +21,6 @@ from string import ascii_uppercase
 from prointvar.pdbx import PDBXreader
 from prointvar.pdbx import PDBXwriter
 
-from prointvar.utils import flash
 from prointvar.utils import compute_rsa
 from prointvar.utils import get_rsa_class
 from prointvar.utils import row_selector
@@ -28,6 +28,9 @@ from prointvar.utils import lazy_file_remover
 from prointvar.library import dssp_types
 
 from prointvar.config import config
+
+logger = logging.getLogger("prointvar")
+
 
 """
 Useful info from http://web.expasy.org/docs/userman.html#FT_line
@@ -72,7 +75,7 @@ Model (i.e. theoretical) structure.
 
 def parse_dssp_from_file(inputfile, excluded=(), add_full_chain=True, add_ss_reduced=False,
                          add_rsa=True, method="Sander", add_rsa_class=False,
-                         reset_res_id=False, verbose=False):
+                         reset_res_id=False):
     """
     Parse lines of the DSSP file to get entries for every Residue
     in each CHAIN. The hierachy is maintained. CHAIN->RESIDUE->[...].
@@ -85,12 +88,10 @@ def parse_dssp_from_file(inputfile, excluded=(), add_full_chain=True, add_ss_red
     :param add_rsa_class: boolean
     :param method: name of the method
     :param reset_res_id: boolean
-    :param verbose: boolean
     :return: returns a pandas DataFrame
     """
 
-    if verbose:
-        flash("Parsing DSSP from lines...")
+    logger.info("Parsing DSSP from lines...")
 
     # example lines with some problems
     """
@@ -149,16 +150,20 @@ def parse_dssp_from_file(inputfile, excluded=(), add_full_chain=True, add_ss_red
     # table modular extensions
     if add_full_chain:
         table = add_dssp_full_chain(table)
+        logger.info("DSSP added full chain...")
 
     table['SS'] = table.SS.fillna('-')
     if add_ss_reduced:
         table = add_dssp_ss_reduced(table)
+        logger.info("DSSP added reduced SS...")
 
     if add_rsa:
         table = add_dssp_rsa(table, method=method)
+        logger.info("DSSP added RSA...")
 
     if add_rsa_class:
         table = add_dssp_rsa_class(table)
+        logger.info("DSSP added RSA class...")
 
     # drop missing residues ("!")  and chain breaks ("!*")
     table = table[table['AA'] != '!']
@@ -168,6 +173,7 @@ def parse_dssp_from_file(inputfile, excluded=(), add_full_chain=True, add_ss_red
         table.reset_index(inplace=True)
         table = table.drop(['index'], axis=1)
         table['LINE'] = table.index + 1
+        logger.info("DSSP reset residue number...")
 
     if excluded is not None:
         assert type(excluded) is tuple
@@ -207,12 +213,15 @@ def get_dssp_selected_from_table(data, chain=None, chain_full=None, res=None):
     table = data
     if chain is not None:
         table = row_selector(table, 'CHAIN', chain, method="isin")
+        logger.info("DSSP table filtered by CHAIN...")
 
     if chain_full is not None:
         table = row_selector(table, 'CHAIN_FULL', chain_full, method="isin")
+        logger.info("DSSP table filtered by CHAIN_FULL...")
 
     if res is not None:
         table = row_selector(table, 'RES', res, method="isin")
+        logger.info("DSSP table filtered by RES...")
 
     return table
 
@@ -333,13 +342,11 @@ def add_dssp_ss_reduced(data):
 
 
 class DSSPreader(object):
-    def __init__(self, inputfile, verbose=False):
+    def __init__(self, inputfile):
         """
         :param inputfile: Needs to point to a valid DSSP file.
-        :param verbose: boolean
         """
         self.inputfile = inputfile
-        self.verbose = verbose
         self.data = None
         self.excluded = ("LINE", "STRUCTURE", "BP1", "BP2", "BP2_CHAIN",
                          "NH_O_1", "NH_O_1_nrg", "O_HN_1", "O_HN_1_nrg",
@@ -362,8 +369,7 @@ class DSSPreader(object):
                                          add_ss_reduced=add_ss_reduced,
                                          add_rsa=add_rsa, method=method,
                                          add_rsa_class=add_rsa_class,
-                                         reset_res_id=reset_res_id,
-                                         verbose=self.verbose)
+                                         reset_res_id=reset_res_id)
         return self.data
 
     def to_json(self, pretty=True):
@@ -377,20 +383,18 @@ class DSSPreader(object):
             else:
                 return json.dumps(data)
         else:
-            flash('No DSSP data parsed...')
+            logger.info('No DSSP data parsed...')
 
 
 class DSSPrunner(object):
-    def __init__(self, inputfile, outputfile=None, verbose=False):
+    def __init__(self, inputfile, outputfile=None):
         """
         :param inputfile: Needs to point to a valid PDB or mmCIF file.
         :param outputfile: if not provided will use the same file name and
           <.dssp> extension
-        :param verbose: boolean
         """
         self.inputfile = inputfile
         self.outputfile = outputfile
-        self.verbose = verbose
         self.data = None
 
         if not os.path.isfile(self.inputfile):
@@ -445,7 +449,7 @@ class DSSPrunner(object):
                             # skipping only HETATM chains or (generally) empty tables
                             continue
                     else:
-                        flash("PDB for {} already available...".format(outputpdb))
+                        logger.info("PDB for {} already available...".format(outputpdb))
                     # generating the dssp output for the current chain
                     filename, extension = os.path.splitext(self.outputfile)
                     outputdssp = filename + '_{}.dssp'.format(chain)
@@ -454,7 +458,7 @@ class DSSPrunner(object):
                         d = DSSPrunner(outputpdb, outputdssp)
                         d.run(override=override, run_unbound=False, save_new_input=False)
                     else:
-                        flash("DSSP for {} already available...".format(outputdssp))
+                        logger.info("DSSP for {} already available...".format(outputdssp))
 
             # concat the DSSP output to a single file
             lines = ["  # DSSP generated by ProIntVar\n"]
@@ -494,7 +498,7 @@ class DSSPrunner(object):
             self._run(dssp_bin, run_unbound=run_unbound, override=override,
                       save_new_input=save_new_input, clean_output=clean_output)
         else:
-            flash('DSSP for {} already available...'.format(self.outputfile))
+            logger.info('DSSP for {} already available...'.format(self.outputfile))
         return
 
 

@@ -18,6 +18,7 @@ import re
 import sys
 import time
 import json
+import logging
 import requests
 import pandas as pd
 from string import digits
@@ -34,8 +35,7 @@ from prointvar.library import (ASA_Miller, ASA_Wilke, ASA_Sander)
 from prointvar.library import aa_codes_1to3_common
 from prointvar.library import aa_codes_1to3_extended
 
-
-_ATOM_FORMAT_STRING = "%s%5i %-4s%c%3s %c%4i%c   %8.3f%8.3f%8.3f%s%6.2f      %4s%2s%2s\n"
+logger = logging.getLogger("prointvar")
 
 
 def string_split(s):
@@ -186,9 +186,9 @@ def fetch_from_url_or_retry(url, json=True, header=None, post=False, data=None,
                                        (n_retries - 1), stream, **params)
     else:
         message = "{}\t{}".format(response.status_code, url)
-        flash(message)
+        logger.debug(message)
         # response.raise_for_status()
-        return None
+        return response
 
 
 def store_data(data, path_root, directory, filename, extension="json"):
@@ -439,7 +439,7 @@ def row_selector(data, key=None, value=None, method="isin"):
                 value = table[key].iloc[0]
                 table = table.loc[table[key] == value]
         else:
-            flash('{} not in the DataFrame...'.format(key))
+            logger.debug('{} not in the DataFrame...'.format(key))
 
     if table.empty:
         message = 'Your filters resulted in an empty DataFrame...'

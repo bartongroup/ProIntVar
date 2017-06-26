@@ -16,12 +16,14 @@ import gzip
 import shutil
 import urllib
 import pickle
+import logging
 import requests
 
-from prointvar.utils import flash
 from prointvar.utils import fetch_from_url_or_retry
 
 from prointvar.config import config
+
+logger = logging.getLogger("prointvar")
 
 
 def fetch_best_structures_pdbe(identifier, cached=False, retry_in=(429,)):
@@ -84,7 +86,7 @@ def fetch_preferred_assembly_id(identifier):
         data = fetch_summary_properties_pdbe(identifier)
     except Exception as e:
         message = "Something went wrong for {}... {}".format(identifier, e)
-        flash(message)
+        logger.debug(message)
     try:
         if data is not None:
             data = data.json()
@@ -99,7 +101,7 @@ def fetch_preferred_assembly_id(identifier):
     except Exception as e:
         pref_assembly = "1"
         message = "Something went wrong for {}... {}".format(identifier, e)
-        flash(message)
+        logger.debug(message)
 
     bio_best = str(pref_assembly)
     return bio_best
@@ -159,7 +161,7 @@ def download_structure_from_pdbe(identifier, pdb=False, bio=False, override=Fals
                 r.raise_for_status()
             except requests.exceptions.HTTPError as e:
                 message = 'Unable to retrieve {} for {}'.format(url, str(e))
-                flash(message)
+                logger.debug(message)
     return
 
 
@@ -186,7 +188,7 @@ def download_sifts_from_ebi(identifier, override=False):
             urllib.request.urlretrieve(url, outputfile)
         except IOError as e:
             message = 'Unable to retrieve {} for {}'.format(url, str(e))
-            flash(message)
+            logger.debug(message)
 
         if filename.endswith('.gz'):
             with gzip.open(outputfile, 'rb') as infile, \
@@ -225,7 +227,7 @@ def download_data_from_uniprot(identifier, file_format="fasta", override=False):
                     r.raise_for_status()
                 except requests.exceptions.HTTPError as e:
                     message = 'Unable to retrieve {} for {}'.format(url, str(e))
-                    flash(message)
+                    logger.debug(message)
     else:
         raise ValueError("File format {} is not currently implemented..."
                          "".format(file_format))
@@ -263,7 +265,7 @@ def download_alignment_from_cath(identifier, max_sequences=1000, override=False)
                     r.raise_for_status()
                 except requests.exceptions.HTTPError as e:
                     message = 'Unable to retrieve {} for {}'.format(url, str(e))
-                    flash(message)
+                    logger.debug(message)
     else:
         raise ValueError("Expected CATH  ID but got {}..."
                          "".format(identifier))
@@ -296,7 +298,7 @@ def download_alignment_from_pfam(identifier, override=False):
                 r.raise_for_status()
             except requests.exceptions.HTTPError as e:
                 message = 'Unable to retrieve {} for {}'.format(url, str(e))
-                flash(message)
+                logger.debug(message)
     return
 
 

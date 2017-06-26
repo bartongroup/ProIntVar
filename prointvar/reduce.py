@@ -10,27 +10,27 @@ Fábio Madeira, 2017+
 """
 
 import os
+import logging
 
 from prointvar.pdbx import PDBXwriter
 
-from prointvar.utils import flash
 from prointvar.utils import lazy_file_remover
 
 from prointvar.config import config
 
+logger = logging.getLogger("prointvar")
+
 
 class REDUCErunner(object):
-    def __init__(self, inputfile, outputfile=None, verbose=False):
+    def __init__(self, inputfile, outputfile=None):
         """
         :param inputfile: Needs to point to a valid PDB or mmCIF file.
         :param outputfile: if not provided will use the same file name and
           <*.h> extension
-        :param verbose: boolean
         """
         self.inputfile = inputfile
         self.inputfile_back = inputfile
         self.outputfile = outputfile
-        self.verbose = verbose
         self.data = None
 
         if not os.path.isfile(self.inputfile):
@@ -89,7 +89,7 @@ class REDUCErunner(object):
                     lazy_file_remover(self.inputfile)
 
         else:
-            flash('REDUCE for {} already available...'.format(self.outputfile))
+            logger.info('REDUCE for {} already available...'.format(self.outputfile))
         return
 
 

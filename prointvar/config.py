@@ -12,16 +12,12 @@ Fábio Madeira, 2015+
 """
 
 import os
-import sys
 import click
 import logging
 import pkg_resources
 from configparser import ConfigParser
 
-log = logging.getLogger(__name__)
-logging.captureWarnings(True)
-logging.basicConfig(stream=sys.stderr, level=logging.INFO,
-                    format='%(asctime)s - %(levelname)s - %(message)s ')
+logger = logging.getLogger("prointvar")
 
 CONFIG_FILE = "config.ini"
 CONFIG_FILE_TEMPLATE = "config_template.ini"
@@ -68,7 +64,7 @@ def config_setup(filename):
         f.write(pkg_resources.resource_string(
             'prointvar', 'config_template.ini'))
 
-    log.info("Wrote a template config file at {}".format(filename))
+    logger.info("Wrote a template config file at {}".format(filename))
 
 
 @click.command()
@@ -85,7 +81,7 @@ def config_load(filename):
     setup_dir_file = os.path.join(os.path.dirname(__file__), 'config.ini')
     with open(setup_dir_file, 'wb') as f:
         f.write(r)
-    log.info("Config file loaded!")
+    logger.info("Config file loaded!")
 
 
 if __name__ == "__main__":

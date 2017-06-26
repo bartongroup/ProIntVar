@@ -13,6 +13,7 @@ Fábio Madeira, 2017+
 from __future__ import print_function
 
 import os
+import logging
 import pandas as pd
 
 from prointvar.dssp import DSSPrunner
@@ -26,9 +27,9 @@ from prointvar.arpeggio import ARPEGGIOreader
 from prointvar.arpeggio import ARPEGGIOrunner
 from prointvar.fetchers import fetch_best_structures_pdbe
 
-from prointvar.utils import flash
-
 from prointvar.config import config
+
+logger = logging.getLogger("prointvar")
 
 
 class TableMergerError(Exception):
@@ -61,6 +62,8 @@ def mmcif_sifts_table_merger(mmcif_table, sifts_table):
     else:
         raise TableMergerError('Not possible to merge mmCIF and SIFTS table! '
                                'Some of the necessary columns are missing...')
+
+    logger.info("Merged mmCIF and SIFTS tables...")
     return table
 
 
@@ -90,6 +93,8 @@ def mmcif_dssp_table_merger(mmcif_table, dssp_table, pro_format=False):
     else:
         raise TableMergerError('Not possible to merge mmCIF and DSSP table! '
                                'Some of the necessary columns are missing...')
+
+    logger.info("Merged mmCIF and DSSP tables...")
     return table
 
 
@@ -113,6 +118,8 @@ def dssp_sifts_table_merger(dssp_table, sifts_table):
     else:
         raise TableMergerError('Not possible to merge DSSP and SIFTS table! '
                                'Some of the necessary columns are missing...')
+
+    logger.info("Merged DSSP and SIFTS tables...")
     return table
 
 
@@ -158,6 +165,7 @@ def dssp_dssp_table_merger(bound_table, unbound_table):
         raise TableMergerError('Not possible to merge the DSSP tables! '
                                'Some of the necessary columns are missing...')
 
+    logger.info("Merged DSSP bound and DSSP unbound tables...")
     return table
 
 
@@ -204,6 +212,8 @@ def contacts_mmcif_table_merger(contacts_table, mmcif_table, suffix='A'):
     else:
         raise TableMergerError('Not possible to merge the Contacts and mmCIF tables! '
                                'Some of the necessary columns are missing...')
+
+    logger.info("Merged Arpeggio and mmCIF tables...")
     return table
 
 
@@ -283,8 +293,8 @@ def table_generator(uniprot_id=None, pdb_id=None, chain=None, res=None,
                 pdb_id = data[0]['pdb_id']
                 chain = (data[0]['chain_id'],)
             else:
-                flash('Best structures not available from the PDBe API for '
-                      '{}'.format(uniprot_id))
+                logger.info('Best structures not available from the PDBe API for '
+                            '{}'.format(uniprot_id))
                 raise TableMergerError('Nothing to merge...')
 
         # mmCIF table
@@ -396,7 +406,7 @@ def table_generator(uniprot_id=None, pdb_id=None, chain=None, res=None,
 
 class TableMerger(object):
     def __init__(self, mmcif_table=None, dssp_table=None, sifts_table=None,
-                 contacts_table=None, store=True, verbose=False):
+                 contacts_table=None, store=True):
 
         self.mmcif_table = mmcif_table
         self.dssp_table = dssp_table
@@ -405,7 +415,6 @@ class TableMerger(object):
         self.store = store
         self.merged_table = None
         self.filename = None
-        self.verbose = verbose
 
     @staticmethod
     def _get_filename(uniprot_id=None, pdb_id=None, chain=None, res=None,
@@ -440,7 +449,7 @@ class TableMerger(object):
         if self.store and outputfile is not None:
             self.filename = outputfile
             dump_merged_table(self.merged_table, self.filename,
-                              override=override, verbose=self.verbose)
+                              override=override)
         return self.merged_table
 
     def run(self, uniprot_id=None, pdb_id=None, chain=None, res=None, site=None,
@@ -465,7 +474,7 @@ class TableMerger(object):
                                                    atom=atom, lines=lines, bio=bio,
                                                    sifts=sifts, dssp=dssp, contacts=contacts)
             dump_merged_table(self.merged_table, self.filename,
-                              override=override, verbose=self.verbose)
+                              override=override)
 
         return self.merged_table
 
@@ -481,41 +490,37 @@ class TableMerger(object):
                                                chain=chain, res=res, site=site,
                                                atom=atom, lines=lines, bio=bio,
                                                sifts=sifts, dssp=dssp, contacts=contacts)
-        self.merged_table = load_merged_table(self.filename, verbose=self.verbose)
+        self.merged_table = load_merged_table(self.filename)
         return self.merged_table
 
 
-def dump_merged_table(data, outputfile, override=False, verbose=False):
+def dump_merged_table(data, outputfile, override=False):
     """
     Dumps the table to a file.
 
     :param data: pandas DataFrame object - merged table
     :param outputfile: path to the pickled file
     :param override: boolean
-    :param verbose: boolean
     :return: (side-effects) writes a picked object to a file
     """
     if not os.path.isfile(outputfile) or override:
         data.to_pickle(outputfile)
-        if verbose:
-            flash('{} stored locally...'.format(outputfile))
+
+        logger.info('{} stored locally...'.format(outputfile))
     else:
-        if verbose:
-            flash('{} already available...'.format(outputfile))
+        logger.info('{} already available...'.format(outputfile))
 
 
-def load_merged_table(inputfile, verbose=False):
+def load_merged_table(inputfile):
     """
     Loads a table from a file.
 
     :param inputfile: path to the pickled file
-    :param verbose: boolean
     :return: returns a picked object to a file
     """
     if os.path.isfile(inputfile):
-        if verbose:
-            flash('{} is already available...'.format(inputfile))
         merged_table = pd.read_pickle(inputfile)
+        logger.info('{} is already available...'.format(inputfile))
         return merged_table
     else:
         raise IOError("{} not available or could not be read..."
