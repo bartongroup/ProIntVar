@@ -66,14 +66,14 @@ class TestUTILS(unittest.TestCase):
         if not os.path.exists(self.config.db_tmp):
             didnt_exist = True
             os.makedirs(self.config.db_tmp)
-        new_config_file = "{}mock_config.ini".format(self.config.db_tmp)
+        new_config_file = os.path.join(self.config.db_tmp, "mock_config.ini")
         with open(new_config_file, 'w') as out:
             out.write(mock_config)
         config = self.defaults(config_file=new_config_file)
         self.assertFalse(hasattr(config, 'some_name'))
         self.assertTrue(hasattr(config, 'test'))
         self.assertEqual(config.test, "/test/value")
-        os.remove("{}mock_config.ini".format(self.config.db_tmp))
+        os.remove(new_config_file)
         if didnt_exist:
             os.removedirs(self.config.db_tmp)
 

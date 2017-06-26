@@ -42,19 +42,19 @@ class TestARPEGGIO(unittest.TestCase):
 
         self.pdbid = '2pah'
         self.pdbid_small = '2rea'
-        self.inputpdb = "{}{}{}.pdb".format(c.db_root, c.db_pdbx, self.pdbid)
-        self.inputpdb_fast = "{}{}{}.pdb".format(c.db_root, c.db_pdbx, self.pdbid_small)
-        self.inputcif = "{}{}{}.cif".format(c.db_root, c.db_pdbx, self.pdbid)
-        self.inputarpeggio = "{}{}{}.contacts".format(c.db_root,
-                                                      c.db_contacts, self.pdbid)
-        self.input_amam = "{}{}{}.amam".format(c.db_root, c.db_contacts, self.pdbid)
-        self.input_amri = "{}{}{}.amri".format(c.db_root, c.db_contacts, self.pdbid)
-        self.input_ari = "{}{}{}.ari".format(c.db_root, c.db_contacts, self.pdbid)
-        self.input_ri = "{}{}{}.ri".format(c.db_root, c.db_contacts, self.pdbid)
-        self.inputarpeggio_fast = "{}{}{}.contacts".format(c.db_root,
-                                                           c.db_contacts,
-                                                           self.pdbid_small)
-        self.emptyfile = "{}{}{}.tmp".format(c.db_root, c.db_tmp, self.pdbid)
+        self.inputpdb = os.path.join(c.db_root, c.db_pdbx, "{}.pdb".format(self.pdbid))
+        self.inputpdb_fast = os.path.join(c.db_root, c.db_pdbx,
+                                          "{}.pdb".format(self.pdbid_small))
+        self.inputcif = os.path.join(c.db_root, c.db_pdbx, "{}.cif".format(self.pdbid))
+        self.inputarpeggio = os.path.join(c.db_root, c.db_contacts,
+                                          "{}.contacts".format(self.pdbid))
+        self.input_amam = os.path.join(c.db_root, c.db_contacts, "{}.amam".format(self.pdbid))
+        self.input_amri = os.path.join(c.db_root, c.db_contacts, "{}.amri".format(self.pdbid))
+        self.input_ari = os.path.join(c.db_root, c.db_contacts, "{}.ari".format(self.pdbid))
+        self.input_ri = os.path.join(c.db_root, c.db_contacts, "{}.ri".format(self.pdbid))
+        self.inputarpeggio_fast = os.path.join(c.db_root, c.db_contacts,
+                                               "{}.contacts".format(self.pdbid_small))
+        self.emptyfile = os.path.join(c.db_root, c.db_tmp, "{}.tmp".format(self.pdbid))
         self.notfound = ""
         self.excluded = ()
 
@@ -135,8 +135,8 @@ class TestARPEGGIO(unittest.TestCase):
     # @unittest.expectedFailure
     def test_generator_pdb_exec_fail(self):
         pdbid = "1ejg"
-        inputpdb = "{}{}{}.pdb".format(c.db_root, c.db_pdbx, pdbid)
-        inputarpeggio = "{}{}{}.contacts".format(c.db_root, c.db_pdbx, pdbid)
+        inputpdb = os.path.join(c.db_root, c.db_pdbx, "{}.pdb".format(pdbid))
+        inputarpeggio = os.path.join(c.db_root, c.db_pdbx, "{}.contacts".format(pdbid))
         try:
             self.generator(inputpdb,
                            inputarpeggio).run(clean_output=True,
@@ -146,7 +146,7 @@ class TestARPEGGIO(unittest.TestCase):
             msg = "PDB with residues have missing atoms..."
             self.assertFalse(os.path.isfile(inputarpeggio), msg)
 
-        inputpdb_new = "{}{}{}_new.pdb".format(c.db_root, c.db_pdbx, pdbid)
+        inputpdb_new = os.path.join(c.db_root, c.db_pdbx, "{}_new.pdb".format(pdbid))
         r = PDBXreader(inputpdb)
         data = r.atoms(format_type="pdb", remove_altloc=True,
                        remove_hydrogens=True, reset_atom_id=True,
@@ -160,10 +160,10 @@ class TestARPEGGIO(unittest.TestCase):
         self.assertTrue(os.path.isfile(inputarpeggio))
         os.remove(inputpdb_new)
         os.remove(inputarpeggio)
-        os.remove("{}{}{}.amam".format(c.db_root, c.db_pdbx, pdbid))
-        os.remove("{}{}{}.amri".format(c.db_root, c.db_pdbx, pdbid))
-        os.remove("{}{}{}.ari".format(c.db_root, c.db_pdbx, pdbid))
-        os.remove("{}{}{}.ri".format(c.db_root, c.db_pdbx, pdbid))
+        os.remove(os.path.join(c.db_root, c.db_pdbx, "{}.amam".format(pdbid)))
+        os.remove(os.path.join(c.db_root, c.db_pdbx, "{}.amri".format(pdbid)))
+        os.remove(os.path.join(c.db_root, c.db_pdbx, "{}.ari".format(pdbid)))
+        os.remove(os.path.join(c.db_root, c.db_pdbx, "{}.ri".format(pdbid)))
 
     def test_generator_pdb(self):
         if os.path.isfile(self.inputpdb):

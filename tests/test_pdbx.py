@@ -43,13 +43,13 @@ class TestPDBX(unittest.TestCase):
 
         self.pdbid = '2pah'
         self.pdbid2 = '1ejg'
-        self.inputcif = "{}{}{}.cif".format(c.db_root, c.db_pdbx, self.pdbid)
-        self.inputbiocif = "{}{}{}_bio.cif".format(c.db_root, c.db_pdbx, self.pdbid)
-        self.outputcif = "{}{}{}.cif".format(c.db_root, c.db_tmp, self.pdbid)
-        self.inputpdb = "{}{}{}.pdb".format(c.db_root, c.db_pdbx, self.pdbid)
-        self.inputpdb2 = "{}{}{}.pdb".format(c.db_root, c.db_pdbx, self.pdbid2)
-        self.outputpdb = "{}{}{}.pdb".format(c.db_root, c.db_tmp, self.pdbid)
-        self.emptyfile = "{}{}{}.tmp".format(c.db_root, c.db_tmp, self.pdbid)
+        self.inputcif = os.path.join(c.db_root, c.db_pdbx, "{}.cif".format(self.pdbid))
+        self.inputbiocif = os.path.join(c.db_root, c.db_pdbx, "{}_bio.cif".format(self.pdbid))
+        self.outputcif = os.path.join(c.db_root, c.db_tmp, "{}.cif".format(self.pdbid))
+        self.inputpdb = os.path.join(c.db_root, c.db_pdbx, "{}.pdb".format(self.pdbid))
+        self.inputpdb2 = os.path.join(c.db_root, c.db_pdbx, "{}.pdb".format(self.pdbid2))
+        self.outputpdb = os.path.join(c.db_root, c.db_tmp, "{}.pdb".format(self.pdbid))
+        self.emptyfile = os.path.join(c.db_root, c.db_tmp, "{}.tmp".format(self.pdbid))
         self.notfound = ""
         self.excluded = ()
 

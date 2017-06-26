@@ -299,9 +299,9 @@ def table_generator(uniprot_id=None, pdb_id=None, chain=None, res=None,
 
         # mmCIF table
         if bio:
-            inputcif = "{}{}{}_bio.cif".format(config.db_root, config.db_pdbx, pdb_id)
+            inputcif = os.path.join(config.db_root, config.db_pdbx, "{}_bio.cif".format(pdb_id))
         else:
-            inputcif = "{}{}{}.cif".format(config.db_root, config.db_pdbx, pdb_id)
+            inputcif = os.path.join(config.db_root, config.db_pdbx, "{}.cif".format(pdb_id))
 
         r = PDBXreader(inputcif)
 
@@ -318,7 +318,7 @@ def table_generator(uniprot_id=None, pdb_id=None, chain=None, res=None,
 
         # SIFTS table
         if sifts:
-            inputsifts = "{}{}{}.xml".format(config.db_root, config.db_sifts, pdb_id)
+            inputsifts = os.path.join(config.db_root, config.db_sifts, "{}.xml".format(pdb_id))
 
             r = SIFTSreader(inputsifts)
             sifts_table = r.residues(add_regions=True, add_dbs=False)
@@ -331,11 +331,11 @@ def table_generator(uniprot_id=None, pdb_id=None, chain=None, res=None,
         if dssp:
             # (default) bound DSSP
             if bio:
-                outputdssp = "{}{}{}_bio.dssp" \
-                             "".format(config.db_root, config.db_dssp, pdb_id)
+                outputdssp = os.path.join(config.db_root, config.db_dssp,
+                                          "{}_bio.dssp".format(pdb_id))
             else:
-                outputdssp = "{}{}{}.dssp" \
-                             "".format(config.db_root, config.db_dssp, pdb_id)
+                outputdssp = os.path.join(config.db_root, config.db_dssp,
+                                          "{}.dssp".format(pdb_id))
             if not os.path.isfile(outputdssp) or override:
                 w = DSSPrunner(inputcif, outputdssp)
                 w.run(override=override)
@@ -350,11 +350,11 @@ def table_generator(uniprot_id=None, pdb_id=None, chain=None, res=None,
             if dssp_unbound and dssp_table is not None:
                 # unbound DSSP
                 if bio:
-                    outputdssp_unb = "{}{}{}_bio_unbound.dssp" \
-                                     "".format(config.db_root, config.db_dssp, pdb_id)
+                    outputdssp_unb = os.path.join(config.db_root, config.db_dssp,
+                                                  "{}_bio_unbound.dssp".format(pdb_id))
                 else:
-                    outputdssp_unb = "{}{}{}_unbound.dssp" \
-                                     "".format(config.db_root, config.db_dssp, pdb_id)
+                    outputdssp_unb = os.path.join(config.db_root, config.db_dssp,
+                                                  "{}_unbound.dssp".format(pdb_id))
 
                 if not os.path.isfile(outputdssp_unb) or override:
                     w = DSSPrunner(inputcif, outputdssp_unb)
@@ -373,11 +373,11 @@ def table_generator(uniprot_id=None, pdb_id=None, chain=None, res=None,
         # Contacts (Arpeggio) table
         if contacts:
             if bio:
-                outputarp = "{}{}{}_bio.contacts" \
-                                 "".format(config.db_root, config.db_contacts, pdb_id)
+                outputarp = os.path.join(config.db_root, config.db_contacts,
+                                         "{}_bio.contacts".format(pdb_id))
             else:
-                outputarp = "{}{}{}.contacts" \
-                                 "".format(config.db_root, config.db_contacts, pdb_id)
+                outputarp = os.path.join(config.db_root, config.db_contacts,
+                                         "{}.contacts".format(pdb_id))
 
             if not os.path.isfile(outputarp) or override:
                 g = ARPEGGIOrunner(inputfile=inputcif, outputfile=outputarp)
@@ -436,7 +436,7 @@ class TableMerger(object):
         if contacts:
             name += "_cont"
 
-        filename = "{}{}{}.pkl".format(config.db_root, config.db_pickled, name)
+        filename = os.path.join(config.db_root, config.db_pickled, "{}.pkl".format(name))
         return filename
 
     def merge(self, outputfile=None, override=False):

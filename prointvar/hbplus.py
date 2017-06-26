@@ -223,7 +223,7 @@ class HBPLUSrunner(object):
         if self.inputfile != filename:
             shutil.copyfile(self.inputfile, filename)
         basename, extension = os.path.splitext(filename)
-        basename = "./" + basename
+        basename = os.path.join(".", basename)
         # output files (some optional)
         output_clean = basename + ".new"
         output_clean_log = basename + ".clean.log"

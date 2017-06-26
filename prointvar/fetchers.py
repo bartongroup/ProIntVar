@@ -36,7 +36,7 @@ def fetch_best_structures_pdbe(identifier, cached=False, retry_in=(429,)):
     :return: response object
     """
 
-    pickled = "{}{}{}_bs.pkl".format(config.db_root, config.db_pickled, identifier)
+    pickled = os.path.join(config.db_root, config.db_pickled, "{}_bs.pkl".format(identifier))
     if cached and os.path.isfile(pickled):
         response = pickle.load(open(pickled, 'rb'))
     else:
@@ -59,7 +59,7 @@ def fetch_summary_properties_pdbe(identifier, cached=False, retry_in=(429,)):
     :return: response object
     """
 
-    pickled = "{}{}{}_sp.pkl".format(config.db_root, config.db_pickled, identifier)
+    pickled = os.path.join(config.db_root, config.db_pickled, "{}_sp.pkl".format(identifier))
     if cached and os.path.isfile(pickled):
         response = pickle.load(open(pickled, 'rb'))
     else:
@@ -126,8 +126,8 @@ def download_structure_from_pdbe(identifier, pdb=False, bio=False, override=Fals
         else:
             filename = "{}.cif".format(identifier)
 
-    outputfile = "{}{}{}".format(config.db_root, config.db_pdbx, filename)
-    os.makedirs("{}{}".format(config.db_root, config.db_pdbx), exist_ok=True)
+    outputfile = os.path.join(config.db_root, config.db_pdbx, filename)
+    os.makedirs(os.path.join(config.db_root, config.db_pdbx), exist_ok=True)
     if not os.path.exists(outputfile.rstrip('.gz')) or override:
         if pdb:
             url = config.http_pdbe + ("entry-files/download/"
@@ -175,9 +175,8 @@ def download_sifts_from_ebi(identifier, override=False):
     """
 
     filename = "{}.xml.gz".format(identifier)
-
-    outputfile = "{}{}{}".format(config.db_root, config.db_sifts, filename)
-    os.makedirs("{}{}".format(config.db_root, config.db_sifts), exist_ok=True)
+    outputfile = os.path.join(config.db_root, config.db_sifts, filename)
+    os.makedirs(os.path.join(config.db_root, config.db_sifts), exist_ok=True)
     if not os.path.exists(outputfile.rstrip('.gz')) or override:
 
         url = config.ftp_sifts + "{}.xml.gz".format(identifier)
@@ -211,9 +210,8 @@ def download_data_from_uniprot(identifier, file_format="fasta", override=False):
     file_format = file_format.lstrip('.')
     if file_format in ['txt', 'fasta', 'gff']:
         filename = "{}.{}".format(identifier, file_format)
-
-        outputfile = "{}{}{}".format(config.db_root, config.db_uniprot, filename)
-        os.makedirs("{}{}".format(config.db_root, config.db_uniprot), exist_ok=True)
+        outputfile = os.path.join(config.db_root, config.db_uniprot, filename)
+        os.makedirs(os.path.join(config.db_root, config.db_uniprot), exist_ok=True)
         if not os.path.exists(outputfile) or override:
 
             url = config.http_uniprot + "{}.{}".format(identifier, file_format)
@@ -247,8 +245,8 @@ def download_alignment_from_cath(identifier, max_sequences=1000, override=False)
     if '_' in identifier:
         filename = "{}.fasta".format(identifier)
         superfamily, funfam = identifier.split('_')[0], identifier.split('_')[1]
-        outputfile = "{}{}{}".format(config.db_root, config.db_cath, filename)
-        os.makedirs("{}{}".format(config.db_root, config.db_cath), exist_ok=True)
+        outputfile = os.path.join(config.db_root, config.db_cath, filename)
+        os.makedirs(os.path.join(config.db_root, config.db_cath), exist_ok=True)
         if not os.path.exists(outputfile) or override:
 
             url = config.http_cath + "superfamily/{}/funfam/{}/" \
@@ -283,8 +281,8 @@ def download_alignment_from_pfam(identifier, override=False):
 
     filename = "{}.sth".format(identifier)
 
-    outputfile = "{}{}{}".format(config.db_root, config.db_pfam, filename)
-    os.makedirs("{}{}".format(config.db_root, config.db_pfam), exist_ok=True)
+    outputfile = os.path.join(config.db_root, config.db_pfam, filename)
+    os.makedirs(os.path.join(config.db_root, config.db_pfam), exist_ok=True)
     if not os.path.exists(outputfile) or override:
 
         url = config.http_pfam + "family/{}/alignment/full".format(identifier)

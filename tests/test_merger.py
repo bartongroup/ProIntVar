@@ -102,16 +102,16 @@ class TestMerger(unittest.TestCase):
         super(TestMerger, cls).setUpClass()
 
         cls.pdbid = '2pah'
-        cls.inputcif = "{}{}{}.cif".format(c.db_root, c.db_pdbx, cls.pdbid)
-        cls.inputdssp = "{}{}{}.dssp".format(c.db_root, c.db_dssp, cls.pdbid)
+        cls.inputcif = os.path.join(c.db_root, c.db_pdbx, "{}.cif".format(cls.pdbid))
+        cls.inputdssp = os.path.join(c.db_root, c.db_dssp, "{}.dssp".format(cls.pdbid))
 
-        cls.inputbiocif = "{}{}{}_bio.cif".format(c.db_root, c.db_pdbx, cls.pdbid)
-        cls.inputbiodssp = "{}{}{}_bio.dssp".format(c.db_root, c.db_dssp, cls.pdbid)
+        cls.inputbiocif = os.path.join(c.db_root, c.db_pdbx, "{}_bio.cif".format(cls.pdbid))
+        cls.inputbiodssp = os.path.join(c.db_root, c.db_dssp, "{}_bio.dssp".format(cls.pdbid))
 
-        cls.inputsifts = "{}{}{}.xml".format(c.db_root, c.db_sifts, cls.pdbid)
+        cls.inputsifts = os.path.join(c.db_root, c.db_sifts, "{}.xml".format(cls.pdbid))
 
-        cls.inputcontacts = "{}{}{}.contacts" \
-                            "".format(c.db_root, c.db_contacts, cls.pdbid)
+        cls.inputcontacts = os.path.join(c.db_root, c.db_contacts,
+                                         "{}.contacts".format(cls.pdbid))
 
         d = PDBXreader(cls.inputcif)
         cls.mmcif = d.atoms(add_res_full=True)
@@ -128,11 +128,11 @@ class TestMerger(unittest.TestCase):
         cls.dssp_bio = d.residues(add_rsa_class=True, add_ss_reduced=True)
 
         # chain A only: unbound
-        cls.outputcif_A = "{}{}{}_A.cif".format(c.db_root, c.db_pdbx, cls.pdbid)
+        cls.outputcif_A = os.path.join(c.db_root, c.db_pdbx, "{}_A.cif".format(cls.pdbid))
         w = PDBXwriter(inputfile=cls.inputcif,
                        outputfile=cls.outputcif_A)
         w.run(chain=('A',))
-        cls.outputdssp_A = "{}{}{}_A.dssp".format(c.db_root, c.db_dssp, cls.pdbid)
+        cls.outputdssp_A = os.path.join(c.db_root, c.db_dssp, "{}_A.dssp".format(cls.pdbid))
         d = DSSPrunner(inputfile=cls.outputcif_A,
                        outputfile=cls.outputdssp_A)
         d.run()

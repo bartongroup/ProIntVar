@@ -35,13 +35,13 @@ class TestDSSP(unittest.TestCase):
         """Initialize the framework for testing."""
 
         self.pdbid = '2pah'
-        self.inputcif = "{}{}{}.cif".format(c.db_root, c.db_pdbx, self.pdbid)
-        self.inputdssp = "{}{}{}.dssp".format(c.db_root, c.db_dssp, self.pdbid)
+        self.inputcif = os.path.join(c.db_root, c.db_pdbx, "{}.cif".format(self.pdbid))
+        self.inputdssp = os.path.join(c.db_root, c.db_dssp, "{}.dssp".format(self.pdbid))
 
-        self.inputbiocif = "{}{}{}.cif".format(c.db_root, c.db_pdbx, self.pdbid)
-        self.inputbiodssp = "{}{}{}_bio.dssp".format(c.db_root, c.db_dssp, self.pdbid)
+        self.inputbiocif = os.path.join(c.db_root, c.db_pdbx, "{}.cif".format(self.pdbid))
+        self.inputbiodssp = os.path.join(c.db_root, c.db_dssp, "{}_bio.dssp".format(self.pdbid))
 
-        self.emptyfile = "{}{}{}.tmp".format(c.db_root, c.db_tmp, self.pdbid)
+        self.emptyfile = os.path.join(c.db_root, c.db_tmp, "{}.tmp".format(self.pdbid))
         self.notfound = ""
         self.excluded = ()
 

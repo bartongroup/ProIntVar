@@ -83,7 +83,7 @@ class TestFetchers(unittest.TestCase):
         self.assertTrue(r.ok)
 
     def test_best_structure_pdbe_cached(self):
-        pickled = "{}{}{}_bs.pkl".format(c.db_root, c.db_pickled, self.uniprotid)
+        pickled = os.path.join(c.db_root, c.db_pickled, "{}_bs.pkl".format(self.uniprotid))
         self.assertFalse(os.path.isfile(pickled))
         r = self.fetch_best_structures_pdbe(self.uniprotid, cached=True)
         self.assertTrue(r.ok)
@@ -95,7 +95,7 @@ class TestFetchers(unittest.TestCase):
         self.assertTrue(r.ok)
 
     def test_summary_properties_cached(self):
-        pickled = "{}{}{}_sp.pkl".format(c.db_root, c.db_pickled, self.pdbid)
+        pickled = os.path.join(c.db_root, c.db_pickled, "{}_sp.pkl".format(self.pdbid))
         self.assertFalse(os.path.isfile(pickled))
         r = self.fetch_summary_properties_pdbe(self.pdbid, cached=True)
         self.assertTrue(r.ok)
@@ -108,39 +108,39 @@ class TestFetchers(unittest.TestCase):
 
     def test_download_structure_from_pdbe_pdb(self):
         self.download_structure_from_pdbe(self.pdbid, pdb=True)
-        os.remove("{}{}{}.pdb".format(c.db_root, c.db_pdbx, self.pdbid))
+        os.remove(os.path.join(c.db_root, c.db_pdbx, "{}.pdb".format(self.pdbid)))
 
     def test_download_structure_from_pdbe_mmcif(self):
         self.download_structure_from_pdbe(self.pdbid, pdb=False)
-        os.remove("{}{}{}.cif".format(c.db_root, c.db_pdbx, self.pdbid))
+        os.remove(os.path.join(c.db_root, c.db_pdbx, "{}.cif".format(self.pdbid)))
 
     def test_download_structure_from_pdbe_mmcif_bio(self):
         self.download_structure_from_pdbe(self.pdbid, pdb=False, bio=True)
-        os.remove("{}{}{}_bio.cif".format(c.db_root, c.db_pdbx, self.pdbid))
+        os.remove(os.path.join(c.db_root, c.db_pdbx, "{}_bio.cif".format(self.pdbid)))
 
     def test_download_sifts_from_ebi(self):
         self.download_sifts_from_ebi(self.pdbid)
-        os.remove("{}{}{}.xml".format(c.db_root, c.db_sifts, self.pdbid))
+        os.remove(os.path.join(c.db_root, c.db_sifts, "{}.xml".format(self.pdbid)))
 
     def test_download_data_from_uniprot_fasta(self):
         self.download_data_from_uniprot(self.uniprotid, file_format="fasta")
-        os.remove("{}{}{}.fasta".format(c.db_root, c.db_uniprot, self.uniprotid))
+        os.remove(os.path.join(c.db_root, c.db_uniprot, "{}.fasta".format(self.uniprotid)))
 
     def test_download_data_from_uniprot_gff(self):
         self.download_data_from_uniprot(self.uniprotid, file_format="gff")
-        os.remove("{}{}{}.gff".format(c.db_root, c.db_uniprot, self.uniprotid))
+        os.remove(os.path.join(c.db_root, c.db_uniprot, "{}.gff".format(self.uniprotid)))
 
     def test_download_data_from_uniprot_txt(self):
         self.download_data_from_uniprot(self.uniprotid, file_format="txt")
-        os.remove("{}{}{}.txt".format(c.db_root, c.db_uniprot, self.uniprotid))
+        os.remove(os.path.join(c.db_root, c.db_uniprot, "{}.txt".format(self.uniprotid)))
 
     def test_download_alignment_from_cath(self):
         self.download_alignment_from_cath(self.cathid)
-        os.remove("{}{}{}.fasta".format(c.db_root, c.db_cath, self.cathid))
+        os.remove(os.path.join(c.db_root, c.db_cath, "{}.fasta".format(self.cathid)))
 
     def test_download_alignment_from_pfam(self):
         self.download_alignment_from_pfam(self.pfamid)
-        os.remove("{}{}{}.sth".format(c.db_root, c.db_pfam, self.pfamid))
+        os.remove(os.path.join(c.db_root, c.db_pfam, "{}.sth".format(self.pfamid)))
 
 
 if __name__ == '__main__':

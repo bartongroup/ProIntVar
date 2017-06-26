@@ -32,10 +32,10 @@ class TestREDUCE(unittest.TestCase):
         """Initialize the framework for testing."""
 
         self.pdbid = '2pah'
-        self.inputpdb = "{}{}{}.pdb".format(c.db_root, c.db_pdbx, self.pdbid)
-        self.inputcif = "{}{}{}.cif".format(c.db_root, c.db_pdbx, self.pdbid)
-        self.outputred = "{}{}{}.reduce.pdb".format(c.db_root, c.db_pdbx, self.pdbid)
-        self.emptyfile = "{}{}{}.tmp".format(c.db_root, c.db_tmp, self.pdbid)
+        self.inputpdb = os.path.join(c.db_root, c.db_pdbx, "{}.pdb".format(self.pdbid))
+        self.inputcif = os.path.join(c.db_root, c.db_pdbx, "{}.cif".format(self.pdbid))
+        self.outputred = os.path.join(c.db_root, c.db_pdbx, "{}.reduce.pdb".format(self.pdbid))
+        self.emptyfile = os.path.join(c.db_root, c.db_tmp, "{}.tmp".format(self.pdbid))
         self.notfound = ""
         self.excluded = ()
 
