@@ -10,6 +10,8 @@ Here, we only test whether the endpoints still exist or not!
 
 
 import os
+import sys
+import logging
 import unittest
 
 try:
@@ -142,5 +144,7 @@ class TestFetchers(unittest.TestCase):
 
 
 if __name__ == '__main__':
+    logging.basicConfig(stream=sys.stderr)
+    logging.getLogger("prointvar").setLevel(logging.DEBUG)
     suite = unittest.TestLoader().loadTestsFromTestCase(TestFetchers)
     unittest.TextTestRunner(verbosity=2).run(suite)

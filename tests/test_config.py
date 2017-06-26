@@ -3,8 +3,13 @@
 
 
 import os
+import sys
+import logging
 import unittest
-from unittest.mock import patch
+try:
+    from mock import patch
+except ImportError:
+    from unittest.mock import patch
 
 from prointvar.config import Defaults
 from prointvar.config import config
@@ -74,5 +79,7 @@ class TestUTILS(unittest.TestCase):
 
 
 if __name__ == '__main__':
+    logging.basicConfig(stream=sys.stderr)
+    logging.getLogger("prointvar").setLevel(logging.DEBUG)
     suite = unittest.TestLoader().loadTestsFromTestCase(TestUTILS)
     unittest.TextTestRunner(verbosity=2).run(suite)

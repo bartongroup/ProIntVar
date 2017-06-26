@@ -4,6 +4,7 @@
 import re
 import sys
 import json
+import logging
 import requests
 import responses
 import unittest
@@ -13,8 +14,10 @@ from io import StringIO
 from datetime import datetime
 from contextlib import contextmanager
 
-from unittest.mock import patch
-from unittest.mock import MagicMock
+try:
+    from mock import patch, MagicMock
+except ImportError:
+    from unittest.mock import patch, MagicMock
 
 from prointvar.utils import check_sequence
 from prointvar.utils import compare_sequences
@@ -338,5 +341,7 @@ class TestUTILS(unittest.TestCase):
 
 
 if __name__ == '__main__':
+    logging.basicConfig(stream=sys.stderr)
+    logging.getLogger("prointvar").setLevel(logging.DEBUG)
     suite = unittest.TestLoader().loadTestsFromTestCase(TestUTILS)
     unittest.TextTestRunner(verbosity=2).run(suite)

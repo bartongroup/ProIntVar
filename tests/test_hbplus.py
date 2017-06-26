@@ -5,8 +5,8 @@
 import os
 import sys
 import json
+import logging
 import unittest
-from contextlib import contextmanager
 
 try:
     from StringIO import StringIO
@@ -24,17 +24,6 @@ from prointvar.hbplus import (HBPLUSreader, HBPLUSrunner,
 from prointvar.config import config as c
 root = os.path.abspath(os.path.dirname(__file__))
 c.db_root = "{}/testdata/".format(root)
-
-
-@contextmanager
-def captured_output():
-    new_out, new_err = StringIO(), StringIO()
-    old_out, old_err = sys.stdout, sys.stderr
-    try:
-        sys.stdout, sys.stderr = new_out, new_err
-        yield sys.stdout, sys.stderr
-    finally:
-        sys.stdout, sys.stderr = old_out, old_err
 
 
 @patch("prointvar.config.config.db_root", c.db_root)
@@ -117,13 +106,6 @@ class TestHBPLUS(unittest.TestCase):
             self.assertTrue(os.path.isfile(self.outputhbplus))
         else:
             raise IOError("%s" % self.inputcif)
-
-    def test_reader_hbplus_verbose(self):
-        with captured_output() as (out, err):
-            self.reader(self.outputhbplus, verbose=True).read()
-        # This can go inside or outside the `with` block
-        output = out.getvalue().strip()
-        self.assertEqual(output, 'Parsing HBPLUS from lines...')
 
     def test_parser_keys(self):
         self.assertListEqual([k for k in self.parser(self.outputhbplus).CHAIN_A.unique()],
@@ -215,5 +197,7 @@ class TestHBPLUS(unittest.TestCase):
 
 
 if __name__ == '__main__':
+    logging.basicConfig(stream=sys.stderr)
+    logging.getLogger("prointvar").setLevel(logging.DEBUG)
     suite = unittest.TestLoader().loadTestsFromTestCase(TestHBPLUS)
     unittest.TextTestRunner(verbosity=2).run(suite)

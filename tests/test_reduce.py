@@ -3,6 +3,8 @@
 
 
 import os
+import sys
+import logging
 import unittest
 
 try:
@@ -73,5 +75,7 @@ class TestREDUCE(unittest.TestCase):
 
 
 if __name__ == '__main__':
+    logging.basicConfig(stream=sys.stderr)
+    logging.getLogger("prointvar").setLevel(logging.DEBUG)
     suite = unittest.TestLoader().loadTestsFromTestCase(TestREDUCE)
     unittest.TextTestRunner(verbosity=2).run(suite)

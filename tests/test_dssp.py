@@ -5,8 +5,8 @@
 import os
 import sys
 import json
+import logging
 import unittest
-from contextlib import contextmanager
 
 try:
     from StringIO import StringIO
@@ -25,17 +25,6 @@ from prointvar.dssp import (DSSPreader, DSSPrunner,
 from prointvar.config import config as c
 root = os.path.abspath(os.path.dirname(__file__))
 c.db_root = "{}/testdata/".format(root)
-
-
-@contextmanager
-def captured_output():
-    new_out, new_err = StringIO(), StringIO()
-    old_out, old_err = sys.stdout, sys.stderr
-    try:
-        sys.stdout, sys.stderr = new_out, new_err
-        yield sys.stdout, sys.stderr
-    finally:
-        sys.stdout, sys.stderr = old_out, old_err
 
 
 @patch("prointvar.config.config.db_root", c.db_root)
@@ -126,13 +115,6 @@ class TestDSSP(unittest.TestCase):
             self.assertTrue(os.path.isfile(self.inputbiodssp))
         else:
             raise IOError("%s" % self.inputbiocif)
-
-    def test_reader_cif_verbose(self):
-        with captured_output() as (out, err):
-            self.reader(self.inputdssp, verbose=True).read()
-        # This can go inside or outside the `with` block
-        output = out.getvalue().strip()
-        self.assertEqual(output, 'Parsing DSSP from lines...')
 
     def test_parser_keys(self):
         self.assertListEqual([k for k in self.parser(self.inputdssp).CHAIN.unique()],
@@ -285,5 +267,7 @@ class TestDSSP(unittest.TestCase):
 
 
 if __name__ == '__main__':
+    logging.basicConfig(stream=sys.stderr)
+    logging.getLogger("prointvar").setLevel(logging.DEBUG)
     suite = unittest.TestLoader().loadTestsFromTestCase(TestDSSP)
     unittest.TextTestRunner(verbosity=2).run(suite)

@@ -3,6 +3,8 @@
 
 
 import os
+import sys
+import logging
 import unittest
 
 try:
@@ -533,5 +535,7 @@ class TestMerger(unittest.TestCase):
         self.assertIn('Amide-Amide', table.loc[0, 'Int_Types'])
 
 if __name__ == '__main__':
+    logging.basicConfig(stream=sys.stderr)
+    logging.getLogger("prointvar").setLevel(logging.DEBUG)
     suite = unittest.TestLoader().loadTestsFromTestCase(TestMerger)
     unittest.TextTestRunner(verbosity=2).run(suite)
