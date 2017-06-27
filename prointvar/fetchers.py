@@ -53,6 +53,26 @@ class BioFetcher(object):
         return self.response
 
 
+def fetch_uniprot_variants_ebi(identifier, cached=False, retry_in=(429,)):
+    """
+    Queries the EBI Proteins API for variants.
+    based on UniProt identifiers (e.g. O15294).
+
+    :param identifier: UniProt ID
+    :param cached: (boolean) if True, stores a pickle file locally
+    :param retry_in: http code for retrying connections
+    :return: pandas table dataframe
+    """
+
+    url_root = config.api_proteins
+    url_enpoint = "variation/"
+    url = url_root + url_enpoint + identifier
+    b = BioFetcher(url=url, cached=cached,
+                   cache_output="{}_vars.pkl".format(identifier),
+                   json=True, retry_in=retry_in)
+    return b.response
+
+
 def fetch_best_structures_pdbe(identifier, cached=False, retry_in=(429,)):
     """
     Queries the PDBe API SIFTS mappings best_structures endpoint.

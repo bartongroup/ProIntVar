@@ -24,6 +24,7 @@ except ImportError:
     from unittest.mock import patch
 
 from prointvar.fetchers import (fetch_best_structures_pdbe,
+                                fetch_uniprot_variants_ebi,
                                 fetch_summary_properties_pdbe,
                                 get_preferred_assembly_id,
                                 download_structure_from_pdbe,
@@ -56,6 +57,7 @@ class TestFetchers(unittest.TestCase):
         self.fetch_best_structures_pdbe = fetch_best_structures_pdbe
         self.fetch_summary_properties_pdbe = fetch_summary_properties_pdbe
         self.fetch_preferred_assembly_id = get_preferred_assembly_id
+        self.fetch_uniprot_variants_ebi = fetch_uniprot_variants_ebi
         self.download_structure_from_pdbe = download_structure_from_pdbe
         self.download_sifts_from_ebi = download_sifts_from_ebi
         self.download_data_from_uniprot = download_data_from_uniprot
@@ -72,6 +74,7 @@ class TestFetchers(unittest.TestCase):
         self.fetch_best_structures_pdbe = None
         self.fetch_summary_properties_pdbe = None
         self.fetch_preferred_assembly_id = None
+        self.fetch_uniprot_variants_ebi = None
         self.download_structure_from_pdbe = None
         self.download_sifts_from_ebi = None
         self.download_data_from_uniprot = None
@@ -105,6 +108,18 @@ class TestFetchers(unittest.TestCase):
     def test_preferred_assembly_pdbe(self):
         r = self.fetch_preferred_assembly_id(self.pdbid)
         self.assertEqual("1", r)
+
+    def test_uniprot_variants_ebi(self):
+        r = self.fetch_uniprot_variants_ebi(self.uniprotid)
+        self.assertTrue(r.ok)
+
+    def test_uniprot_variants_ebi_cached(self):
+        pickled = os.path.join(c.db_root, c.db_pickled, "{}_vars.pkl".format(self.uniprotid))
+        self.assertFalse(os.path.isfile(pickled))
+        r = self.fetch_uniprot_variants_ebi(self.uniprotid, cached=True)
+        self.assertTrue(r.ok)
+        self.assertTrue(os.path.isfile(pickled))
+        os.remove(pickled)
 
     def test_download_structure_from_pdbe_pdb(self):
         self.download_structure_from_pdbe(self.pdbid, pdb=True)
