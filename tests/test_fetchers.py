@@ -25,7 +25,7 @@ except ImportError:
 
 from prointvar.fetchers import (fetch_best_structures_pdbe,
                                 fetch_summary_properties_pdbe,
-                                fetch_preferred_assembly_id,
+                                get_preferred_assembly_id,
                                 download_structure_from_pdbe,
                                 download_sifts_from_ebi,
                                 download_data_from_uniprot,
@@ -55,7 +55,7 @@ class TestFetchers(unittest.TestCase):
         self.pfamid = "PF08124"
         self.fetch_best_structures_pdbe = fetch_best_structures_pdbe
         self.fetch_summary_properties_pdbe = fetch_summary_properties_pdbe
-        self.fetch_preferred_assembly_id = fetch_preferred_assembly_id
+        self.fetch_preferred_assembly_id = get_preferred_assembly_id
         self.download_structure_from_pdbe = download_structure_from_pdbe
         self.download_sifts_from_ebi = download_sifts_from_ebi
         self.download_data_from_uniprot = download_data_from_uniprot
