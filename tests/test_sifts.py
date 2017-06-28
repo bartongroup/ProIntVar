@@ -46,6 +46,8 @@ class TestSIFTS(unittest.TestCase):
         self.reader = SIFTSreader
         self.filter = get_sifts_selected_from_table
 
+        logging.disable(logging.DEBUG)
+
     def tearDown(self):
         """Remove testing framework."""
 
@@ -59,6 +61,8 @@ class TestSIFTS(unittest.TestCase):
         self.parser_dbs = None
         self.reader = None
         self.filter = None
+
+        logging.disable(logging.NOTSET)
 
     def test_file_not_found_reader(self):
         with self.assertRaises(IOError):

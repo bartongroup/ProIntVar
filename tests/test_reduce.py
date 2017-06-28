@@ -41,6 +41,8 @@ class TestREDUCE(unittest.TestCase):
 
         self.generator = REDUCErunner
 
+        logging.disable(logging.DEBUG)
+
     def tearDown(self):
         """Remove testing framework."""
 
@@ -54,6 +56,8 @@ class TestREDUCE(unittest.TestCase):
         self.excluded = None
 
         self.generator = None
+
+        logging.disable(logging.NOTSET)
 
     def test_file_not_found_generator(self):
         with self.assertRaises(IOError):

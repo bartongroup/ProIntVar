@@ -64,6 +64,8 @@ class TestFetchers(unittest.TestCase):
         self.download_alignment_from_cath = download_alignment_from_cath
         self.download_alignment_from_pfam = download_alignment_from_pfam
 
+        logging.disable(logging.DEBUG)
+
     def tearDown(self):
         """Remove testing framework."""
 
@@ -80,6 +82,8 @@ class TestFetchers(unittest.TestCase):
         self.download_data_from_uniprot = None
         self.download_alignment_from_cath = None
         self.download_alignment_from_pfam = None
+
+        logging.disable(logging.NOTSET)
 
     def test_best_structure_pdbe(self):
         r = self.fetch_best_structures_pdbe(self.uniprotid)

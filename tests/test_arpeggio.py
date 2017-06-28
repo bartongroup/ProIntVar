@@ -71,6 +71,8 @@ class TestARPEGGIO(unittest.TestCase):
         self.add_contact_info = add_contact_info
         self.add_special_cont_types = add_special_cont_types
 
+        logging.disable(logging.DEBUG)
+
     def tearDown(self):
         """Remove testing framework."""
 
@@ -101,6 +103,8 @@ class TestARPEGGIO(unittest.TestCase):
         self.parser_spec = None
         self.add_contact_info = None
         self.add_special_cont_types = None
+
+        logging.disable(logging.NOTSET)
 
     def test_file_not_found_reader(self):
         with self.assertRaises(IOError):

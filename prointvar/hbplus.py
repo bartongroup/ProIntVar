@@ -178,7 +178,7 @@ class HBPLUSreader(object):
             else:
                 return json.dumps(data)
         else:
-            logger.info('No HBPLUS data parsed...')
+            logger.info("No HBPLUS data parsed...")
 
 
 class HBPLUSrunner(object):
@@ -303,7 +303,7 @@ class HBPLUSrunner(object):
                     lazy_file_remover(self.inputfile)
 
         else:
-            logger.info('HBPLUS for {} already available...'.format(self.outputfile))
+            logger.info("HBPLUS for %s already available...", self.outputfile)
         return
 
 

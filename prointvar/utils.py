@@ -185,10 +185,11 @@ def fetch_from_url_or_retry(url, json=True, header=None, post=False, data=None,
         return fetch_from_url_or_retry(url, json, header, post, data, retry_in, wait,
                                        (n_retries - 1), stream, **params)
     else:
-        message = "{}\t{}".format(response.status_code, url)
-        logger.debug(message)
-        # response.raise_for_status()
-        return response
+        try:
+            response.raise_for_status()
+        except requests.exceptions.HTTPError as e:
+            logger.debug('%s: Unable to retrieve %s for %s',
+                         response.status_code, url, e)
 
 
 def store_data(data, path_root, directory, filename, extension="json"):
@@ -439,7 +440,7 @@ def row_selector(data, key=None, value=None, method="isin"):
                 value = table[key].iloc[0]
                 table = table.loc[table[key] == value]
         else:
-            logger.debug('{} not in the DataFrame...'.format(key))
+            logger.debug("%s not in the DataFrame...", key)
 
     if table.empty:
         message = 'Your filters resulted in an empty DataFrame...'

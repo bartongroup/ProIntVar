@@ -108,6 +108,8 @@ class TestUTILS(unittest.TestCase):
         self.get_new_pro_ids = get_new_pro_ids
         self.row_selector = row_selector
 
+        logging.disable(logging.DEBUG)
+
     def tearDown(self):
         """Remove testing framework."""
 
@@ -126,6 +128,8 @@ class TestUTILS(unittest.TestCase):
         self.convert_str_to_bool = None
         self.get_new_pro_ids = None
         self.row_selector = None
+
+        logging.disable(logging.NOTSET)
 
     def test_flash(self):
         with captured_output() as (out, err):

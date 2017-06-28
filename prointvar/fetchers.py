@@ -124,8 +124,7 @@ def get_preferred_assembly_id(identifier):
     try:
         data = fetch_summary_properties_pdbe(identifier)
     except Exception as e:
-        message = "Something went wrong for {}... {}".format(identifier, e)
-        logger.debug(message)
+        logger.debug("Something went wrong for %s... %s", identifier, e)
     try:
         if data is not None:
             data = data.json()
@@ -139,8 +138,7 @@ def get_preferred_assembly_id(identifier):
                 pref_assembly = data[identifier][0]["assemblies"][0]["assembly_id"]
     except Exception as e:
         pref_assembly = "1"
-        message = "Something went wrong for {}... {}".format(identifier, e)
-        logger.debug(message)
+        logger.debug("Something went wrong for %s... %s", identifier, e)
 
     bio_best = str(pref_assembly)
     return bio_best
@@ -168,7 +166,7 @@ class BioDownloader(object):
         if not os.path.exists(self.outputfile) or self.override:
             self._download()
         else:
-            logger.info('{} already available...'.format(self.outputfile))
+            logger.info("%s already available...", self.outputfile)
 
         if self.outputfile_origin.endswith('.gz') and self.decompress:
             self._decompress()
@@ -185,16 +183,15 @@ class BioDownloader(object):
                 import urllib
                 urllib.urlretrieve(self.url, self.outputfile_origin)
         except (URLError, HTTPError, IOError, Exception) as e:
-            message = 'Unable to retrieve {} for {}'.format(self.url, str(e))
-            logger.debug(message)
+            logger.debug("Unable to retrieve %s for %s", self.url, e)
 
     def _decompress(self):
         with gzip.open(self.outputfile_origin, 'rb') as infile, \
                 open(self.outputfile, 'wb') as outfile:
             shutil.copyfileobj(infile, outfile)
             os.remove(self.outputfile_origin)
-            logger.info('Decompressed {} to {}'
-                        ''.format(self.outputfile_origin, self.outputfile))
+            logger.info("Decompressed %s to %s",
+                        self.outputfile_origin, self.outputfile)
 
 
 def download_structure_from_pdbe(identifier, pdb=False, bio=False, override=False):

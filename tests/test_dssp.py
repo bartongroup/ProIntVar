@@ -54,6 +54,8 @@ class TestDSSP(unittest.TestCase):
         self.add_rsa_class = add_dssp_rsa_class
         self.add_ss_reduced = add_dssp_ss_reduced
 
+        logging.disable(logging.DEBUG)
+
     def tearDown(self):
         """Remove testing framework."""
 
@@ -73,6 +75,8 @@ class TestDSSP(unittest.TestCase):
         self.add_rsa = None
         self.add_rsa_class = None
         self.add_ss_reduced = None
+
+        logging.disable(logging.NOTSET)
 
     def test_file_not_found_reader(self):
         with self.assertRaises(IOError):

@@ -293,8 +293,8 @@ def table_generator(uniprot_id=None, pdb_id=None, chain=None, res=None,
                 pdb_id = data[0]['pdb_id']
                 chain = (data[0]['chain_id'],)
             else:
-                logger.info('Best structures not available from the PDBe API for '
-                            '{}'.format(uniprot_id))
+                logger.info("Best structures not available from the PDBe API for %s",
+                            uniprot_id)
                 raise TableMergerError('Nothing to merge...')
 
         # mmCIF table
@@ -506,9 +506,9 @@ def dump_merged_table(data, outputfile, override=False):
     if not os.path.isfile(outputfile) or override:
         data.to_pickle(outputfile)
 
-        logger.info('{} stored locally...'.format(outputfile))
+        logger.info("%s stored locally...", outputfile)
     else:
-        logger.info('{} already available...'.format(outputfile))
+        logger.info("%s already available...", outputfile)
 
 
 def load_merged_table(inputfile):
@@ -520,7 +520,7 @@ def load_merged_table(inputfile):
     """
     if os.path.isfile(inputfile):
         merged_table = pd.read_pickle(inputfile)
-        logger.info('{} is already available...'.format(inputfile))
+        logger.info("%s is already available...", inputfile)
         return merged_table
     else:
         raise IOError("{} not available or could not be read..."

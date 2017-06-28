@@ -427,7 +427,7 @@ class SIFTSreader(object):
             else:
                 return json.dumps(data)
         else:
-            logger.info('No SIFTS data parsed...')
+            logger.info("No SIFTS data parsed...")
 
 
 if __name__ == '__main__':

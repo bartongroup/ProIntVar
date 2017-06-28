@@ -75,6 +75,8 @@ class TestPDBX(unittest.TestCase):
         self.fix_pdb_ins_code = fix_pdb_ins_code
         self.fix_type_symbol = fix_type_symbol
 
+        logging.disable(logging.DEBUG)
+
     def tearDown(self):
         """Remove testing framework."""
 
@@ -110,6 +112,8 @@ class TestPDBX(unittest.TestCase):
         self.fix_label_alt_id = None
         self.fix_pdb_ins_code = None
         self.fix_type_symbol = None
+
+        logging.disable(logging.NOTSET)
 
     def test_file_not_found_reader(self):
         with self.assertRaises(IOError):

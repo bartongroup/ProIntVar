@@ -629,7 +629,7 @@ class ARPEGGIOreader(object):
             else:
                 return json.dumps(data)
         else:
-            logger.info('No ARPEGGIO data parsed...')
+            logger.info("No ARPEGGIO data parsed...")
 
 
 class ARPEGGIOrunner(object):
@@ -786,7 +786,7 @@ class ARPEGGIOrunner(object):
                     lazy_file_remover(self.inputfile_h)
 
         else:
-            logger.info('ARPEGGIO for {} already available...'.format(self.outputfile))
+            logger.info("ARPEGGIO for %s already available...", self.outputfile)
         return
 
 

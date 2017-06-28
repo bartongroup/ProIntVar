@@ -89,7 +89,7 @@ class REDUCErunner(object):
                     lazy_file_remover(self.inputfile)
 
         else:
-            logger.info('REDUCE for {} already available...'.format(self.outputfile))
+            logger.info("REDUCE for %s already available...", self.outputfile)
         return
 
 

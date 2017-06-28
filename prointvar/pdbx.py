@@ -132,7 +132,7 @@ def parse_mmcif_atoms_from_file(inputfile, excluded=(), add_res_full=True,
 
     if remove_partial_res:
         table = remove_partial_residues(table)
-        logger.info("PDBx removed imcomplete residues...")
+        logger.info("PDBx removed incomplete residues...")
 
     if reset_atom_id:
         table.reset_index(inplace=True)
@@ -267,7 +267,7 @@ def parse_pdb_atoms_from_file(inputfile, excluded=(), add_contacts=False,
 
     if remove_partial_res:
         table = remove_partial_residues(table)
-        logger.info("PDBx removed imcomplete residues...")
+        logger.info("PDBx removed incomplete residues...")
 
     if reset_atom_id:
         table.reset_index(inplace=True)
@@ -395,23 +395,23 @@ def get_mmcif_selected_from_table(data, chain=None, res=None, res_full=None, com
     table = data
     if chain is not None:
         table = row_selector(table, '{}_asym_id'.format(category), chain, method="isin")
-        logger.info("PDBx table filtered by {}_asym_id...".format(category))
+        logger.info("PDBx table filtered by %s_asym_id...", category)
 
     if res is not None:
         table = row_selector(table, '{}_seq_id'.format(category), res, method="isin")
-        logger.info("PDBx table filtered by {}_seq_id...".format(category))
+        logger.info("PDBx table filtered by %s_seq_id...", category)
 
     if res_full is not None:
         table = row_selector(table, '{}_seq_id_full'.format(category), res_full, method="isin")
-        logger.info("PDBx table filtered by {}_seq_id_full...".format(category))
+        logger.info("PDBx table filtered by %s_seq_id_full...", category)
 
     if comp is not None:
         table = row_selector(table, '{}_comp_id'.format(category), comp, method="isin")
-        logger.info("PDBx table filtered by {}_comp_id...".format(category))
+        logger.info("PDBx table filtered by %s_comp_id...", category)
 
     if atom is not None:
         table = row_selector(table, '{}_atom_id'.format(category), atom, method="isin")
-        logger.info("PDBx table filtered by {}_atom_id...".format(category))
+        logger.info("PDBx table filtered by %s_atom_id...", category)
 
     if lines is not None:
         table = row_selector(table, 'group_PDB', lines, method="isin")
@@ -470,7 +470,7 @@ def write_mmcif_from_table(outputfile, data, override=False):
         with open(outputfile, 'w') as outlines:
             outlines.write("\n".join(atom_lines))
     else:
-        logger.info('mmCIF for {} already available...'.format(outputfile))
+        logger.info("mmCIF for %s already available...", outputfile)
     return
 
 
@@ -500,7 +500,7 @@ def write_pdb_from_table(outputfile, data, override=False, pro_format=False):
         with open(outputfile, 'w') as outlines:
             outlines.write("".join(atom_lines))
     else:
-        logger.info('PDB for {} already available...'.format(outputfile))
+        logger.info("PDB for %s already available...", outputfile)
     return
 
 
@@ -1001,7 +1001,7 @@ class PDBXreader(object):
             else:
                 return json.dumps(data)
         else:
-            logger.info('No mmCIF data parsed...')
+            logger.info("No mmCIF data parsed...")
 
 
 class PDBXwriter(object):

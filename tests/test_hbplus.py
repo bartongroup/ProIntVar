@@ -47,6 +47,8 @@ class TestHBPLUS(unittest.TestCase):
         self.generator = HBPLUSrunner
         self.filter = get_hbplus_selected_from_table
 
+        logging.disable(logging.DEBUG)
+
     def tearDown(self):
         """Remove testing framework."""
 
@@ -62,6 +64,8 @@ class TestHBPLUS(unittest.TestCase):
         self.reader = None
         self.generator = None
         self.filter = None
+
+        logging.disable(logging.NOTSET)
 
     def test_file_not_found_reader(self):
         with self.assertRaises(IOError):

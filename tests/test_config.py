@@ -35,11 +35,15 @@ class TestUTILS(unittest.TestCase):
         self.config = config
         self.defaults = Defaults
 
+        logging.disable(logging.DEBUG)
+
     def tearDown(self):
         """Remove testing framework."""
 
         self.config = None
         self.defaults = None
+
+        logging.disable(logging.NOTSET)
 
     def test_loading_config_defaults(self):
         config = self.config

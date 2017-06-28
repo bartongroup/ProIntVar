@@ -64,7 +64,7 @@ def config_setup(filename):
         f.write(pkg_resources.resource_string(
             'prointvar', 'config_template.ini'))
 
-    logger.info("Wrote a template config file at {}".format(filename))
+    logger.info("Wrote a template config file at %s", filename)
 
 
 @click.command()

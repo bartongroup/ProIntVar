@@ -67,6 +67,8 @@ class TestMerger(unittest.TestCase):
         self.dump_merged_table = dump_merged_table
         self.load_merged_table = load_merged_table
 
+        logging.disable(logging.DEBUG)
+
     def tearDown(self):
         """Remove testing framework."""
 
@@ -95,6 +97,8 @@ class TestMerger(unittest.TestCase):
         self.generator = None
         self.dump_merged_table = None
         self.load_merged_table = None
+
+        logging.disable(logging.NOTSET)
 
     @classmethod
     def setUpClass(cls):
