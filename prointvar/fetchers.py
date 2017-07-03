@@ -47,7 +47,7 @@ class BioFetcher(object):
             self.response = pickle.load(open(self.pickled, 'rb'))
         else:
             self.response = fetch_from_url_or_retry(self.url, **self.kwargs)
-            if self.cached:
+            if self.cached and self.response is not None:
                 with open(self.pickled, 'wb') as output:
                     pickle.dump(self.response, output, -1)
         return self.response
@@ -165,11 +165,10 @@ class BioDownloader(object):
 
         if not os.path.exists(self.outputfile) or self.override:
             self._download()
+            if self.outputfile_origin.endswith('.gz') and self.decompress:
+                self._decompress()
         else:
             logger.info("%s already available...", self.outputfile)
-
-        if self.outputfile_origin.endswith('.gz') and self.decompress:
-            self._decompress()
 
     def _download(self):
         try:
