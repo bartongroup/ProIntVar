@@ -53,6 +53,44 @@ class BioFetcher(object):
         return self.response
 
 
+def fetch_uniprot_fasta(identifier, cached=False, retry_in=(429,)):
+    """
+    Retrieve UniProt fasta sequence from the database.
+
+    :param identifier: UniProt accession identifier
+    :param cached: (boolean) if True, stores a pickle file locally
+    :param retry_in: http code for retrying connections
+    :return: pandas table dataframe
+    """
+
+    url_root = config.http_uniprot
+    url_endpoint = identifier + ".fasta"
+    url = url_root + url_endpoint
+    b = BioFetcher(url=url, cached=cached,
+                   cache_output="{}_fasta.pkl".format(identifier),
+                   json=True, retry_in=retry_in)
+    return b.response
+
+
+def fetch_uniprot_id_from_name(identifier, cached=False, retry_in=(429,)):
+    """
+    Retrieve UniProt ID from Name.
+
+    :param identifier: UniProt accession identifier
+    :param cached: (boolean) if True, stores a pickle file locally
+    :param retry_in: http code for retrying connections
+    :return: pandas table dataframe
+    """
+
+    url_root = config.http_uniprot
+    url_endpoint = "?query=%22{}%22&format=json".format(identifier)
+    url = url_root + url_endpoint
+    b = BioFetcher(url=url, cached=cached,
+                   cache_output="{}_id.pkl".format(identifier),
+                   json=True, retry_in=retry_in)
+    return b.response
+
+
 def fetch_uniprot_variants_ebi(identifier, cached=False, retry_in=(429,)):
     """
     Queries the EBI Proteins API for variants.

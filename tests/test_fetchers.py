@@ -31,7 +31,9 @@ from prointvar.fetchers import (fetch_best_structures_pdbe,
                                 download_sifts_from_ebi,
                                 download_data_from_uniprot,
                                 download_alignment_from_cath,
-                                download_alignment_from_pfam)
+                                download_alignment_from_pfam,
+                                fetch_uniprot_fasta,
+                                fetch_uniprot_id_from_name)
 
 from prointvar.config import config as c
 root = os.path.abspath(os.path.dirname(__file__))
@@ -63,6 +65,8 @@ class TestFetchers(unittest.TestCase):
         self.download_data_from_uniprot = download_data_from_uniprot
         self.download_alignment_from_cath = download_alignment_from_cath
         self.download_alignment_from_pfam = download_alignment_from_pfam
+        self.fetch_uniprot_fasta = fetch_uniprot_fasta
+        self.fetch_uniprot_id_from_name = fetch_uniprot_id_from_name
 
         logging.disable(logging.DEBUG)
 
@@ -82,6 +86,8 @@ class TestFetchers(unittest.TestCase):
         self.download_data_from_uniprot = None
         self.download_alignment_from_cath = None
         self.download_alignment_from_pfam = None
+        self.fetch_uniprot_fasta = None
+        self.fetch_uniprot_id_from_name = None
 
         logging.disable(logging.NOTSET)
 
@@ -161,6 +167,30 @@ class TestFetchers(unittest.TestCase):
         self.download_alignment_from_pfam(self.pfamid)
         os.remove(os.path.join(c.db_root, c.db_pfam, "{}.sth".format(self.pfamid)))
 
+    def test_fetch_uniprot_fasta(self):
+        r = self.fetch_uniprot_fasta(self.uniprotid)
+        self.assertTrue(r.ok)
+
+    def test_fetch_uniprot_fasta_cached(self):
+        pickled = os.path.join(c.db_root, c.db_pickled, "{}_fasta.pkl".format(self.uniprotid))
+        self.assertFalse(os.path.isfile(pickled))
+        r = self.fetch_uniprot_fasta(self.uniprotid, cached=True)
+        self.assertTrue(r.ok)
+        self.assertTrue(os.path.isfile(pickled))
+        os.remove(pickled)
+
+    def test_fetch_uniprot_id_from_name(self):
+        r = self.fetch_uniprot_id_from_name("PH4H_HUMAN")
+        self.assertTrue(r.ok)
+        self.assertEqual("P00439", r.json()[0]["id"])
+
+    def test_fetch_uniprot_id_from_name_cached(self):
+        pickled = os.path.join(c.db_root, c.db_pickled, "{}_id.pkl".format("PH4H_HUMAN"))
+        self.assertFalse(os.path.isfile(pickled))
+        r = self.fetch_uniprot_id_from_name("PH4H_HUMAN", cached=True)
+        self.assertTrue(r.ok)
+        self.assertTrue(os.path.isfile(pickled))
+        os.remove(pickled)
 
 if __name__ == '__main__':
     logging.basicConfig(stream=sys.stderr)
