@@ -3,6 +3,7 @@
 
 import click
 import click_log
+import logging
 
 from prointvar.fetchers import fetch_best_structures_pdbe
 from prointvar.fetchers import download_structure_from_pdbe
@@ -14,6 +15,34 @@ from prointvar.fetchers import download_alignment_from_pfam
 from prointvar.utils import flash
 
 
+logger = logging.getLogger("prointvar")
+
+
+def read_alignment(inputfile):
+    """
+    Reads an input multiple sequence alignment (MSA).
+    Formats recognised by Biopython:
+        "clustal", "emboss", "nexus", "fasta", "phylip" and "stockholm"
+
+    :param inputfile: Input MSA (read by biopython)
+    :return: returns the biopython alignment object
+    """
+
+    from Bio import AlignIO
+
+    if inputfile.endswith('.fasta') or inputfile.endswith('.fa'):
+        align_format = 'fasta'
+    elif inputfile.endswith('.sto') or inputfile.endswith('.sth'):
+        align_format = 'stockholm'
+    elif inputfile.endswith('.aln') or inputfile.endswith('.clw'):
+        align_format = 'clustal'
+    else:
+        raise ValueError("Alignment format unrecognised...")
+
+    alignment = AlignIO.read(inputfile, align_format)
+    return alignment
+
+
 # main application
 @click.group(chain=True,
              context_settings={'help_option_names': ['-h', '--help']})
@@ -21,6 +50,48 @@ def cli():
     """Main script that process all the available sub-commands and options.
     """
     pass
+
+
+@cli.command('alignment')
+@click.option('-i', '--input', 'inputfile', type=str,
+              multiple=False, help='The input file to open.',
+              required=True)
+@click.option('-o', '--output', 'outputfile', type=str,
+              multiple=False, help='The output file to open.',
+              required=False)
+def alignment(inputfile, outputfile=None):
+
+    from prointvar.fetchers import fetch_uniprot_id_from_name
+    from prointvar.fetchers import fetch_best_structures_pdbe
+    from prointvar.fetchers import fetch_uniprot_variants_ebi
+    from prointvar.merger import TableMerger
+
+    align = read_alignment(inputfile)
+    var_rows = []
+    for record in align:
+        # seq = str(record.seq)
+        desc = str(record.description)
+        uniprot_name = desc.split('/')[0]
+        r = fetch_uniprot_id_from_name(uniprot_name, cached=True)
+        uniprot_id = r.json()[0]["id"]
+        print(uniprot_id)
+        # Fetch/download structures
+        r = fetch_best_structures_pdbe(uniprot_id, cached=True)
+        pdb_ids = []
+        if r is not None:
+            for entry in r.json()[uniprot_id]:
+                pdb_id = entry["pdb_id"]
+                if pdb_id not in pdb_ids:
+                    pdb_ids.append(pdb_id)
+
+        for pdb_id in pdb_ids:
+            file_downloader([pdb_id], mmcif=True, bio=True, sifts=True)
+
+        # Fetch/download variants
+        r = fetch_uniprot_variants_ebi(uniprot_id, cached=True)
+        if r is not None:
+            from prointvar.variants import flatten_uniprot_variants_ebi
+            var_table = flatten_uniprot_variants_ebi(r)
 
 
 @cli.command('mmcif2pdb')
