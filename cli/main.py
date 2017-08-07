@@ -73,7 +73,7 @@ def alignment(inputfile, outputfile=None):
         desc = str(record.description)
         uniprot_name = desc.split('/')[0]
         r = fetch_uniprot_id_from_name(uniprot_name, cached=True)
-        uniprot_id = r.json()[0]["id"]
+        uniprot_id = str(r.content, encoding='utf-8').strip()
         print(uniprot_id)
         # Fetch/download structures
         r = fetch_best_structures_pdbe(uniprot_id, cached=True)

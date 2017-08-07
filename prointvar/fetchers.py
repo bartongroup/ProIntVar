@@ -83,11 +83,11 @@ def fetch_uniprot_id_from_name(identifier, cached=False, retry_in=(429,)):
     """
 
     url_root = config.http_uniprot
-    url_endpoint = "?query=%22{}%22&format=json".format(identifier)
+    url_endpoint = "?query={}&columns=id&format=list".format(identifier)
     url = url_root + url_endpoint
     b = BioFetcher(url=url, cached=cached,
                    cache_output="{}_id.pkl".format(identifier),
-                   json=True, retry_in=retry_in)
+                   json=False, retry_in=retry_in)
     return b.response
 
 

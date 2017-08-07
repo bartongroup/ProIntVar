@@ -182,7 +182,7 @@ class TestFetchers(unittest.TestCase):
     def test_fetch_uniprot_id_from_name(self):
         r = self.fetch_uniprot_id_from_name("PH4H_HUMAN")
         self.assertTrue(r.ok)
-        self.assertEqual("P00439", r.json()[0]["id"])
+        self.assertEqual("P00439", str(r.content, encoding='utf-8').strip())
 
     def test_fetch_uniprot_id_from_name_cached(self):
         pickled = os.path.join(c.db_root, c.db_pickled, "{}_id.pkl".format("PH4H_HUMAN"))
