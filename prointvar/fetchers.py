@@ -35,8 +35,12 @@ class BioFetcher(object):
         self.url = url
         self.cached = cached
         self.cache_output = cache_output
-        self.pickled = os.path.join(config.db_root, config.db_pickled,
-                                    self.cache_output)
+        if self.cached:
+            if self.cache_output is not None:
+                self.pickled = os.path.join(config.db_root, config.db_pickled,
+                                            self.cache_output)
+            else:
+                raise ValueError("Attribute 'cache_output' needs to be provided!")
         self.kwargs = kwargs
         self.response = None
         self._fetch()

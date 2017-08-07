@@ -33,7 +33,8 @@ from prointvar.fetchers import (fetch_best_structures_pdbe,
                                 download_alignment_from_cath,
                                 download_alignment_from_pfam,
                                 fetch_uniprot_fasta,
-                                fetch_uniprot_id_from_name)
+                                fetch_uniprot_id_from_name,
+                                BioFetcher, BioDownloader)
 
 from prointvar.config import config as c
 root = os.path.abspath(os.path.dirname(__file__))
@@ -67,6 +68,8 @@ class TestFetchers(unittest.TestCase):
         self.download_alignment_from_pfam = download_alignment_from_pfam
         self.fetch_uniprot_fasta = fetch_uniprot_fasta
         self.fetch_uniprot_id_from_name = fetch_uniprot_id_from_name
+        self.BioFetcher = BioFetcher
+        self.BioDownloader = BioDownloader
 
         logging.disable(logging.DEBUG)
 
@@ -88,6 +91,8 @@ class TestFetchers(unittest.TestCase):
         self.download_alignment_from_pfam = None
         self.fetch_uniprot_fasta = None
         self.fetch_uniprot_id_from_name = None
+        self.BioFetcher = None
+        self.BioDownloader = None
 
         logging.disable(logging.NOTSET)
 
@@ -191,6 +196,23 @@ class TestFetchers(unittest.TestCase):
         self.assertTrue(r.ok)
         self.assertTrue(os.path.isfile(pickled))
         os.remove(pickled)
+
+    def test_biofetcher_uniprot_fasta(self):
+        url_root = c.http_uniprot
+        url_endpoint = self.uniprotid + ".fasta"
+        url = url_root + url_endpoint
+        b = self.BioFetcher(url, cached=False)
+        r = b.response
+        self.assertTrue(r.ok)
+
+    def test_biodownloader_uniprot_fasta(self):
+        filename = self.uniprotid + ".fasta"
+        outputfile = os.path.join(c.db_root, c.db_uniprot, filename)
+        url = c.http_uniprot + filename
+        self.BioDownloader(url=url, outputfile=outputfile,
+                           decompress=True, override=False)
+        os.remove(os.path.join(c.db_root, c.db_uniprot, filename))
+
 
 if __name__ == '__main__':
     logging.basicConfig(stream=sys.stderr)
