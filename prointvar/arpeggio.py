@@ -5,7 +5,7 @@
 
 This defines the methods that work with ARPEGGIO files.
 
-Needs the Edited Arpeggio Fork from: https://github.com/biomadeira/arpeggio
+Needs the Edited Arpeggio Fork from: https://bitbucket.org/biomadeira/arpeggio
 
 Propositions for things to work:
 - Generate new PDB file from mmCIF and (even) PDB so that some issues (below) are cleared
