@@ -105,12 +105,20 @@ def alignment(inputfile, outputfile=None):
               multiple=False, help='Overrides any existing file, if available.',
               default=False, is_flag=True, required=False)
 def mmcif2pdb(inputfile, outputfile=None, override=False):
+    """
+    Converts mmCIF to PDB format.
+
+    :param inputfile: (str) path to the file
+    :param outputfile: (str) path to the file
+    :param override: boolean
+    :return: (side-effects)
+    """
     from prointvar.pdbx import PDBXwriter
     w = PDBXwriter(inputfile=inputfile, outputfile=outputfile)
     w.run(format_type='pdb', override=override)
 
 
-@cli.command('mmcif_clean')
+@cli.command('clean_mmcif')
 @click.option('-i', '--input', 'inputfile', type=str,
               multiple=False, help='The input file to open.',
               required=True)
@@ -129,8 +137,19 @@ def mmcif2pdb(inputfile, outputfile=None, override=False):
 @click.option('--override', 'override',
               multiple=False, help='Overrides any existing file, if available.',
               default=False, is_flag=True, required=False)
-def mmcif_clean(inputfile, outputfile=None, rm_hydrogens=False, rm_altlocs=False,
+def clean_mmcif(inputfile, outputfile=None, rm_hydrogens=False, rm_altlocs=False,
               rm_partial_res=False, override=False):
+    """
+    Cleans the mmCIF file.
+
+    :param inputfile: (str) path to the file
+    :param outputfile: (str) path to the file
+    :param rm_hydrogens: (bool) removes explicit hydrogens
+    :param rm_altlocs: (bool) removes alternative locations
+    :param rm_partial_res: (bool) removes incomplete residues
+    :param override: boolean
+    :return: (side-effects)
+    """
     from prointvar.pdbx import PDBXwriter, PDBXreader
     r = PDBXreader(inputfile=inputfile)
     data = r.atoms(format_type='mmcif',
@@ -140,7 +159,7 @@ def mmcif_clean(inputfile, outputfile=None, rm_hydrogens=False, rm_altlocs=False
     w.run(data, format_type='mmcif', override=override)
 
 
-@cli.command('pdb_clean')
+@cli.command('clean_pdb')
 @click.option('-i', '--input', 'inputfile', type=str,
               multiple=False, help='The input file to open.',
               required=True)
@@ -162,8 +181,19 @@ def mmcif_clean(inputfile, outputfile=None, rm_hydrogens=False, rm_altlocs=False
 @click.option('--pro_format', 'pro_format',
               multiple=False, help='',
               default=False, is_flag=True, required=False)
-def pdb_clean(inputfile, outputfile=None, rm_hydrogens=False, rm_altlocs=False,
+def clean_pdb(inputfile, outputfile=None, rm_hydrogens=False, rm_altlocs=False,
               rm_partial_res=False, override=False, pro_format=False):
+    """
+    Cleans the PDB file.
+
+    :param inputfile: (str) path to the file
+    :param outputfile: (str) path to the file
+    :param rm_hydrogens: (bool) removes explicit hydrogens
+    :param rm_altlocs: (bool) removes alternative locations
+    :param rm_partial_res: (bool) removes incomplete residues
+    :param override: boolean
+    :return: (side-effects)
+    """
     from prointvar.pdbx import PDBXwriter, PDBXreader
     r = PDBXreader(inputfile=inputfile)
     data = r.atoms(format_type='pdb',
@@ -267,6 +297,8 @@ def downloads(ids, pdb=False, mmcif=False, bio=False, sifts=False,
               fasta=False, gff=False, txt=False, cath=False,
               pfam=False, best_structures=False, override=False):
     """
+    Downloads a variety of files from main repositories.
+
     Pass 1 or more accession IDs (e.g. '2pah' or '2pah 3kic').\n
     Currently accepted: PDB, UniProt, Pfam and CATH.
     """
