@@ -1,14 +1,27 @@
-### ProIntVar Core
+# ProIntVar Core
 ProIntVar Core is a Python module that implements methods for working with Protein Structures (handles mmCIF, DSSP, SIFTS, protein interactions, etc.) and genetic variation (via UniProt and Ensembl APIs). 
 
 ProIntVar core is now separated from ProtIntVar Analysis, which contains analysis scripts that use ProIntVar Core components. 
 
-### Dependencies
+## Table of Contents
+
+- [Dependencies](#dependencies)
+- [Installing](#installing)
+- [Configuration](#configuration)
+- [How to use](#how-to-use)
+- [Additional Information](#additional-information)
+  - [Key features](#key-features)
+  - [Project Structure](#project-structure)
+  - [Guidelines on file names and extensions](#guidelines-on-file-names-and-extensions)
+- [Licensing](#licensing)
+
+
+## Dependencies
 Using Python 3.5+.
 
 Check [requirements.txt](./requirements.txt) for all dependencies.
 
-### Installing 
+## Installing 
 
 Setting up a virtual environment 
 ```sh
@@ -34,7 +47,7 @@ $ python setup.py test
 $ python setup.py install
 ```
 
-### Configuration
+## Configuration
 
 Editing the provided template configuration settings
 ```sh
@@ -55,18 +68,21 @@ $ python
 '/new_config_path_to_tmp_dir/'
 ```
 
-
-### How to use
+## How to use
 
 TODO.
 
-### Additional Information
+## Additional Information
 
-#### Project Structure
+### Key features
+
+* PDBx/mmCIF support in both reading and writing
+
+### Project Structure
 
 TODO
 
-#### Guidelines on file names and extensions
+### Guidelines on file names and extensions
 **PDB/PDBx/mmCIF Macromolecular structures**
 * PDB and mmCIF formatted files are read and written from `db_pdbx` folder, as defined in the configuration file `config.ini`
     - PDB/mmCIF files are written as `<pdb_id>.pdb` or `<pdb_id>.cif`
@@ -98,10 +114,5 @@ TODO
     - Reduce Hydrogen-filled PDBs are written as `<pdb_id>.h.pdb` in `db_pdbx`
 
 
-#### Key features
-
-* PDBx/mmCIF support in both reading and writing
-
-
-### Licensing
+## Licensing
 [GNU GPL3](LICENSE.md)
