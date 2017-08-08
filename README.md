@@ -3,23 +3,44 @@ ProIntVar Core is a Python module that implements methods for working with Prote
 
 ProIntVar core is now separated from ProtIntVar Analysis, which contains analysis scripts that use ProIntVar Core components. 
 
+
 ## Table of Contents
 
+- [Key features](#key-features)
+- [Overview](#overview)
 - [Dependencies](#dependencies)
 - [Installing](#installing)
 - [Configuration](#configuration)
 - [How to use](#how-to-use)
 - [Additional Information](#additional-information)
-  - [Key features](#key-features)
   - [Project Structure](#project-structure)
   - [Guidelines on file names and extensions](#guidelines-on-file-names-and-extensions)
 - [Licensing](#licensing)
+
+
+## Key features
+
+* Support for both reading and writing [PDB/mmCIF](http://mmcif.wwpdb.org/) structures
+* [DSSP](http://swift.cmbi.ru.nl/gv/dssp/) runnning and parsing
+* PDB-UniProt structure-sequence mapping with [SIFTS](http://www.ebi.ac.uk/pdbe/docs/sifts/index.html) (xml) parsing 
+* Interface (contacts) computing and analysis with [Arpeggio](http://biosig.unimelb.edu.au/arpeggioweb/)
+* Addition of Hydrogen atoms with [HBPLUS](http://www.ebi.ac.uk/thornton-srv/software/HBPLUS/) and [Reduce](http://kinemage.biochem.duke.edu/software/reduce.php)
+* Download various raw files (structures, sequences, variants, etc.)
+* Fetch data from several APIs (Proteins API, PDBe REST API, Ensembl REST, etc.)
+* A TableMerger class that simplifies working with protein structures and sequence annotations
+* All data is handled with [Pandas](http://pandas.pydata.org/) data structures
+
+
+## Overview
+
+TODO.
 
 
 ## Dependencies
 Using Python 3.5+.
 
 Check [requirements.txt](./requirements.txt) for all dependencies.
+
 
 ## Installing 
 
@@ -47,6 +68,7 @@ $ python setup.py test
 $ python setup.py install
 ```
 
+
 ## Configuration
 
 Editing the provided template configuration settings
@@ -68,15 +90,13 @@ $ python
 '/new_config_path_to_tmp_dir/'
 ```
 
+
 ## How to use
 
 TODO.
 
+
 ## Additional Information
-
-### Key features
-
-* PDBx/mmCIF support in both reading and writing
 
 ### Project Structure
 
