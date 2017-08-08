@@ -1,7 +1,7 @@
 # ProIntVar Core
-ProIntVar Core is a Python module that implements methods for working with Protein Structures (handles mmCIF, DSSP, SIFTS, protein interactions, etc.) and genetic variation (via UniProt and Ensembl APIs). 
+ProIntVar Core is a Python module that implements methods for working with protein structures (handles mmCIF, DSSP, SIFTS, protein interactions, etc.) and genetic variation (via UniProt and Ensembl APIs). 
 
-ProIntVar core is now separated from ProtIntVar Analysis, which contains analysis scripts that use ProIntVar Core components. 
+ProIntVar core is now separated from ProIntVar-Analysis, which contains analysis scripts that use ProIntVar Core components. 
 
 
 ## Table of Contents
@@ -33,10 +33,10 @@ ProIntVar core is now separated from ProtIntVar Analysis, which contains analysi
 
 ## Overview
 
-ProIntVar handles data with aid of Pandas DataFrames. Data such as protein structure (sequence and atom 3D coordinates) and respective 
+ProIntVar handles data with aid of Pandas DataFrames. Data such as protein structures (sequence and atom 3D coordinates) and respective 
 annotations (from structural analysis, e.g. interacting interfaces, secondary structure and solvent accessibility), as well as 
 protein sequences and annotations (e.g. genetic variants, and other functional information) are handled by the classes/methods
-so that each modular (components) table can be integrated onto a 'merged table' that collapses all the data.
+so that each modular (components) table can be integrated onto a single 'merged table'.
 
 ![screenshot](prointvar.png "")
 
