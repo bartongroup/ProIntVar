@@ -1,5 +1,5 @@
-# ProIntVar Core
-ProIntVar Core is a Python module that implements methods for working with protein structures (handles mmCIF, DSSP, SIFTS, protein interactions, etc.) and genetic variation (via UniProt and Ensembl APIs). 
+# ProIntVar
+ProIntVar-Core is a Python module that implements methods for working with protein structures (handles mmCIF, DSSP, SIFTS, protein interactions, etc.) and genetic variation (via UniProt and Ensembl APIs). 
 
 ProIntVar core is now separated from ProIntVar-Analysis, which contains analysis scripts that use ProIntVar Core components. 
 
