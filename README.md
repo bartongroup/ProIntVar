@@ -33,8 +33,16 @@ ProIntVar core is now separated from ProtIntVar Analysis, which contains analysi
 
 ## Overview
 
-TODO.
+ProIntVar handles data with aid of Pandas DataFrames. Data such as protein structure (sequence and atom 3D coordinates) and respective 
+annotations (from structural analysis, e.g. interacting interfaces, secondary structure and solvent accessibility), as well as 
+protein sequences and annotations (e.g. genetic variants, and other functional information) are handled by the classes/methods
+so that each modular (components) table can be integrated onto a 'merged table' that collapses all the data.
 
+![screenshot](prointvar.png "")
+
+
+The methods implemenented in `prointvar/merger.py` allow for the different components to be merged together onto a 
+single Pandas DataFrame.
 
 ## Dependencies
 Using Python 3.5+.
