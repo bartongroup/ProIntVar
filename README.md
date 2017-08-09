@@ -12,6 +12,8 @@ ProIntVar core is now separated from ProIntVar-Analysis, which contains analysis
 - [Installing](#installing)
 - [Configuration](#configuration)
 - [How to use](#how-to-use)
+  - [ProIntVar CLI](#ProIntVar-cli)
+  - [ProIntVar Classes](#ProIntVar-classes)
 - [Additional Information](#additional-information)
   - [Project Structure](#project-structure)
   - [Guidelines on file names and extensions](#guidelines-on-file-names-and-extensions)
@@ -101,10 +103,104 @@ $ python
 
 ## How to use
 
-TODO.
+### ProIntVar CLI
+
+There are several tools provided with the ProIntVar CLI, each having its own options and arguments. Pass the `--help` for more information about each tool.
+
+An example usage of the CLI is to download some files from main repositories. Using the Downloader interface in the CLI to download some macromolecular structures:
+
+```sh
+# downloads structures in mmCIF format to the directory defined in the config.ini
+ProIntVar download --mmcif 2pah
+# downloads SIFTS record in XML format
+ProIntVar download --sifts 2pah
+```
+
+### ProIntVar Classes
+
+Each main class in ProIntVar works as an independent component that can be used on its own or together with other classes. Generally each main class produces/parses data to a pandas DataFrame. The classes/methods provided in `prointvar.merger` can be used to merge DataFrames. Merging DataFrames is not trivial, since there must be common features in the tables to be merged.
+More information on how to use the `TableMerger` class and which features (columns) from each table can be used to merge with confidence is provided [below](#table-merger).
+
+#### `prointvar.pdbx`
+
+Using PDBXreader to parse a mmCIF formatted macromolecular structure.
+```python
+
+import os
+from prointvar.config import config as cfg
+from prointvar.pdbx import PDBXreader
+
+input_struct = os.path.join(cfg.db_root, cfg.db_pdbx, '2pah.cif')
+df = PDBXreader(inputfile=input_struct).atoms(format_type="mmcif")
+# pandas DataFrame
+df.head()
+
+```
+
+We can convert the format of the mmCIF structure to PDB format.
+```python
+
+from prointvar.pdbx import PDBXwriter
+
+output_struct = os.path.join(cfg.db_root, cfg.db_pdbx, '2pah.pdb')
+w = PDBXwriter(outputfile=output_struct)
+w.run(df, format_type="pdb")
+
+```
+
+#### `prointvar.dssp`
+
+With the DSSP classes we can read DSSP formatted files and also generate DSSP output for mmCIF or PDB structures.
+
+```python
+
+from prointvar.dssp import DSSPrunner, DSSPreader
+
+input_struct = os.path.join(cfg.db_root, cfg.db_pdbx, '2pah.cif')
+output_dssp = os.path.join(cfg.db_root, cfg.db_dssp, '2pah.dssp')
+DSSPrunner(inputfile=input_structure, outputfile=output_dssp).write()
+
+df2 = DSSPreader(inputfile=output_dssp).read()
+# pandas DataFrame
+df2.head()
+
+```
+
+#### `prointvar.sifts`
+
+Parsing the SIFTS UniProt-PDB cross-mapping is as simple.
+
+```python
+
+from prointvar.sifts import SIFTSreader
+
+input_sifts = os.path.join(cfg.db_root, cfg.db_sifts, '2pah.xml')
+df3 = SIFTSreader(inputfile=input_sifts).read()
+# pandas DataFrame
+df3.head()
+
+```
+
+#### `prointvar.merger`
+
+Now protein structure, secondary structure and solvent accessibility can be merged onto protein sequence (via SIFTS).
+
+```python
+
+from prointvar.merger import TableMerger
+
+mdf = TableMerger(pdbx_table=df, dssp_table=df2, sifts_table=df3).merge()
+# pandas DataFrame
+mdf.head()
+
+```
 
 
 ## Additional Information
+
+### Table merger
+
+TODO
 
 ### Project Structure
 
