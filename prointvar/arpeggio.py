@@ -750,6 +750,9 @@ class ARPEGGIOrunner(object):
             lazy_file_remover(output_specific_siftmatch)
             lazy_file_remover(output_specific_polarmatch)
 
+    def write(self, **kwargs):
+        return self.run(**kwargs)
+
     def run(self, hydro_method="arpeggio", override=False,
             clean_output=True, save_new_input=False, pro_format=False):
 

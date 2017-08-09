@@ -63,6 +63,9 @@ class REDUCErunner(object):
             raise IOError("Reduce output not generated for {}"
                           "".format(self.outputfile))
 
+    def write(self, **kwargs):
+        return self.run(**kwargs)
+
     def run(self, override=False, clean_output=True, save_new_input=False):
 
         # generate outputfile if missing

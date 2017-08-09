@@ -1025,6 +1025,9 @@ class PDBXwriter(object):
             if format_type == "pdb":
                 self.outputfile = filename + ".cif"
 
+    def write(self, **kwargs):
+        return self.run(**kwargs)
+
     def run(self, data=None, chain=None, res=None, atom=None, lines=None, category='label',
             override=False, format_type="mmcif", pro_format=False):
 

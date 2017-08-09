@@ -481,6 +481,9 @@ class DSSPrunner(object):
                 for outputpdb in new_inputs:
                     lazy_file_remover(outputpdb)
 
+    def write(self, **kwargs):
+        return self.run(**kwargs)
+
     def run(self, run_unbound=False, override=False, save_new_input=False,
             clean_output=True):
 

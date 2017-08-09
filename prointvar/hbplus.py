@@ -272,6 +272,9 @@ class HBPLUSrunner(object):
             lazy_file_remover("./hbdebug.dat")
             lazy_file_remover("./fort.15")
 
+    def write(self, **kwargs):
+        return self.run(**kwargs)
+
     def run(self, run_clean=False, hydro_pdb_out=False, override=False,
             clean_output=True, save_new_input=False):
 
