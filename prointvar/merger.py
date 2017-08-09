@@ -405,10 +405,10 @@ def table_generator(uniprot_id=None, pdb_id=None, chain=None, res=None,
 
 
 class TableMerger(object):
-    def __init__(self, mmcif_table=None, dssp_table=None, sifts_table=None,
+    def __init__(self, pdbx_table=None, dssp_table=None, sifts_table=None,
                  contacts_table=None, store=True):
 
-        self.mmcif_table = mmcif_table
+        self.mmcif_table = pdbx_table
         self.dssp_table = dssp_table
         self.sifts_table = sifts_table
         self.contacts_table = contacts_table
