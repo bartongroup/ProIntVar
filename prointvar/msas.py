@@ -10,6 +10,7 @@ Fábio Madeira, 2017+
 
 """
 
+import os
 import re
 import logging
 import pandas as pd
@@ -31,6 +32,9 @@ def read_alignment(inputfile, aln_format=None):
     :param aln_format: (str) or None
     :return: returns the biopython alignment object
     """
+
+    if not os.path.isfile(inputfile):
+        raise IOError("{} not available or could not be read...".format(inputfile))
 
     if aln_format is not None:
         align_format = aln_format
