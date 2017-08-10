@@ -10,8 +10,6 @@ Fábio Madeira, 2017+
 
 """
 
-from __future__ import print_function
-
 import os
 import logging
 import pandas as pd
