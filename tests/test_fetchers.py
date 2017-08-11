@@ -34,7 +34,8 @@ from prointvar.fetchers import (fetch_best_structures_pdbe,
                                 download_alignment_from_pfam,
                                 fetch_uniprot_fasta,
                                 fetch_uniprot_id_from_name,
-                                BioFetcher, BioDownloader)
+                                BioFetcher, BioDownloader,
+                                fetch_uniprot_species_from_id)
 
 from prointvar.config import config as c
 root = os.path.abspath(os.path.dirname(__file__))
@@ -68,6 +69,7 @@ class TestFetchers(unittest.TestCase):
         self.download_alignment_from_pfam = download_alignment_from_pfam
         self.fetch_uniprot_fasta = fetch_uniprot_fasta
         self.fetch_uniprot_id_from_name = fetch_uniprot_id_from_name
+        self.fetch_uniprot_species_from_id = fetch_uniprot_species_from_id
         self.BioFetcher = BioFetcher
         self.BioDownloader = BioDownloader
 
@@ -91,6 +93,7 @@ class TestFetchers(unittest.TestCase):
         self.download_alignment_from_pfam = None
         self.fetch_uniprot_fasta = None
         self.fetch_uniprot_id_from_name = None
+        self.fetch_uniprot_species_from_id = None
         self.BioFetcher = None
         self.BioDownloader = None
 
@@ -193,6 +196,22 @@ class TestFetchers(unittest.TestCase):
         pickled = os.path.join(c.db_root, c.db_pickled, "{}_id.pkl".format("PH4H_HUMAN"))
         self.assertFalse(os.path.isfile(pickled))
         r = self.fetch_uniprot_id_from_name("PH4H_HUMAN", cached=True)
+        self.assertTrue(r.ok)
+        self.assertTrue(os.path.isfile(pickled))
+        os.remove(pickled)
+
+    def test_fetch_uniprot_species_from_id(self):
+        r = self.fetch_uniprot_species_from_id(self.uniprotid)
+        self.assertTrue(r.ok)
+        organism = str(r.content, encoding='utf-8').split('\n')[1]
+        species = '_'.join(organism.split()[0:2]).lower()
+        self.assertEqual(species, "homo_sapiens")
+
+    def test_fetch_uniprot_species_from_id_cached(self):
+        pickled = os.path.join(c.db_root, c.db_pickled,
+                               "{}_org.pkl".format(self.uniprotid))
+        self.assertFalse(os.path.isfile(pickled))
+        r = self.fetch_uniprot_species_from_id(self.uniprotid, cached=True)
         self.assertTrue(r.ok)
         self.assertTrue(os.path.isfile(pickled))
         os.remove(pickled)

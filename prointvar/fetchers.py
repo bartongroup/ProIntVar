@@ -95,6 +95,25 @@ def fetch_uniprot_id_from_name(identifier, cached=False, retry_in=(429,)):
     return b.response
 
 
+def fetch_uniprot_species_from_id(identifier, cached=False, retry_in=(429,)):
+    """
+    Retrieve Species from UniProt ID.
+
+    :param identifier: UniProt accession identifier
+    :param cached: (boolean) if True, stores a pickle file locally
+    :param retry_in: http code for retrying connections
+    :return: pandas table dataframe
+    """
+
+    url_root = config.http_uniprot
+    url_endpoint = "?query={}&columns=organism&format=tab".format(identifier)
+    url = url_root + url_endpoint
+    b = BioFetcher(url=url, cached=cached,
+                   cache_output="{}_org.pkl".format(identifier),
+                   json=False, retry_in=retry_in)
+    return b.response
+
+
 def fetch_uniprot_variants_ebi(identifier, cached=False, retry_in=(429,)):
     """
     Queries the EBI Proteins API for variants.
