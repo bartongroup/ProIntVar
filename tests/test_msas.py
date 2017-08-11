@@ -144,7 +144,7 @@ class TestMSAS(unittest.TestCase):
 
     def test_parse_pfam_sth_seq_description(self):
         self.pfam_sth_seq_description(self.pfam_sto, self.entry,
-                                      get_uniprot_id=True)
+                                      get_uniprot_id=True, cached=False)
         self.assertEqual(self.entry['Source'], "Pfam")
         self.assertEqual(self.entry['Accession'], "A0A067NRR9")
         self.assertEqual(self.entry['Name'], "A0A067NRR9_PLEOS")
@@ -189,7 +189,7 @@ class TestMSAS(unittest.TestCase):
         self.assertEqual(self.entry['Name'], "A0A067NRR9_PLEOS")
 
         self.sequence_info_from_description(self.pfam_sto, self.entry,
-                                            get_uniprot_id=True)
+                                            get_uniprot_id=True, cached=False)
         self.assertEqual(self.entry['Source'], "Pfam")
         self.assertEqual(self.entry['Accession'], "A0A067NRR9")
         self.assertEqual(self.entry['Name'], "A0A067NRR9_PLEOS")
@@ -227,7 +227,7 @@ class TestMSAS(unittest.TestCase):
     def test_read_alignment_to_table_pfam(self):
         data = self.parser(inputfile=self.inputpfam,
                            excluded=self.excluded,
-                           get_uniprot_id=True)
+                           get_uniprot_id=True, cached=False)
         self.assertIn('Sequence', list(data))
         self.assertIn('Source', list(data))
         self.assertIn('Name', list(data))

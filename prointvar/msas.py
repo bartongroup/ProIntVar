@@ -52,7 +52,8 @@ def read_alignment(inputfile, aln_format=None):
     return alignment
 
 
-def parse_msa_sequences_from_file(inputfile, excluded=(), get_uniprot_id=False):
+def parse_msa_sequences_from_file(inputfile, excluded=(), get_uniprot_id=False,
+                                  cached=False):
     """
     Reads a Pfam/CATH MSA and returns a pandas table with a
     collection of protein IDs and sequences
@@ -60,6 +61,7 @@ def parse_msa_sequences_from_file(inputfile, excluded=(), get_uniprot_id=False):
     :param inputfile: path to the MSA file
     :param excluded: option to exclude some columns
     :param get_uniprot_id: (boolean)
+    :param cached: (boolean)
     :return: returns a pandas DataFrame
     """
 
@@ -71,7 +73,7 @@ def parse_msa_sequences_from_file(inputfile, excluded=(), get_uniprot_id=False):
         # get cross-reference information for each entry
         entry = {}
         entry['Sequence'] = seq
-        entry = parse_sequence_info_from_description(desc, entry,
+        entry = parse_sequence_info_from_description(desc, entry, cached=cached,
                                                      get_uniprot_id=get_uniprot_id)
 
         rows.append(entry)
@@ -102,7 +104,8 @@ def parse_msa_sequences_from_file(inputfile, excluded=(), get_uniprot_id=False):
     return table
 
 
-def parse_sequence_info_from_description(desc, entry, get_uniprot_id=False):
+def parse_sequence_info_from_description(desc, entry, get_uniprot_id=False,
+                                         cached=False):
     """
     Parses the Biopython alignment sequence description and tries to guess
     the content. (only works for known formats).
@@ -110,6 +113,7 @@ def parse_sequence_info_from_description(desc, entry, get_uniprot_id=False):
     :param desc: Biopython's 'description' field
     :param entry: Mutable dictionary
     :param get_uniprot_id: (boolean)
+    :param cached: (boolean)
     :return: (updated) Dictionary
     """
 
@@ -120,20 +124,22 @@ def parse_sequence_info_from_description(desc, entry, get_uniprot_id=False):
         return entry
 
     # trying the Pfam Stockholm seq description
-    parse_pfam_sth_seq_description(desc, entry,
+    parse_pfam_sth_seq_description(desc, entry, cached=cached,
                                    get_uniprot_id=get_uniprot_id)
     if entry != prev_entry:
         return entry
 
     # trying the CATH fasta seq description
-    parse_cath_fasta_seq_description(desc, entry,
+    parse_cath_fasta_seq_description(desc, entry, cached=cached,
                                      get_uniprot_id=get_uniprot_id)
+
     if entry != prev_entry:
         return entry
 
     # trying a generic sequence description
-    parse_generic_seq_description(desc, entry,
+    parse_generic_seq_description(desc, entry, cached=cached,
                                   get_uniprot_id=get_uniprot_id)
+
     if entry != prev_entry:
         return entry
 
@@ -187,7 +193,8 @@ def parse_uniprot_fasta_seq_description(desc, entry):
     return entry
 
 
-def parse_pfam_sth_seq_description(desc, entry, get_uniprot_id=False):
+def parse_pfam_sth_seq_description(desc, entry, get_uniprot_id=False,
+                                   cached=False):
     """
     Pattern: <Accession_Name>/<Start>-<End>
     Example: C7P4T5_HALMD/44-372
@@ -195,6 +202,7 @@ def parse_pfam_sth_seq_description(desc, entry, get_uniprot_id=False):
     :param desc: Biopython's 'description' field
     :param entry: Mutable dictionary
     :param get_uniprot_id: (boolean)
+    :param cached: (boolean)
     :return: (updated) Dictionary
     """
 
@@ -202,7 +210,7 @@ def parse_pfam_sth_seq_description(desc, entry, get_uniprot_id=False):
     match = re.search(pattern, desc, flags=0)
     if match:
         match = match.group()
-        entry = parse_generic_seq_description(match, entry,
+        entry = parse_generic_seq_description(match, entry, cached=cached,
                                               get_uniprot_id=get_uniprot_id)
 
         entry['Source'] = 'Pfam'
@@ -215,7 +223,8 @@ def parse_pfam_sth_seq_description(desc, entry, get_uniprot_id=False):
     return entry
 
 
-def parse_cath_fasta_seq_description(desc, entry, get_uniprot_id=False):
+def parse_cath_fasta_seq_description(desc, entry, get_uniprot_id=False,
+                                     cached=False):
     """
     Pattern: cath|<version>|<Accession_ID>/<Start>-<End>
     Example:
@@ -235,6 +244,7 @@ def parse_cath_fasta_seq_description(desc, entry, get_uniprot_id=False):
     :param desc: Biopython's 'description' field
     :param entry: Mutable dictionary
     :param get_uniprot_id: (boolean)
+    :param cached: (boolean)
     :return: (updated) Dictionary
     """
     # trying the CATH fasta seq description
@@ -260,7 +270,8 @@ def parse_cath_fasta_seq_description(desc, entry, get_uniprot_id=False):
         # same as the generic seq description
         nmatch = re.search(pattern, match, flags=0)
         if nmatch:
-            entry = parse_generic_seq_description(nmatch.group(), entry,
+            entry = parse_generic_seq_description(nmatch.group(),
+                                                  entry, cached=cached,
                                                   get_uniprot_id=get_uniprot_id)
 
         entry['Source'] = 'CATH'
@@ -273,7 +284,8 @@ def parse_cath_fasta_seq_description(desc, entry, get_uniprot_id=False):
     return entry
 
 
-def parse_generic_seq_description(desc, entry, get_uniprot_id=False):
+def parse_generic_seq_description(desc, entry, get_uniprot_id=False,
+                                  cached=False):
     """
     Pattern: <Accession_ID>/<Start>-<End> or <Accession_Name>/<Start>-<End>
     Example: P00439/24-145
@@ -281,6 +293,7 @@ def parse_generic_seq_description(desc, entry, get_uniprot_id=False):
     :param desc: Biopython's 'description' field
     :param entry: Mutable dictionary
     :param get_uniprot_id: (boolean)
+    :param cached: (boolean)
     :return: (updated) Dictionary
     """
 
@@ -316,7 +329,7 @@ def parse_generic_seq_description(desc, entry, get_uniprot_id=False):
 
         # UniProt ID missing
         if name and get_uniprot_id:
-            r = fetch_uniprot_id_from_name(name, cached=True)
+            r = fetch_uniprot_id_from_name(name, cached=cached)
             try:
                 identifier = r.json()[0]["id"]
             except Exception:
