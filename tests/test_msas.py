@@ -4,6 +4,7 @@
 
 import os
 import sys
+import json
 import logging
 import unittest
 
@@ -23,7 +24,8 @@ from prointvar.msas import (read_alignment, parse_msa_sequences_from_file,
                             parse_uniprot_fasta_seq_description,
                             parse_pfam_sth_seq_description,
                             parse_cath_fasta_seq_description,
-                            parse_generic_seq_description)
+                            parse_generic_seq_description,
+                            MSAreader)
 
 from prointvar.config import config as c
 
@@ -65,7 +67,8 @@ class TestMSAS(unittest.TestCase):
         self.excluded = ()
         self.entry = {}
 
-        self.reader = read_alignment
+        self.reader = MSAreader
+        self.read_alignment = read_alignment
         self.parser = parse_msa_sequences_from_file
 
         self.uniprot_fasta_seq_description = parse_uniprot_fasta_seq_description
@@ -96,6 +99,7 @@ class TestMSAS(unittest.TestCase):
         self.entry = None
 
         self.reader = None
+        self.read_alignment = None
         self.parser = None
 
         self.uniprot_fasta_seq_description = None
@@ -108,7 +112,7 @@ class TestMSAS(unittest.TestCase):
 
     def test_file_not_found_reader(self):
         with self.assertRaises(IOError):
-            self.reader(self.notfound)
+            self.read_alignment(self.notfound)
 
     def test_file_not_found_parser(self):
         with self.assertRaises(IOError):
@@ -117,7 +121,7 @@ class TestMSAS(unittest.TestCase):
     def test_empty_file_reader(self):
         with self.assertRaises(ValueError):
             open(self.emptyfile, 'w').close()
-            self.reader(self.emptyfile).read()
+            self.read_alignment(self.emptyfile).read()
             os.remove(self.emptyfile)
 
     def test_empty_file_parser(self):
@@ -127,10 +131,10 @@ class TestMSAS(unittest.TestCase):
             os.remove(self.emptyfile)
 
     def test_read_alignment(self):
-        align = self.reader(self.inputcath)
+        align = self.read_alignment(self.inputcath)
         self.assertTrue(type(align), MultipleSeqAlignment)
         self.assertEqual(len(align), 42)
-        align = self.reader(self.inputpfam)
+        align = self.read_alignment(self.inputpfam)
         self.assertTrue(type(align), MultipleSeqAlignment)
         self.assertEqual(len(align), 57)
 
@@ -236,6 +240,29 @@ class TestMSAS(unittest.TestCase):
         self.assertEqual(data.loc[0, 'Source'], 'Pfam')
         self.assertEqual(data.loc[0, 'Start'], 27)
         self.assertEqual(data.loc[0, 'End'], 514)
+
+    def test_reader_class_pfam(self):
+        r = self.reader(inputfile=self.inputcath)
+        data = r.msas(excluded=self.excluded, cached=False,
+                      get_uniprot_id=True)
+        self.assertIn('Sequence', list(data))
+        self.assertIn('Source', list(data))
+        self.assertIn('Description', list(data))
+        self.assertIn('Collection', list(data))
+        self.assertEqual(data.loc[0, 'Accession'], '1hm3A01')
+        self.assertEqual(data.loc[0, 'Collection'], 'cath')
+        self.assertEqual(data.loc[0, 'Start'], 27)
+        self.assertEqual(data.loc[0, 'End'], 338)
+
+    def test_reader_class_pfam_to_json(self):
+        r = self.reader(inputfile=self.inputcath)
+        r.read(excluded=self.excluded, cached=False,
+               get_uniprot_id=True)
+        data = r.to_json()
+        self.assertEqual(json.loads(data)[0]['Accession'], '1hm3A01')
+        self.assertEqual(json.loads(data)[0]['Collection'], 'cath')
+        self.assertEqual(json.loads(data)[0]['Start'], 27)
+        self.assertEqual(json.loads(data)[0]['End'], 338)
 
 
 if __name__ == '__main__':

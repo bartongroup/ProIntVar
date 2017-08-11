@@ -13,6 +13,7 @@ Fábio Madeira, 2017+
 import os
 import re
 import copy
+import json
 import logging
 import pandas as pd
 
@@ -31,7 +32,7 @@ def read_alignment(inputfile, aln_format=None):
 
     :param inputfile: Input MSA (read by biopython)
     :param aln_format: (str) or None
-    :return: returns the biopython alignment object
+    :return: returns the Biopython alignment object
     """
 
     if not os.path.isfile(inputfile):
@@ -155,7 +156,6 @@ def parse_uniprot_fasta_seq_description(desc, entry):
 
     :param desc: Biopython's 'description' field
     :param entry: Mutable dictionary
-    :param get_uniprot_id: (boolean)
     :return: (updated) Dictionary
     """
 
@@ -346,6 +346,43 @@ def parse_generic_seq_description(desc, entry, get_uniprot_id=False,
             entry['Description'] = desc.strip()
 
     return entry
+
+
+class MSAreader(object):
+    def __init__(self, inputfile):
+        """
+        :param inputfile: Needs to point to a valid MSA file.
+        """
+        self.inputfile = inputfile
+        self.data = None
+        self.excluded = ()
+
+        if not os.path.isfile(inputfile):
+            raise IOError("{} not available or could not be read...".format(inputfile))
+
+    def read(self, **kwargs):
+        return self.msas(**kwargs)
+
+    def msas(self, excluded=None, get_uniprot_id=False, cached=False):
+        if excluded is None:
+            excluded = self.excluded
+        self.data = parse_msa_sequences_from_file(self.inputfile, excluded=excluded,
+                                                  get_uniprot_id=get_uniprot_id,
+                                                  cached=cached)
+        return self.data
+
+    def to_json(self, pretty=True):
+        if self.data is not None:
+            if type(self.data) is pd.core.frame.DataFrame:
+                data = self.data.to_dict(orient='records')
+            else:
+                data = self.data
+            if pretty:
+                return json.dumps(data, sort_keys=False, indent=4)
+            else:
+                return json.dumps(data)
+        else:
+            logger.info("No MSA data parsed...")
 
 
 if __name__ == '__main__':
