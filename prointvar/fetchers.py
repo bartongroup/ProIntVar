@@ -18,6 +18,7 @@ import pickle
 import logging
 
 from prointvar.utils import fetch_from_url_or_retry
+from prointvar.library import ensembl_species
 
 from prointvar.config import config
 
@@ -129,9 +130,113 @@ def fetch_uniprot_variants_ebi(identifier, cached=False, retry_in=(429,)):
     url_endpoint = "variation/"
     url = url_root + url_endpoint + identifier
     b = BioFetcher(url=url, cached=cached,
-                   cache_output="{}_vars.pkl".format(identifier),
+                   cache_output="{}_vars_uni.pkl".format(identifier),
                    json=True, retry_in=retry_in)
     return b.response
+
+
+def fetch_ensembl_uniprot_ensembl_mapping(identifier, cached=False, retry_in=(429,),
+                                          species='homo_sapiens'):
+    """
+    Uses the UniProt mapping service to try and get Ensembl IDs for
+    the UniProt accession identifier provided.
+
+    :param identifier: UniProt accession identifier
+    :param cached: (boolean) if True, stores a pickle file locally
+    :param retry_in: http code for retrying connections
+    :param species: Ensembl species
+    :return: pandas table dataframe
+    """
+
+    if species not in ensembl_species:
+        raise ValueError('Provided species {} is not valid'.format(species))
+
+    url_root = config.api_ensembl
+    url_endpoint = "xrefs/symbol/{}/".format(species)
+    url = url_root + url_endpoint + identifier
+
+    b = BioFetcher(url=url, cached=cached,
+                   cache_output="{}_uni_ens.pkl".format(identifier),
+                   json=True, retry_in=retry_in)
+    return b.response
+
+
+def fetch_ensembl_transcript_variants(identifier, cached=False, retry_in=(429,)):
+    """
+    Queries the Ensembl REST API for transcript variants (mostly from dbSNP).
+    based on Ensembl Protein identifiers (e.g. ENSP00000275603).
+
+    :param identifier: Ensembl Protein ID
+    :param cached: (boolean) if True, stores a pickle file locally
+    :param retry_in: http code for retrying connections
+    :return: pandas table dataframe
+    """
+
+    url_root = config.api_ensembl
+    url_endpoint = "overlap/translation/"
+    url = url_root + url_endpoint + identifier
+    # params = {'feature': 'transcript_variation', 'type': 'missense_variant'}
+    params = {'feature': 'transcript_variation'}
+    b = BioFetcher(url=url, cached=cached,
+                   cache_output="{}_vars_ens.pkl".format(identifier),
+                   json=True, retry_in=retry_in, **params)
+    return b.response
+
+
+def fetch_ensembl_somatic_variants(identifier, cached=False, retry_in=(429,)):
+    """
+    Queries the Ensembl REST API for somatic variants (mostly from COSMIC).
+    based on Ensembl Protein identifiers (e.g. ENSP00000275603).
+
+    :param identifier: Ensembl Protein ID
+    :param cached: (boolean) if True, stores a pickle file locally
+    :param retry_in: http code for retrying connections
+    :return: pandas table dataframe
+    """
+
+    url_root = config.api_ensembl
+    url_endpoint = "overlap/translation/"
+    url = url_root + url_endpoint + identifier
+    params = {'feature': 'somatic_transcript_variation'}
+    b = BioFetcher(url=url, cached=cached,
+                   cache_output="{}_vars_cos.pkl".format(identifier),
+                   json=True, retry_in=retry_in, **params)
+    return b.response
+
+
+def fetch_ensembl_variants_by_id(identifier, cached=False, retry_in=(429,),
+                                 species='homo_sapiens'):
+    """
+    Queries the Ensembl API for variant IDs (e.g rs376845802 or COSM302853).
+
+    :param identifier: variant ID
+    :param cached: (boolean) if True, stores a pickle file locally
+    :param retry_in: http code for retrying connections
+    :param species: Ensembl species
+    :return: pandas table dataframe
+    """
+
+    if isinstance(identifier, str):
+        url_root = config.api_ensembl
+        url_endpoint = "variation/{}/".format(species)
+        url = url_root + url_endpoint + identifier
+        # params = {'pops': '1', 'phenotypes': '1'} #, 'genotypes': '1', 'population_genotypes': '1'}
+        b = BioFetcher(url=url, cached=cached,
+                       cache_output="{}_vars_ids.pkl".format(identifier),
+                       json=True, retry_in=retry_in)
+        return b.response
+    elif isinstance(identifier, list):
+        data = """{ "ids" : ["%s"]}""" % ('", "'.join(identifier))
+        header = {"Accept": "application/json"}
+        url_root = config.api_ensembl
+        url_endpoint = "variation/{}".format(species)
+        url = url_root + url_endpoint
+        # params = {'pops': '1', 'phenotypes': '1'} #, 'genotypes': '1'}
+        b = BioFetcher(url=url, cached=cached,
+                       cache_output="{}_vars_ids.pkl".format(identifier),
+                       json=True, retry_in=retry_in,
+                       post=True, data=data, header=header)
+        return b.response
 
 
 def fetch_best_structures_pdbe(identifier, cached=False, retry_in=(429,)):
