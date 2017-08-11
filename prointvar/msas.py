@@ -12,6 +12,7 @@ Fábio Madeira, 2017+
 
 import os
 import re
+import copy
 import logging
 import pandas as pd
 
@@ -51,13 +52,14 @@ def read_alignment(inputfile, aln_format=None):
     return alignment
 
 
-def parse_msa_sequences_from_file(inputfile, excluded=()):
+def parse_msa_sequences_from_file(inputfile, excluded=(), get_uniprot_id=False):
     """
     Reads a Pfam/CATH MSA and returns a pandas table with a
     collection of protein IDs and sequences
 
     :param inputfile: path to the MSA file
     :param excluded: option to exclude some columns
+    :param get_uniprot_id: (boolean)
     :return: returns a pandas DataFrame
     """
 
@@ -69,7 +71,9 @@ def parse_msa_sequences_from_file(inputfile, excluded=()):
         # get cross-reference information for each entry
         entry = {}
         entry['Sequence'] = seq
-        entry = parse_sequence_info_from_description(desc, entry)
+        entry = parse_sequence_info_from_description(desc, entry,
+                                                     get_uniprot_id=get_uniprot_id)
+
         rows.append(entry)
 
     table = pd.DataFrame(rows)
@@ -84,11 +88,11 @@ def parse_msa_sequences_from_file(inputfile, excluded=()):
             pass
 
     # enforce some specific column types
-    msa_types = {key: str for key in list(table)}
+    msa_types = {key: str for key in list(table) if key != 'Start' and key != 'End'}
     for col in table:
         try:
             table[col] = table[col].astype(msa_types[col])
-        except ValueError:
+        except (ValueError, KeyError):
             # there are some NaNs in there
             pass
 
@@ -98,117 +102,120 @@ def parse_msa_sequences_from_file(inputfile, excluded=()):
     return table
 
 
-def parse_sequence_info_from_description(desc, entry):
+def parse_sequence_info_from_description(desc, entry, get_uniprot_id=False):
     """
     Parses the Biopython alignment sequence description and tries to guess
     the content. (only works for known formats).
 
     :param desc: Biopython's 'description' field
     :param entry: Mutable dictionary
+    :param get_uniprot_id: (boolean)
     :return: (updated) Dictionary
     """
 
+    prev_entry = copy.deepcopy(entry)
     # trying the UniProt fasta seq description
-    pattern = re.compile("([a-zA-Z])+\|([A-Z0-9])+\|([A-Z0-9])+_([A-Z0-9])+")
-    uniprot_fasta = re.search(pattern, desc, flags=0)
-
-    # trying the Pfam Stockholm seq description
-    pattern = re.compile("([A-Z0-9])+_([A-Z0-9])+\/[\-]?([0-9])+-[\-]?([0-9])+")
-    pfam_sth = re.search(pattern, desc, flags=0)
-
-    # trying the CATH fasta seq description
-    pattern = re.compile("([a-zA-Z])+\|([0-9])(.|-)([0-9])(.|-)([0-9])\|"
-                         "([a-zA-Z0-9])+\/[\-]?([0-9])+-[\-]?([0-9])+")
-    # cath_fasta = re.match(pattern, desc, flags=0)
-    cath_fasta = re.search(pattern, desc, flags=0)
-
-    # trying a generic sequence description
-    pattern = re.compile("([A-Z0-9])+[\_]?([a-zA-Z0-9])+\/[\-]?([0-9])+-[\-]?([0-9])+")
-    gen_fasta = re.search(pattern, desc, flags=0)
-
-    if uniprot_fasta:
-        return parse_uniprot_fasta_seq_description(uniprot_fasta.group(), desc, entry)
-    elif pfam_sth:
-        return parse_pfam_sth_seq_description(pfam_sth.group(), desc, entry)
-    elif cath_fasta:
-        return parse_cath_fasta_seq_description(cath_fasta.group(), desc, entry)
-    elif gen_fasta:
-        return parse_generic_seq_description(gen_fasta.group(), desc, entry)
-    else:
-        logger.debug("Nothing parsed from the MSA sequence description...")
+    parse_uniprot_fasta_seq_description(desc, entry)
+    if entry != prev_entry:
         return entry
 
+    # trying the Pfam Stockholm seq description
+    parse_pfam_sth_seq_description(desc, entry,
+                                   get_uniprot_id=get_uniprot_id)
+    if entry != prev_entry:
+        return entry
 
-def parse_uniprot_fasta_seq_description(match, desc, entry):
+    # trying the CATH fasta seq description
+    parse_cath_fasta_seq_description(desc, entry,
+                                     get_uniprot_id=get_uniprot_id)
+    if entry != prev_entry:
+        return entry
+
+    # trying a generic sequence description
+    parse_generic_seq_description(desc, entry,
+                                  get_uniprot_id=get_uniprot_id)
+    if entry != prev_entry:
+        return entry
+
+    logger.debug("Nothing parsed from the MSA sequence description...")
+    return entry
+
+
+def parse_uniprot_fasta_seq_description(desc, entry):
     """
     Pattern: <source>|<Accession_ID>|<Accession_Name> ++
     Example: sp|P00439|PH4H_HUMAN Phenylalanine-4-hydroxylase (...)
         OS=Homo sapiens GN=PAH PE=1 SV=1
 
-    :param match: matched from the regex pattern
     :param desc: Biopython's 'description' field
     :param entry: Mutable dictionary
+    :param get_uniprot_id: (boolean)
     :return: (updated) Dictionary
     """
 
-    # pattern matching
-    pattern = re.compile("([a-zA-Z])+\|")
-    source = re.search(pattern, match, flags=0)
-    if source:
-        source = source.group().rstrip('|')
-        entry['UniProt_Source'] = source
+    # trying the UniProt fasta seq description
+    pattern = re.compile("([a-zA-Z])+\|([A-Z0-9])+\|([A-Z0-9])+_([A-Z0-9])+")
+    match = re.search(pattern, desc, flags=0)
+    if match:
+        match = match.group()
+        # pattern matching
+        pattern = re.compile("([a-zA-Z])+\|")
+        source = re.search(pattern, match, flags=0)
+        if source:
+            source = source.group().rstrip('|')
+            entry['Collection'] = source
 
-    pattern = re.compile("\|([a-zA-Z0-9])+\|")
-    identifier = re.search(pattern, match, flags=0)
-    if identifier:
-        identifier = identifier.group().lstrip('|').rstrip('|')
-        entry['UniProt_ID'] = identifier
+        pattern = re.compile("\|([a-zA-Z0-9])+\|")
+        identifier = re.search(pattern, match, flags=0)
+        if identifier:
+            identifier = identifier.group().lstrip('|').rstrip('|')
+            entry['Accession'] = identifier
 
-    pattern = re.compile("\|([A-Z0-9])+_([A-Z0-9])+")
-    name = re.search(pattern, match, flags=0)
-    if name:
-        name = name.group().lstrip('|')
-        entry['UniProt_Name'] = name
+        pattern = re.compile("\|([A-Z0-9])+_([A-Z0-9])+")
+        name = re.search(pattern, match, flags=0)
+        if name:
+            name = name.group().lstrip('|')
+            entry['Name'] = name
 
-    entry['Source'] = 'UniProt'
+        entry['Source'] = 'UniProt'
 
-    # remaining description
-    if desc != match:
-        desc = desc.replace(match, "")
-        entry['Description'] = desc.strip()
+        # remaining description
+        if desc != match:
+            desc = desc.replace(match, "")
+            entry['Description'] = desc.strip()
 
     return entry
 
 
-def parse_pfam_sth_seq_description(match, desc, entry):
+def parse_pfam_sth_seq_description(desc, entry, get_uniprot_id=False):
     """
     Pattern: <Accession_Name>/<Start>-<End>
     Example: C7P4T5_HALMD/44-372
 
-    :param match: matched from the regex pattern
     :param desc: Biopython's 'description' field
     :param entry: Mutable dictionary
+    :param get_uniprot_id: (boolean)
     :return: (updated) Dictionary
     """
 
-    # pattern matching
-    pattern = re.compile("([A-Z0-9])+[\_]?([a-zA-Z0-9])+\/[\-]?([0-9])+-[\-]?([0-9])+")
-    # same as the generic seq description
-    nmatch = re.search(pattern, match, flags=0)
-    if nmatch:
-        entry = parse_generic_seq_description(nmatch.group(), nmatch.group(), entry)
+    pattern = re.compile("([A-Z0-9])+_([A-Z0-9])+\/[\-]?([0-9])+-[\-]?([0-9])+")
+    match = re.search(pattern, desc, flags=0)
+    if match:
+        match = match.group()
+        entry = parse_generic_seq_description(match, entry,
+                                              get_uniprot_id=get_uniprot_id)
 
-    entry['Source'] = 'Pfam'
+        entry['Source'] = 'Pfam'
 
-    # remaining description
-    if desc != match:
-        desc = desc.replace(match, "")
-        entry['Description'] = desc.strip()
+        # remaining description
+        if desc != match:
+            desc = desc.replace(match, "")
+            entry['Description'] = desc.strip()
 
     return entry
 
 
-def parse_cath_fasta_seq_description(match, desc, entry):
+def parse_cath_fasta_seq_description(desc, entry, get_uniprot_id=False):
     """
     Pattern: cath|<version>|<Accession_ID>/<Start>-<End>
     Example:
@@ -225,88 +232,105 @@ def parse_cath_fasta_seq_description(match, desc, entry):
         ORG=Pedobacter_heparinus;SWISSPROT=1;
         TAXON=485917;UNIPROT=Q59288
 
-    :param match: matched from the regex pattern
     :param desc: Biopython's 'description' field
     :param entry: Mutable dictionary
+    :param get_uniprot_id: (boolean)
     :return: (updated) Dictionary
     """
+    # trying the CATH fasta seq description
+    pattern = re.compile("([a-zA-Z])+\|([0-9])(.|-)([0-9])(.|-)([0-9])\|"
+                         "([a-zA-Z0-9])+\/[\-]?([0-9])+-[\-]?([0-9])+")
+    match = re.search(pattern, desc, flags=0)
+    if match:
+        match = match.group()
+        # pattern matching
+        pattern = re.compile("([a-zA-Z])+\|")
+        source = re.search(pattern, match, flags=0)
+        if source:
+            source = source.group().rstrip('|')
+            entry['Collection'] = source
 
-    # pattern matching
-    pattern = re.compile("\|([0-9])(.|-)([0-9])(.|-)([0-9])\|")
-    version = re.search(pattern, match, flags=0)
-    if version:
-        version = version.group().lstrip('|').rstrip('|')
-        entry['Version'] = version
+        pattern = re.compile("\|([0-9])(.|-)([0-9])(.|-)([0-9])\|")
+        version = re.search(pattern, match, flags=0)
+        if version:
+            version = version.group().lstrip('|').rstrip('|')
+            entry['Version'] = version
 
-    pattern = re.compile("([A-Z0-9])+[\_]?([a-zA-Z0-9])+\/[\-]?([0-9])+-[\-]?([0-9])+")
-    # same as the generic seq description
-    nmatch = re.search(pattern, match, flags=0)
-    if nmatch:
-        entry = parse_generic_seq_description(nmatch.group(),
-                                              nmatch.group(), entry)
+        pattern = re.compile("([A-Z0-9])+[\_]?([a-zA-Z0-9])+\/[\-]?([0-9])+-[\-]?([0-9])+")
+        # same as the generic seq description
+        nmatch = re.search(pattern, match, flags=0)
+        if nmatch:
+            entry = parse_generic_seq_description(nmatch.group(), entry,
+                                                  get_uniprot_id=get_uniprot_id)
 
-    entry['Source'] = 'CATH'
+        entry['Source'] = 'CATH'
 
-    # remaining description
-    if desc != match:
-        desc = desc.replace(match, "")
-        entry['Description'] = desc.strip()
+        # remaining description
+        if desc != match:
+            desc = desc.replace(match, "")
+            entry['Description'] = desc.strip()
 
     return entry
 
 
-def parse_generic_seq_description(match, desc, entry):
+def parse_generic_seq_description(desc, entry, get_uniprot_id=False):
     """
     Pattern: <Accession_ID>/<Start>-<End> or <Accession_Name>/<Start>-<End>
     Example: P00439/24-145
 
-    :param match: matched from the regex pattern
     :param desc: Biopython's 'description' field
     :param entry: Mutable dictionary
+    :param get_uniprot_id: (boolean)
     :return: (updated) Dictionary
     """
 
-    # pattern matching
-    pattern = re.compile("([A-Z0-9])+_([a-zA-Z0-9])+\/")
-    name = re.search(pattern, match, flags=0)
-    if name:
-        name = name.group().rstrip('/')
-        entry['UniProt_Name'] = name
+    # trying a generic sequence description
+    pattern = re.compile("([A-Z0-9])+[\_]?([a-zA-Z0-9])+\/[\-]?([0-9])+-[\-]?([0-9])+")
+    match = re.search(pattern, desc, flags=0)
+    if match:
+        match = match.group()
+        # pattern matching
+        pattern = re.compile("([A-Z0-9])+_([a-zA-Z0-9])+\/")
+        name = re.search(pattern, match, flags=0)
+        if name:
+            name = name.group().rstrip('/')
+            entry['Name'] = name
 
-    pattern = re.compile("([a-zA-Z0-9])+\/")
-    identifier = re.search(pattern, match, flags=0)
-    if identifier:
-        identifier = identifier.group().rstrip('/')
-        entry['UniProt_ID'] = identifier
+        pattern = re.compile("([a-zA-Z0-9])+\/")
+        identifier = re.search(pattern, match, flags=0)
+        if identifier:
+            identifier = identifier.group().rstrip('/')
+            entry['Accession'] = identifier
 
-    pattern = re.compile("\/[\-]?([0-9])+")
-    start = re.search(pattern, match, flags=0)
-    if start:
-        start = int(start.group().lstrip('/'))
-        entry['Start'] = start
+        pattern = re.compile("\/[\-]?([0-9])+")
+        start = re.search(pattern, match, flags=0)
+        if start:
+            start = int(start.group().lstrip('/'))
+            entry['Start'] = start
 
-    pattern = re.compile("-[\-]?([0-9])+")
-    end = re.search(pattern, match, flags=0)
-    if end:
-        end = int((end.group()).replace('--', '-'))
-        entry['End'] = end
+        pattern = re.compile("-[\-]?([0-9])+")
+        end = re.search(pattern, match, flags=0)
+        if end:
+            end = int((end.group())[1:])
+            entry['End'] = end
 
-    # UniProt ID missing
-    if name:
-        r = fetch_uniprot_id_from_name(name, cached=True)
-        try:
-            identifier = r.json()[0]["id"]
-        except:
-            # new - to match the update in the UniProt API endpoint
-            identifier = str(r.content, encoding='utf-8').strip()
-        entry['UniProt_ID'] = identifier
+        # UniProt ID missing
+        if name and get_uniprot_id:
+            r = fetch_uniprot_id_from_name(name, cached=True)
+            try:
+                identifier = r.json()[0]["id"]
+            except Exception:
+                # JSONDecodeError
+                # new - to match the update in the UniProt API endpoint
+                identifier = str(r.content, encoding='utf-8').strip()
+            entry['Accession'] = identifier
 
-    entry['Source'] = 'GenericParser'
+        entry['Source'] = 'GenericParser'
 
-    # remaining description
-    if desc != match:
-        desc = desc.replace(match, "")
-        entry['Description'] = desc.strip()
+        # remaining description
+        if desc != match:
+            desc = desc.replace(match, "")
+            entry['Description'] = desc.strip()
 
     return entry
 
