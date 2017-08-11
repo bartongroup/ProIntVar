@@ -107,8 +107,8 @@ def fetch_uniprot_variants_ebi(identifier, cached=False, retry_in=(429,)):
     """
 
     url_root = config.api_proteins
-    url_enpoint = "variation/"
-    url = url_root + url_enpoint + identifier
+    url_endpoint = "variation/"
+    url = url_root + url_endpoint + identifier
     b = BioFetcher(url=url, cached=cached,
                    cache_output="{}_vars.pkl".format(identifier),
                    json=True, retry_in=retry_in)
@@ -126,8 +126,8 @@ def fetch_best_structures_pdbe(identifier, cached=False, retry_in=(429,)):
     """
 
     url_root = config.api_pdbe
-    url_enpoint = "mappings/best_structures/"
-    url = url_root + url_enpoint + identifier
+    url_endpoint = "mappings/best_structures/"
+    url = url_root + url_endpoint + identifier
     b = BioFetcher(url=url, cached=cached,
                    cache_output="{}_bs.pkl".format(identifier),
                    json=True, retry_in=retry_in)
@@ -145,8 +145,8 @@ def fetch_summary_properties_pdbe(identifier, cached=False, retry_in=(429,)):
     """
 
     url_root = config.api_pdbe
-    url_enpoint = "pdb/entry/summary/"
-    url = url_root + url_enpoint + identifier
+    url_endpoint = "pdb/entry/summary/"
+    url = url_root + url_endpoint + identifier
     b = BioFetcher(url=url, cached=cached,
                    cache_output="{}_sp.pkl".format(identifier),
                    json=True, retry_in=retry_in)
