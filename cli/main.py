@@ -11,36 +11,12 @@ from prointvar.fetchers import download_sifts_from_ebi
 from prointvar.fetchers import download_data_from_uniprot
 from prointvar.fetchers import download_alignment_from_cath
 from prointvar.fetchers import download_alignment_from_pfam
+from prointvar.msas import parse_msa_sequences_from_file
 
 from prointvar.utils import flash
 
 
 logger = logging.getLogger("prointvar")
-
-
-def read_alignment(inputfile):
-    """
-    Reads an input multiple sequence alignment (MSA).
-    Formats recognised by Biopython:
-        "clustal", "emboss", "nexus", "fasta", "phylip" and "stockholm"
-
-    :param inputfile: Input MSA (read by biopython)
-    :return: returns the biopython alignment object
-    """
-
-    from Bio import AlignIO
-
-    if inputfile.endswith('.fasta') or inputfile.endswith('.fa'):
-        align_format = 'fasta'
-    elif inputfile.endswith('.sto') or inputfile.endswith('.sth'):
-        align_format = 'stockholm'
-    elif inputfile.endswith('.aln') or inputfile.endswith('.clw'):
-        align_format = 'clustal'
-    else:
-        raise ValueError("Alignment format unrecognised...")
-
-    alignment = AlignIO.read(inputfile, align_format)
-    return alignment
 
 
 # main application
@@ -66,32 +42,87 @@ def alignment(inputfile, outputfile=None):
     from prointvar.fetchers import fetch_uniprot_variants_ebi
     from prointvar.merger import TableMerger
 
-    align = read_alignment(inputfile)
+    # print(inputfile)
+    # print(outputfile)
+    align = parse_msa_sequences_from_file(inputfile,
+                                          get_uniprot_id=True, cached=True)
     var_rows = []
-    for record in align:
-        # seq = str(record.seq)
-        desc = str(record.description)
-        uniprot_name = desc.split('/')[0]
-        r = fetch_uniprot_id_from_name(uniprot_name, cached=True)
-        uniprot_id = str(r.content, encoding='utf-8').strip()
+    for ix in align.index:
+        # get descriptions
+        uniprot_id = align.loc[ix, 'Accession']
         print(uniprot_id)
-        # Fetch/download structures
-        r = fetch_best_structures_pdbe(uniprot_id, cached=True)
-        pdb_ids = []
-        if r is not None:
-            for entry in r.json()[uniprot_id]:
-                pdb_id = entry["pdb_id"]
-                if pdb_id not in pdb_ids:
-                    pdb_ids.append(pdb_id)
+        # print(align.loc[ix, :])
+        # print(align.loc[ix, 'Description'])
+        # print(align.loc[ix, 'Source'])
+        # print(align.loc[ix, 'Desc'])
 
-        for pdb_id in pdb_ids:
-            file_downloader([pdb_id], mmcif=True, bio=True, sifts=True)
+        # # Fetch/download structures
+        # r = fetch_best_structures_pdbe(uniprot_id, cached=True)
+        # pdb_ids = []
+        # if r is not None:
+        #     # print(r.json())
+        #     for entry in r.json()[uniprot_id]:
+        #         pdb_id = entry["pdb_id"]
+        #         if pdb_id not in pdb_ids:
+        #             pdb_ids.append(pdb_id)
+        #
+        # for pdb_id in pdb_ids:
+        #     file_downloader([pdb_id], mmcif=True, bio=True, sifts=True)
 
-        # Fetch/download variants
-        r = fetch_uniprot_variants_ebi(uniprot_id, cached=True)
-        if r is not None:
-            from prointvar.variants import flatten_uniprot_variants_ebi
-            var_table = flatten_uniprot_variants_ebi(r)
+        # # # UniProt Variants
+        # # Fetch/download variants
+        # r = fetch_uniprot_variants_ebi(uniprot_id, cached=True)
+        # if r is not None:
+        #     from prointvar.variants import flatten_uniprot_variants_ebi
+        #     var_table = flatten_uniprot_variants_ebi(r)
+        #     print(var_table.head())
+        #     print(var_table.loc[0, :])
+        #     print(list(var_table))
+        #     break
+
+        # # # Ensembl Variants
+        from prointvar.fetchers import fetch_uniprot_species_from_id
+        from prointvar.fetchers import fetch_ensembl_uniprot_ensembl_mapping
+        from prointvar.fetchers import fetch_ensembl_transcript_variants
+        from prointvar.fetchers import fetch_ensembl_somatic_variants
+        from prointvar.fetchers import fetch_ensembl_variants_by_id
+        info = fetch_uniprot_species_from_id(uniprot_id)
+        organism = str(info.content, encoding='utf-8').split('\n')[1]
+        species = '_'.join(organism.split()[0:2]).lower()
+        info = fetch_ensembl_uniprot_ensembl_mapping(uniprot_id, cached=True,
+                                                     species=species).json()
+        ensps = []
+        for entry in info:
+            if 'type' in entry and 'id' in entry:
+                if entry['type'] == 'translation':
+                    if entry['id'] not in ensps:
+                        ensps.append(entry['id'])
+        for ensp in ensps:
+            print(ensp)
+            ens_vars = fetch_ensembl_transcript_variants(ensp, cached=False).json()
+            # print(ens_vars)
+
+            som_vars = fetch_ensembl_somatic_variants(ensp, cached=False).json()
+            # print(som_vars)
+
+            var_ids = []
+            for entry in ens_vars:
+                print(entry)
+                if 'id' in entry:
+                    if entry['id'] not in var_ids:
+                        var_ids.append(entry['id'])
+            for entry in som_vars:
+                print(entry)
+                if 'id' in entry:
+                    if entry['id'] not in var_ids:
+                        var_ids.append(entry['id'])
+            print(var_ids, len(var_ids))
+
+            # maybe not needed?
+            vars = fetch_ensembl_variants_by_id(var_ids, cached=False, species=species).json()
+            print([vars])
+
+
 
 
 @cli.command('mmcif2pdb')
