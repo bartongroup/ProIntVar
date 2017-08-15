@@ -36,9 +36,14 @@ from prointvar.fetchers import (fetch_best_structures_pdbe,
                                 BioFetcher, BioDownloader,
                                 fetch_uniprot_species_from_id,
                                 fetch_ensembl_uniprot_ensembl_mapping,
+                                fetch_ensembl_ensembl_uniprot_mapping,
                                 fetch_ensembl_transcript_variants,
                                 fetch_ensembl_somatic_variants,
-                                fetch_ensembl_variants_by_id)
+                                fetch_ensembl_variants_by_id,
+                                fetch_ensembl_sequence_from_id)
+
+from prointvar.variants import (get_ensembl_protein_id_from_mapping,
+                                get_uniprot_id_from_mapping)
 
 from prointvar.config import config as c
 
@@ -77,11 +82,15 @@ class TestFetchers(unittest.TestCase):
         self.fetch_uniprot_id_from_name = fetch_uniprot_id_from_name
         self.fetch_uniprot_species_from_id = fetch_uniprot_species_from_id
         self.fetch_ensembl_uniprot_ensembl_mapping = fetch_ensembl_uniprot_ensembl_mapping
+        self.fetch_ensembl_ensembl_uniprot_mapping = fetch_ensembl_ensembl_uniprot_mapping
         self.fetch_ensembl_transcript_variants = fetch_ensembl_transcript_variants
         self.fetch_ensembl_somatic_variants = fetch_ensembl_somatic_variants
         self.fetch_ensembl_variants_by_id = fetch_ensembl_variants_by_id
+        self.fetch_ensembl_sequence_from_id = fetch_ensembl_sequence_from_id
         self.BioFetcher = BioFetcher
         self.BioDownloader = BioDownloader
+        self.get_ensembl_protein_id_from_mapping = get_ensembl_protein_id_from_mapping
+        self.get_uniprot_id_from_mapping = get_uniprot_id_from_mapping
 
         logging.disable(logging.DEBUG)
 
@@ -107,12 +116,15 @@ class TestFetchers(unittest.TestCase):
         self.fetch_uniprot_id_from_name = None
         self.fetch_uniprot_species_from_id = None
         self.fetch_ensembl_uniprot_ensembl_mapping = None
+        self.fetch_ensembl_ensembl_uniprot_mapping = None
         self.fetch_ensembl_transcript_variants = None
         self.fetch_ensembl_somatic_variants = None
         self.fetch_ensembl_variants_by_id = None
+        self.fetch_ensembl_sequence_from_id = None
         self.BioFetcher = None
         self.BioDownloader = None
-
+        self.get_ensembl_protein_id_from_mapping = None
+        self.get_uniprot_id_from_mapping = None
         logging.disable(logging.NOTSET)
 
     def test_best_structure_pdbe(self):
@@ -236,14 +248,14 @@ class TestFetchers(unittest.TestCase):
     def test_fetch_ensembl_uniprot_ensembl_mapping(self):
         r = self.fetch_ensembl_uniprot_ensembl_mapping(self.uniprotid)
         self.assertTrue(r.ok)
-        # small recipe for getting Ensembl Protein IDs
-        ensps = []
-        for entry in r.json():
-            if 'type' in entry and 'id' in entry:
-                if entry['type'] == 'translation':
-                    if entry['id'] not in ensps:
-                        ensps.append(entry['id'])
+        ensps = self.get_ensembl_protein_id_from_mapping(r.json())
         self.assertEqual(ensps, [self.ensemblid])
+
+    def test_fetch_ensembl_ensembl_uniprot_mapping(self):
+        r = self.fetch_ensembl_ensembl_uniprot_mapping(self.ensemblid)
+        self.assertTrue(r.ok)
+        uniprots = self.get_uniprot_id_from_mapping(r.json())
+        self.assertEqual(uniprots, ['A0A024RBG4', self.uniprotid])
 
     def test_fetch_ensembl_transcript_variants(self):
         r = self.fetch_ensembl_transcript_variants(self.ensemblid)
@@ -255,6 +267,10 @@ class TestFetchers(unittest.TestCase):
 
     def fetch_fetch_ensembl_variants_by_id(self):
         r = self.fetch_ensembl_variants_by_id(self.varid)
+        self.assertTrue(r.ok)
+
+    def fetch_fetch_ensembl_sequence_from_id(self):
+        r = fetch_ensembl_sequence_from_id(self.ensemblid)
         self.assertTrue(r.ok)
 
     def test_biofetcher_uniprot_fasta(self):

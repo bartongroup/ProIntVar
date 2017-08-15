@@ -161,6 +161,29 @@ def fetch_ensembl_uniprot_ensembl_mapping(identifier, cached=False, retry_in=(42
     return b.response
 
 
+def fetch_ensembl_ensembl_uniprot_mapping(identifier, cached=False, retry_in=(429,)):
+    """
+    Uses the Ensembl REST mapping service to try and get UniProt IDs for
+    the Ensembl Protein accession identifier provided.
+
+    :param identifier: Ensembl Protein accession identifier
+    :param cached: (boolean) if True, stores a pickle file locally
+    :param retry_in: http code for retrying connections
+    :return: Requests response object
+    """
+
+    url_root = config.api_ensembl
+    url_endpoint = "xrefs/id/"
+    url = url_root + url_endpoint + identifier
+    # params = {'external_db': "Uniprot/SWISSPROT"}
+    # params = {'external_db': "Uniprot/SPTREMBL"}
+
+    b = BioFetcher(url=url, cached=cached,
+                   cache_output="{}_ens_uni.pkl".format(identifier),
+                   json=True, retry_in=retry_in)
+    return b.response
+
+
 def fetch_ensembl_transcript_variants(identifier, cached=False, retry_in=(429,)):
     """
     Queries the Ensembl REST API for transcript variants (mostly from dbSNP).
@@ -237,6 +260,25 @@ def fetch_ensembl_variants_by_id(identifier, cached=False, retry_in=(429,),
                        json=True, retry_in=retry_in,
                        post=True, data=data, header=header)
         return b.response
+
+
+def fetch_ensembl_sequence_from_id(identifier, cached=False, retry_in=(429,)):
+    """
+    Queries the Ensembl REST API for the sequence of a Ensembl Protein ID.
+
+    :param identifier: Ensembl Protein ID
+    :param cached: (boolean) if True, stores a pickle file locally
+    :param retry_in: http code for retrying connections
+    :return: Requests response object
+    """
+    url_root = config.api_ensembl
+    url_endpoint = "sequence/id/"
+    url = url_root + url_endpoint + identifier
+    params = {'type': 'protein'}
+    b = BioFetcher(url=url, cached=cached,
+                   cache_output="{}_ens_seq.pkl".format(identifier),
+                   json=True, retry_in=retry_in, **params)
+    return b.response
 
 
 def fetch_best_structures_pdbe(identifier, cached=False, retry_in=(429,)):

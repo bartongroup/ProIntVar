@@ -108,7 +108,6 @@ def flatten_uniprot_variants_ebi(data, excluded=()):
         entries = {"1_%s" % k: v for k, v in data.items() if k != "features"}
 
         flatten_json(entry, entries)
-        # print(entries)
         var_rows.append(collapse_unique_values(entries))
 
     table = pd.DataFrame(var_rows)
@@ -136,6 +135,56 @@ def flatten_uniprot_variants_ebi(data, excluded=()):
         raise ValueError('Variants collapsing resulted in an empty DataFrame...')
 
     return table
+
+
+def get_ensembl_protein_id_from_mapping(data):
+    """
+    Gets a list of Ensembl IDs from a 'xrefs/symbol/' mapping.
+
+    :param data: Requests object from the Ensembl-UniProt Mapping
+    :return: list of Ensembl Protein IDs
+    """
+    ensps = []
+    for entry in data:
+        if 'type' in entry and 'id' in entry:
+            if entry['type'] == 'translation':
+                if entry['id'] not in ensps:
+                    ensps.append(entry['id'])
+    return ensps
+
+
+def get_uniprot_id_from_mapping(data, full_entry=False, uniprot_id=None):
+    """
+    Gets a list of UniProt IDs from a '"xrefs/id/"' mapping.
+
+    :param data: Requests object from the Ensembl-UniProt Mapping
+    :param full_entry: (boolean) if True gets dictionary instead of just
+        the UniProt IDs
+    :param uniprot_id: if not None means that we want the data for a specific
+        UniProt ID
+    :return: list of UniProt IDs
+    """
+    uniprots = []
+    for entry in data:
+        if 'dbname' in entry and 'primary_id' in entry:
+            if uniprot_id is not None and entry['primary_id'] == uniprot_id:
+                if full_entry:
+                    uniprots.append(entry)
+                else:
+                    uniprots.append(entry['primary_id'])
+            elif entry['dbname'] == 'Uniprot/SWISSPROT':
+                if entry['primary_id'] not in uniprots:
+                    if full_entry:
+                        uniprots.append(entry)
+                    else:
+                        uniprots.append(entry['primary_id'])
+            elif entry['dbname'] == 'Uniprot/SPTREMBL':
+                if entry['primary_id'] not in uniprots:
+                    if full_entry:
+                        uniprots.append(entry)
+                    else:
+                        uniprots.append(entry['primary_id'])
+    return uniprots
 
 
 if __name__ == '__main__':
