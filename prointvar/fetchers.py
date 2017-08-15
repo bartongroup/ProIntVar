@@ -65,7 +65,7 @@ def fetch_uniprot_fasta(identifier, cached=False, retry_in=(429,)):
     :param identifier: UniProt accession identifier
     :param cached: (boolean) if True, stores a pickle file locally
     :param retry_in: http code for retrying connections
-    :return: pandas table dataframe
+    :return: Requests response object
     """
 
     url_root = config.http_uniprot
@@ -84,7 +84,7 @@ def fetch_uniprot_id_from_name(identifier, cached=False, retry_in=(429,)):
     :param identifier: UniProt accession identifier
     :param cached: (boolean) if True, stores a pickle file locally
     :param retry_in: http code for retrying connections
-    :return: pandas table dataframe
+    :return: Requests response object
     """
 
     url_root = config.http_uniprot
@@ -103,7 +103,7 @@ def fetch_uniprot_species_from_id(identifier, cached=False, retry_in=(429,)):
     :param identifier: UniProt accession identifier
     :param cached: (boolean) if True, stores a pickle file locally
     :param retry_in: http code for retrying connections
-    :return: pandas table dataframe
+    :return: Requests response object
     """
 
     url_root = config.http_uniprot
@@ -123,7 +123,7 @@ def fetch_uniprot_variants_ebi(identifier, cached=False, retry_in=(429,)):
     :param identifier: UniProt ID
     :param cached: (boolean) if True, stores a pickle file locally
     :param retry_in: http code for retrying connections
-    :return: pandas table dataframe
+    :return: Requests response object
     """
 
     url_root = config.api_proteins
@@ -138,14 +138,14 @@ def fetch_uniprot_variants_ebi(identifier, cached=False, retry_in=(429,)):
 def fetch_ensembl_uniprot_ensembl_mapping(identifier, cached=False, retry_in=(429,),
                                           species='homo_sapiens'):
     """
-    Uses the UniProt mapping service to try and get Ensembl IDs for
+    Uses the Ensembl REST mapping service to try and get Ensembl IDs for
     the UniProt accession identifier provided.
 
     :param identifier: UniProt accession identifier
     :param cached: (boolean) if True, stores a pickle file locally
     :param retry_in: http code for retrying connections
     :param species: Ensembl species
-    :return: pandas table dataframe
+    :return: Requests response object
     """
 
     if species not in ensembl_species:
@@ -169,7 +169,7 @@ def fetch_ensembl_transcript_variants(identifier, cached=False, retry_in=(429,))
     :param identifier: Ensembl Protein ID
     :param cached: (boolean) if True, stores a pickle file locally
     :param retry_in: http code for retrying connections
-    :return: pandas table dataframe
+    :return: Requests response object
     """
 
     url_root = config.api_ensembl
@@ -191,7 +191,7 @@ def fetch_ensembl_somatic_variants(identifier, cached=False, retry_in=(429,)):
     :param identifier: Ensembl Protein ID
     :param cached: (boolean) if True, stores a pickle file locally
     :param retry_in: http code for retrying connections
-    :return: pandas table dataframe
+    :return: Requests response object
     """
 
     url_root = config.api_ensembl
@@ -213,7 +213,7 @@ def fetch_ensembl_variants_by_id(identifier, cached=False, retry_in=(429,),
     :param cached: (boolean) if True, stores a pickle file locally
     :param retry_in: http code for retrying connections
     :param species: Ensembl species
-    :return: pandas table dataframe
+    :return: Requests response object
     """
 
     if isinstance(identifier, str):
@@ -246,7 +246,7 @@ def fetch_best_structures_pdbe(identifier, cached=False, retry_in=(429,)):
     :param identifier: UniProt ID
     :param cached: (boolean) if True, stores a pickle file locally
     :param retry_in: http code for retrying connections
-    :return: response object
+    :return: Requests response object
     """
 
     url_root = config.api_pdbe
@@ -265,7 +265,7 @@ def fetch_summary_properties_pdbe(identifier, cached=False, retry_in=(429,)):
     :param identifier: PDB ID
     :param cached: (boolean) if True, stores a pickle file locally
     :param retry_in: http code for retrying connections
-    :return: response object
+    :return: Requests response object
     """
 
     url_root = config.api_pdbe
