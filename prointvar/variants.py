@@ -13,6 +13,11 @@ Fábio Madeira, 2017+
 import logging
 import pandas as pd
 
+from prointvar.fetchers import fetch_uniprot_species_from_id
+from prointvar.fetchers import fetch_ensembl_uniprot_ensembl_mapping
+from prointvar.fetchers import fetch_ensembl_ensembl_uniprot_mapping
+from prointvar.fetchers import InvalidEnsemblSpecies
+
 from prointvar.library import uni_var_types
 
 logger = logging.getLogger("prointvar")
@@ -185,6 +190,131 @@ def get_uniprot_id_from_mapping(data, full_entry=False, uniprot_id=None):
                     else:
                         uniprots.append(entry['primary_id'])
     return uniprots
+
+
+def get_preferred_uniprot_id_from_mapping(data):
+    """
+    Takes a list of Ensembl xrefs/ids mapped from a UniProt ID
+    and gets the preferred entry (Many-to-one), based on seq
+    identity and coverage.
+
+    :param data: list of dictionaries
+    :return: (str) preferred UniProt ID
+    """
+
+    best_match = None
+    curr_ix = -1
+    prev_identity = 0
+    prev_coverage = 0
+    for ix, entry in enumerate(data):
+        if ('ensembl_identity' in entry and 'xref_identity' in entry and
+                'xref_start' in entry and 'xref_end' in entry):
+            identity = entry['ensembl_identity'] + entry['xref_identity']
+            coverage = entry['xref_end'] - entry['xref_start']
+            if identity + coverage > prev_identity + prev_coverage:
+                prev_identity = identity
+                prev_coverage = coverage
+                curr_ix = ix
+    if curr_ix != -1 and 'primary_id' in data[curr_ix]:
+        best_match = data[curr_ix]['primary_id']
+    return best_match
+
+
+def get_preferred_ensembl_id_from_mapping(identifiers, cached=False,
+                                          uniprot_id=None):
+    """
+    Takes a list of Ensembl xrefs/ids mapped from a UniProt ID
+    and gets the preferred entry (Many-to-one), based on seq
+    identity and coverage.
+
+    :param identifiers: list of Ensembl IDs
+    :param cached: (boolean) if True, stores a pickle file locally
+    :param uniprot_id: if not None means that we want the data for a specific
+        UniProt ID
+    :return: (str) preferred Ensembl ID
+    """
+
+    best_match = None
+    curr_ix = -1
+    prev_identity = 0
+    prev_coverage = 0
+    for ix, ensp in enumerate(identifiers):
+        info = fetch_ensembl_ensembl_uniprot_mapping(ensp,
+                                                     cached=cached).json()
+        # gets the mapping for a specific uniprot
+        data = get_uniprot_id_from_mapping(info, full_entry=True,
+                                           uniprot_id=uniprot_id)
+        for entry in data:
+            if ('ensembl_identity' in entry and 'xref_identity' in entry and
+                    'xref_start' in entry and 'xref_end' in entry):
+
+                identity = entry['ensembl_identity'] + entry['xref_identity']
+                coverage = entry['xref_end'] - entry['xref_start']
+                if identity + coverage > prev_identity + prev_coverage:
+                    prev_identity = identity
+                    prev_coverage = coverage
+                    curr_ix = ix
+    if curr_ix != -1:
+        best_match = identifiers[curr_ix]
+    return best_match
+
+
+def get_ensembl_species_from_uniprot(data):
+    """
+    Gets a Species Name from a UniProt organism lookup.
+
+    :param data: Request object from the UniProt Query endpoint.
+    :return: (str) formatted species name
+    """
+    organism = str(data.content, encoding='utf-8').split('\n')[1]
+    species = '_'.join(organism.split()[0:2]).lower()
+    return species
+
+
+class VariantsAgreggator(object):
+    def __init__(self, identifier, uniprot=True, cached=False):
+        """
+        Aggregates Variants from UniProt Proteins API and Ensembl REST API.
+
+        :param identifier: UniProt or Ensembl Protein ID
+        :param uniprot: (boolean) if True assumes the inputted ID is from UniProt
+        :param cached: (boolean) passed to the fetcher methods
+        """
+
+        self.cached = cached
+        if uniprot:
+            self.id_source = 'UniProt'
+            self.uniprot_id = identifier
+            self.ensembl_id = self._ensembl_id_from_uniprot()
+        else:
+            self.id_source = 'Ensembl'
+            self.uniprot_id = self._uniprot_id_from_ensembl()
+            self.ensembl_id = identifier
+
+    def _ensembl_id_from_uniprot(self):
+
+        info = fetch_uniprot_species_from_id(self.uniprot_id,
+                                             cached=self.cached)
+        species = get_ensembl_species_from_uniprot(info)
+        try:
+            info = fetch_ensembl_uniprot_ensembl_mapping(self.uniprot_id,
+                                                         cached=self.cached,
+                                                         species=species).json()
+        except InvalidEnsemblSpecies:
+            logger.info('Provided species {} is not valid'.format(species))
+            return None
+        ensps = get_ensembl_protein_id_from_mapping(info)
+        best_match = get_preferred_ensembl_id_from_mapping(ensps, cached=self.cached,
+                                                           uniprot_id=self.uniprot_id)
+        return best_match
+
+    def _uniprot_id_from_ensembl(self):
+
+        info = fetch_ensembl_ensembl_uniprot_mapping(self.ensembl_id,
+                                                     cached=self.cached)
+        data = get_uniprot_id_from_mapping(info, full_entry=True)
+        best_match = get_preferred_uniprot_id_from_mapping(data)
+        return best_match
 
 
 if __name__ == '__main__':
