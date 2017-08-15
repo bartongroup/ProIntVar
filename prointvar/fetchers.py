@@ -25,6 +25,10 @@ from prointvar.config import config
 logger = logging.getLogger("prointvar")
 
 
+class InvalidEnsemblSpecies(ValueError):
+    pass
+
+
 class BioFetcher(object):
     def __init__(self, url, cached=False, cache_output=None, **kwargs):
         """
@@ -149,7 +153,8 @@ def fetch_ensembl_uniprot_ensembl_mapping(identifier, cached=False, retry_in=(42
     """
 
     if species not in ensembl_species:
-        raise ValueError('Provided species {} is not valid'.format(species))
+        raise InvalidEnsemblSpecies(
+            'Provided species {} is not valid'.format(species))
 
     url_root = config.api_ensembl
     url_endpoint = "xrefs/symbol/{}/".format(species)
