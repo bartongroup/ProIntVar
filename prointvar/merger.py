@@ -215,6 +215,71 @@ def contacts_mmcif_table_merger(contacts_table, mmcif_table, suffix='A'):
     return table
 
 
+def uniprot_vars_ensembl_vars_merger(uniprot_vars_table, ensembl_vars_table):
+    """
+    Merges the tables provided using appropriate columns.
+
+    :param uniprot_vars_table: UniProt Variants pandas DataFrame
+    :param ensembl_vars_table: Ensembl Variants pandas DataFrame
+    :return: merged pandas DataFrame
+    """
+
+    # bare minimal columns needed
+    merge_on = ['begin', 'end', 'xrefs_id', 'frequency',
+                'consequenceType', 'siftScore', 'polyphenScore']
+
+    uniprot_vars_table = variants_combine_first(uniprot_vars_table,
+                                                duplicated_key='xrefs_id')
+    ensembl_vars_table = variants_combine_first(ensembl_vars_table,
+                                                duplicated_key='xrefs_id')
+    if (set(merge_on).issubset(uniprot_vars_table.columns) and
+            set(merge_on).issubset(ensembl_vars_table.columns)):
+
+        table = uniprot_vars_table.merge(ensembl_vars_table, how='outer',
+                                         on=merge_on).reset_index(drop=True)
+
+        table = variants_combine_first(table, duplicated_key='xrefs_id')
+    else:
+        raise TableMergerError('Not possible to merge UniProt and Ensembl Vars table! '
+                               'Some of the necessary columns are missing...')
+
+    logger.info("Merged UniProt and Ensembl Vars tables...")
+    return table
+
+
+def variants_combine_first(table, duplicated_key="xrefs_id"):
+    """
+    Helper method that uses the 'combine_first' to collapse
+    rows containing data that have the same value, according to the
+    'key' passed to 'duplicated_key'.
+    This works as a collapse down (from many-to-one rows).
+
+    :param table: pandas DataFrame
+    :param duplicated_key: key to base the 'combine_first' upon
+    :return: modified pandas DataFrame
+    """
+
+    new_table = table.copy()
+    duplicated = {}
+    drop_indexes = []
+    for ix in table.index:
+        pid = table.loc[ix, duplicated_key]
+        dup = table[table[duplicated_key] == pid].index.tolist()
+        duplicated[pid] = dup
+        if len(dup) > 1:
+            drop_indexes.append(ix)
+
+    new_table = new_table.drop(new_table.index[drop_indexes])
+    for key, val in duplicated.items():
+        if type(val) is list and len(val) > 1:
+            combined = table.loc[val[0], :]
+            for i in range(len(val)):
+                combined = combined.combine_first(table.loc[val[i], :])
+            new_table = new_table.append(combined)
+
+    return new_table.reset_index(drop=True, inplace=True)
+
+
 def table_merger(mmcif_table=None, dssp_table=None, sifts_table=None,
                  contacts_table=None):
     """
