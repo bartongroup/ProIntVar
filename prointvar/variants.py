@@ -287,17 +287,20 @@ class VariantsAgreggator(object):
             self.uniprot_id = self._uniprot_id_from_ensembl()
             self.ensembl_id = identifier
 
-    def _ensembl_id_from_uniprot(self):
-
+    def _get_uniprot_species(self):
         info = fetch_uniprot_species_from_id(self.uniprot_id,
                                              cached=self.cached)
-        species = get_ensembl_species_from_uniprot(info)
+        self.species = get_ensembl_species_from_uniprot(info)
+
+    def _ensembl_id_from_uniprot(self):
+
+        self._get_uniprot_species()
         try:
             info = fetch_ensembl_uniprot_ensembl_mapping(self.uniprot_id,
                                                          cached=self.cached,
-                                                         species=species).json()
+                                                         species=self.species).json()
         except InvalidEnsemblSpecies:
-            logger.info('Provided species {} is not valid'.format(species))
+            logger.info('Provided species {} is not valid'.format(self.species))
             return None
         ensps = get_ensembl_protein_id_from_mapping(info)
         best_match = get_preferred_ensembl_id_from_mapping(ensps, cached=self.cached,
