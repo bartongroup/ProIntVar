@@ -37,10 +37,8 @@ def cli():
               required=False)
 def alignment(inputfile, outputfile=None):
 
-    from prointvar.fetchers import fetch_uniprot_id_from_name
     from prointvar.fetchers import fetch_best_structures_pdbe
-    from prointvar.fetchers import fetch_uniprot_variants_ebi
-    from prointvar.merger import TableMerger
+    from prointvar.variants import VariantsAgreggator
 
     # print(inputfile)
     # print(outputfile)
@@ -69,58 +67,11 @@ def alignment(inputfile, outputfile=None):
         # for pdb_id in pdb_ids:
         #     file_downloader([pdb_id], mmcif=True, bio=True, sifts=True)
 
-        # # # UniProt Variants
-        # # Fetch/download variants
-        # r = fetch_uniprot_variants_ebi(uniprot_id, cached=True)
-        # if r is not None:
-        #     from prointvar.variants import flatten_uniprot_variants_ebi
-        #     var_table = flatten_uniprot_variants_ebi(r)
-        #     print(var_table.head())
-        #     print(var_table.loc[0, :])
-        #     print(list(var_table))
-        #     break
-
-        # # # Ensembl Variants
-        from prointvar.fetchers import fetch_uniprot_species_from_id
-        from prointvar.fetchers import fetch_ensembl_uniprot_ensembl_mapping
-        from prointvar.fetchers import fetch_ensembl_transcript_variants
-        from prointvar.fetchers import fetch_ensembl_somatic_variants
-        from prointvar.fetchers import fetch_ensembl_variants_by_id
-        info = fetch_uniprot_species_from_id(uniprot_id)
-        organism = str(info.content, encoding='utf-8').split('\n')[1]
-        species = '_'.join(organism.split()[0:2]).lower()
-        info = fetch_ensembl_uniprot_ensembl_mapping(uniprot_id, cached=True,
-                                                     species=species).json()
-        ensps = []
-        for entry in info:
-            if 'type' in entry and 'id' in entry:
-                if entry['type'] == 'translation':
-                    if entry['id'] not in ensps:
-                        ensps.append(entry['id'])
-        for ensp in ensps:
-            print(ensp)
-            ens_vars = fetch_ensembl_transcript_variants(ensp, cached=False).json()
-            # print(ens_vars)
-
-            som_vars = fetch_ensembl_somatic_variants(ensp, cached=False).json()
-            # print(som_vars)
-
-            var_ids = []
-            for entry in ens_vars:
-                print(entry)
-                if 'id' in entry:
-                    if entry['id'] not in var_ids:
-                        var_ids.append(entry['id'])
-            for entry in som_vars:
-                print(entry)
-                if 'id' in entry:
-                    if entry['id'] not in var_ids:
-                        var_ids.append(entry['id'])
-            print(var_ids, len(var_ids))
-
-            # maybe not needed?
-            vars = fetch_ensembl_variants_by_id(var_ids, cached=False, species=species).json()
-            print([vars])
+        v = VariantsAgreggator(uniprot_id, uniprot=True, cached=True)
+        v.run(uniprot_vars=True,
+              ensembl_transcript_vars=True,
+              ensembl_somatic_vars=True,
+              synonymous=True)
 
 
 
@@ -169,7 +120,7 @@ def mmcif2pdb(inputfile, outputfile=None, override=False):
               multiple=False, help='Overrides any existing file, if available.',
               default=False, is_flag=True, required=False)
 def clean_mmcif(inputfile, outputfile=None, rm_hydrogens=False, rm_altlocs=False,
-              rm_partial_res=False, override=False):
+                rm_partial_res=False, override=False):
     """
     Cleans the mmCIF file.
 
