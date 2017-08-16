@@ -13,12 +13,20 @@ Fábio Madeira, 2017+
 import logging
 import pandas as pd
 
+from prointvar.fetchers import fetch_uniprot_variants_ebi
 from prointvar.fetchers import fetch_uniprot_species_from_id
 from prointvar.fetchers import fetch_ensembl_uniprot_ensembl_mapping
 from prointvar.fetchers import fetch_ensembl_ensembl_uniprot_mapping
+from prointvar.fetchers import fetch_ensembl_transcript_variants
+from prointvar.fetchers import fetch_ensembl_somatic_variants
+# from prointvar.fetchers import fetch_ensembl_variants_by_id
 from prointvar.fetchers import InvalidEnsemblSpecies
 
+from prointvar.merger import uniprot_vars_ensembl_vars_merger
+
+from prointvar.utils import row_selector
 from prointvar.library import uni_var_types
+from prointvar.library import update_ensembl_to_uniprot
 
 logger = logging.getLogger("prointvar")
 
@@ -278,6 +286,7 @@ class VariantsAgreggator(object):
         """
 
         self.cached = cached
+        self.data = None
         if uniprot:
             self.id_source = 'UniProt'
             self.uniprot_id = identifier
@@ -314,6 +323,61 @@ class VariantsAgreggator(object):
         data = get_uniprot_id_from_mapping(info, full_entry=True)
         best_match = get_preferred_uniprot_id_from_mapping(data)
         return best_match
+
+    def run(self, synonymous=True, uniprot_vars=True,
+            ensembl_transcript_vars=True, ensembl_somatic_vars=True):
+
+        if self.uniprot_id is not None and uniprot_vars:
+            r = fetch_uniprot_variants_ebi(self.uniprot_id, cached=self.cached)
+            if r is not None:
+                uni_vars = flatten_uniprot_variants_ebi(r)
+
+        if (self.ensembl_id is not None and
+                (ensembl_transcript_vars or ensembl_somatic_vars)):
+
+            if ensembl_transcript_vars:
+                data = fetch_ensembl_transcript_variants(self.ensembl_id,
+                                                         cached=self.cached).json()
+                trans_vars = pd.DataFrame(data)
+                # rename columns and filter
+                trans_vars.rename(columns=update_ensembl_to_uniprot, inplace=True)
+                if not synonymous:
+                    trans_vars = row_selector(trans_vars, key='consequenceType',
+                                              value='synonymous_variant', method="diffs")
+
+            if ensembl_somatic_vars:
+                data = fetch_ensembl_somatic_variants(self.ensembl_id,
+                                                      cached=self.cached).json()
+                som_vars = pd.DataFrame(data)
+                # rename columns and filter
+                som_vars.rename(columns=update_ensembl_to_uniprot, inplace=True)
+                if not synonymous:
+                    som_vars = row_selector(som_vars, key='consequenceType',
+                                            value='synonymous_variant', method="diffs")
+
+            if ensembl_transcript_vars and ensembl_somatic_vars:
+                ens_vars = pd.concat([trans_vars, som_vars]).reset_index(drop=True)
+            elif ensembl_transcript_vars:
+                ens_vars = trans_vars
+            elif ensembl_somatic_vars:
+                ens_vars = som_vars
+
+        if ((self.uniprot_id is not None and uniprot_vars) and
+                (self.ensembl_id is not None and
+                    (ensembl_transcript_vars or ensembl_somatic_vars))):
+            self.data = uniprot_vars_ensembl_vars_merger(uni_vars, ens_vars)
+        elif self.uniprot_id is not None and uniprot_vars:
+            self.data = uni_vars
+        elif (self.ensembl_id is not None and
+                (ensembl_transcript_vars or ensembl_somatic_vars)):
+            self.data = ens_vars
+        else:
+            raise ValueError('At least one of the variant sources needs to be used...')
+
+        if self.data.empty:
+            message = 'Resulted in an empty DataFrame...'
+            raise ValueError(message)
+        return self.data
 
 
 if __name__ == '__main__':

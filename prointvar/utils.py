@@ -442,6 +442,7 @@ def row_selector(data, key=None, value=None, method="isin"):
 
     if table.empty:
         message = 'Your filters resulted in an empty DataFrame...'
+        logger.debug(message)
         raise ValueError(message)
 
     return table
