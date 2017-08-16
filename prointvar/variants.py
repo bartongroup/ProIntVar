@@ -70,26 +70,22 @@ def collapse_unique_values(entries):
         if name not in unique_names:
             unique_names.append(name)
 
-    col_counts = {}
-    for key in entries.keys():
-        name = '_'.join(key.split('_')[1:])
-        if name in unique_names:
-            if name not in col_counts:
-                col_counts[name] = 1
-            else:
-                col_counts[name] += 1
-
     new_entries = {}
     for key, val in entries.items():
         col = '_'.join(key.split('_')[1:])
 
         if col not in new_entries:
-            if col_counts[col] > 1:
-                new_entries[col] = [val]
-            else:
-                new_entries[col] = val
+            new_entries[col] = [val]
         else:
             new_entries[col].append(val)
+
+    for key, val in new_entries.items():
+        if type(val) is list:
+            new_val = list(set(val))
+            if len(new_val):
+                new_val = new_val[0]
+            new_entries[key] = new_val
+
     return new_entries
 
 
