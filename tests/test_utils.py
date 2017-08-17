@@ -9,6 +9,7 @@ import requests
 import responses
 import unittest
 import datetime
+import numpy as np
 import pandas as pd
 from io import StringIO
 from datetime import datetime
@@ -31,6 +32,7 @@ from prointvar.utils import get_pairwise_alignment
 from prointvar.utils import string_split
 from prointvar.utils import get_new_pro_ids
 from prointvar.utils import row_selector
+from prointvar.utils import merging_down_by_key
 
 from prointvar.config import config as c
 
@@ -107,6 +109,13 @@ class TestUTILS(unittest.TestCase):
         self.convert_str_to_bool = convert_str_to_bool
         self.get_new_pro_ids = get_new_pro_ids
         self.row_selector = row_selector
+        self.merging_down_by_key = merging_down_by_key
+        self.vars_mock = pd.DataFrame([{'xrefs_id': 'id1', 'other_key': []},
+                                       {'xrefs_id': 'id2', 'other_key': 123},
+                                       {'xrefs_id': 'id1', 'other_key': []},
+                                       {'xrefs_id': 'id3', 'other_key': 'string'},
+                                       {'xrefs_id': 'id2', 'other_key': 245},
+                                       {'xrefs_id': 'id3', 'other_key': np.nan}])
 
         logging.disable(logging.DEBUG)
 
@@ -128,6 +137,8 @@ class TestUTILS(unittest.TestCase):
         self.convert_str_to_bool = None
         self.get_new_pro_ids = None
         self.row_selector = None
+        self.merging_down_by_key = None
+        self.vars_mock = None
 
         logging.disable(logging.NOTSET)
 
@@ -343,6 +354,13 @@ class TestUTILS(unittest.TestCase):
         d = self.row_selector(data, key='value', value=(2, 3), method='isin')
         self.assertEqual(len(d.index), 2)
 
+    def test_test_merging_down_by_key(self):
+        table = self.merging_down_by_key(self.vars_mock, key='xrefs_id')
+        self.assertEqual(len(self.vars_mock), 6)
+        self.assertEqual(len(table), 3)
+        self.assertEqual(table.loc[0, 'xrefs_id'], 'id1')
+        self.assertEqual(table.loc[1, 'other_key'], (123, 245))
+        self.assertEqual(table.loc[2, 'other_key'], 'string')
 
 if __name__ == '__main__':
     logging.basicConfig(stream=sys.stderr)

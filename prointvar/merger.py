@@ -25,6 +25,7 @@ from prointvar.pdbx import get_mmcif_selected_from_table
 from prointvar.arpeggio import ARPEGGIOreader
 from prointvar.arpeggio import ARPEGGIOrunner
 from prointvar.fetchers import fetch_best_structures_pdbe
+from prointvar.utils import merging_down_by_key
 
 from prointvar.config import config
 
@@ -229,18 +230,18 @@ def uniprot_vars_ensembl_vars_merger(uniprot_vars_table, ensembl_vars_table):
     merge_on = ['begin', 'end', 'xrefs_id', 'frequency',
                 'consequenceType', 'siftScore', 'polyphenScore']
 
-    uniprot_vars_table = variants_merging_by_key(uniprot_vars_table,
-                                                 key='xrefs_id')
+    uniprot_vars_table = merging_down_by_key(uniprot_vars_table,
+                                             key='xrefs_id')
 
-    ensembl_vars_table = variants_merging_by_key(ensembl_vars_table,
-                                                 key='xrefs_id')
+    ensembl_vars_table = merging_down_by_key(ensembl_vars_table,
+                                             key='xrefs_id')
     if (set(merge_on).issubset(uniprot_vars_table.columns) and
             set(merge_on).issubset(ensembl_vars_table.columns)):
 
         table = uniprot_vars_table.merge(ensembl_vars_table, how='outer',
                                          on=merge_on).reset_index(drop=True)
 
-        table = variants_merging_by_key(table, key='xrefs_id')
+        table = merging_down_by_key(table, key='xrefs_id')
         table.fillna(np.nan, inplace=True)
     else:
         raise TableMergerError('Not possible to merge UniProt and Ensembl Vars table! '
@@ -248,66 +249,6 @@ def uniprot_vars_ensembl_vars_merger(uniprot_vars_table, ensembl_vars_table):
 
     logger.info("Merged UniProt and Ensembl Vars tables...")
     return table
-
-
-def variants_merging_by_key(table, key="xrefs_id"):
-    """
-    Helper method that mergers the rows  containing data
-    that have the same value (e.g. ID), according
-    to the 'key' passed to 'duplicated_key'.
-    This works as a collapse down (from many-to-one rows).
-    Aggregation is possible since multi-value cells are stored as
-    tuples which are hashable.
-
-    :param table: pandas DataFrame
-    :param key: key to base the 'merge down' upon
-    :return: modified pandas DataFrame
-    """
-
-    new_table = table.copy()
-    duplicated = {}
-    drop_indexes = []
-    for ix in table.index:
-        pid = table.loc[ix, key]
-        dup = table[table[key] == pid].index.tolist()
-        duplicated[pid] = dup
-        if len(dup) > 1:
-            drop_indexes.append(ix)
-
-    new_table = new_table.drop(new_table.index[drop_indexes])
-    for key, val in duplicated.items():
-        if type(val) is list and len(val) > 1:
-            rows = []
-            d = {}
-            for i in range(len(list(table))):
-                values = []
-                for j in range(len(val)):
-                    v = table.loc[val[j], list(table)[i]]
-                    if v not in values:
-                        if type(v) is tuple or type(v) is list:
-                            for g in v:
-                                values.append(g)
-                        else:
-                            values.append(v)
-                if not values:
-                    values = np.nan
-                elif len(values) == 1:
-                    values = values[0]
-                else:
-                    values = [v for v in values if not pd.isnull(v)]
-                    if not values:
-                        values = np.nan
-                    elif len(values) == 1:
-                        values = values[0]
-                    else:
-                        values = tuple(set(values))
-
-                d[list(table)[i]] = values
-            rows.append(d)
-            combined = pd.DataFrame(rows)
-            new_table = new_table.append(combined)
-
-    return new_table.reset_index(drop=True)
 
 
 def table_merger(mmcif_table=None, dssp_table=None, sifts_table=None,

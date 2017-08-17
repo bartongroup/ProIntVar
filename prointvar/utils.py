@@ -18,6 +18,7 @@ import time
 import json
 import logging
 import requests
+import numpy as np
 import pandas as pd
 from string import digits
 from string import ascii_lowercase
@@ -30,7 +31,6 @@ from Bio import pairwise2
 from Bio.SubsMat import MatrixInfo as matlist
 
 from prointvar.library import (ASA_Miller, ASA_Wilke, ASA_Sander)
-from prointvar.library import aa_codes_1to3_common
 from prointvar.library import aa_codes_1to3_extended
 
 logger = logging.getLogger("prointvar")
@@ -446,6 +446,66 @@ def row_selector(data, key=None, value=None, method="isin"):
         raise ValueError(message)
 
     return table
+
+
+def merging_down_by_key(table, key="xrefs_id"):
+    """
+    Helper method that mergers the rows  containing data
+    that have the same value (e.g. ID), according
+    to the 'key' passed to 'duplicated_key'.
+    This works as a collapse down (from many-to-one rows).
+    Aggregation is possible since multi-value cells are stored as
+    tuples which are hashable.
+
+    :param table: pandas DataFrame
+    :param key: key to base the 'merge down' upon
+    :return: modified pandas DataFrame
+    """
+
+    new_table = table.copy()
+    duplicated = {}
+    drop_indexes = []
+    for ix in table.index:
+        pid = table.loc[ix, key]
+        dup = table[table[key] == pid].index.tolist()
+        duplicated[pid] = dup
+        if len(dup) > 1:
+            drop_indexes.append(ix)
+
+    new_table = new_table.drop(new_table.index[drop_indexes])
+    for key, val in duplicated.items():
+        if type(val) is list and len(val) > 1:
+            rows = []
+            d = {}
+            for i in range(len(list(table))):
+                values = []
+                for j in range(len(val)):
+                    v = table.loc[val[j], list(table)[i]]
+                    if v not in values:
+                        if type(v) is tuple or type(v) is list:
+                            for g in v:
+                                values.append(g)
+                        else:
+                            values.append(v)
+                if not values:
+                    values = np.nan
+                elif len(values) == 1:
+                    values = values[0]
+                else:
+                    values = [v for v in values if not pd.isnull(v)]
+                    if not values:
+                        values = np.nan
+                    elif len(values) == 1:
+                        values = values[0]
+                    else:
+                        values = tuple(set(values))
+
+                d[list(table)[i]] = values
+            rows.append(d)
+            combined = pd.DataFrame(rows)
+            new_table = new_table.append(combined)
+
+    return new_table.reset_index(drop=True)
 
 
 def get_new_pro_ids():
