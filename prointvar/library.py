@@ -182,37 +182,11 @@ arpeggio_types = {
 
 probe_types = {}
 
-uni_var_types = {
-    'accession': str,
-    'alternativeSequence': str,
-    'begin': str,
-    'consequenceType': str,
-    'cytogeneticBand': str,
-    'description': str,
-    'end': str,
-    'entryName': str,
-    'evidences_code': 'object',
-    'evidences_source_alternativeUrl': 'object',
-    'evidences_source_id': 'object',
-    'evidences_source_name': 'object',
-    'evidences_source_url': 'object',
-    'frequency': str,
-    'ftId': str,
-    'genomicLocation': str,
-    'polyphenPrediction': str,
-    'polyphenScore': str,
-    'sequence': str,
-    'sequenceChecksum': str,
-    'siftPrediction': str,
-    'siftScore': str,
-    'somaticStatus': str,
-    'sourceType': str,
-    'taxid': str,
-    'type': str,
-    'wildType': str,
-    'xrefs_id': 'object',
-    'xrefs_name': 'object',
-    'xrefs_url': 'object'
+uni_ens_var_types = {
+    'begin': int,
+    'end': int,
+    'polyphenScore': float,
+    'siftScore': float,
 }
 
 arpeggio_col_renames = {

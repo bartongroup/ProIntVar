@@ -25,7 +25,7 @@ from prointvar.fetchers import InvalidEnsemblSpecies
 from prointvar.merger import uniprot_vars_ensembl_vars_merger
 
 from prointvar.utils import row_selector
-from prointvar.library import uni_var_types
+from prointvar.library import uni_ens_var_types
 from prointvar.library import update_ensembl_to_uniprot
 
 logger = logging.getLogger("prointvar")
@@ -131,14 +131,12 @@ def flatten_uniprot_variants_ebi(data, excluded=()):
 
     # enforce some specific column types
     for col in table:
-        if col in uni_var_types:
+        if col in uni_ens_var_types:
             try:
-                table[col] = table[col].astype(uni_var_types[col])
+                table[col] = table[col].astype(uni_ens_var_types[col])
             except ValueError:
                 # there are some NaNs in there
                 pass
-        else:
-            print('missing', col)
 
     if table.empty:
         raise ValueError('Variants collapsing resulted in an empty DataFrame...')
@@ -339,8 +337,17 @@ class VariantsAgreggator(object):
                 data = fetch_ensembl_transcript_variants(self.ensembl_id,
                                                          cached=self.cached).json()
                 trans_vars = pd.DataFrame(data)
-                # rename columns and filter
+                # rename columns
                 trans_vars.rename(columns=update_ensembl_to_uniprot, inplace=True)
+                # enforce some specific column types
+                for col in trans_vars:
+                    if col in uni_ens_var_types:
+                        try:
+                            trans_vars[col] = trans_vars[col].astype(uni_ens_var_types[col])
+                        except ValueError:
+                            # there are some NaNs in there
+                            pass
+                # filter synonymous
                 if not synonymous:
                     trans_vars = row_selector(trans_vars, key='consequenceType',
                                               value='synonymous_variant', method="diffs")
@@ -349,8 +356,17 @@ class VariantsAgreggator(object):
                 data = fetch_ensembl_somatic_variants(self.ensembl_id,
                                                       cached=self.cached).json()
                 som_vars = pd.DataFrame(data)
-                # rename columns and filter
+                # rename columns
                 som_vars.rename(columns=update_ensembl_to_uniprot, inplace=True)
+                # enforce some specific column types
+                for col in som_vars:
+                    if col in uni_ens_var_types:
+                        try:
+                            som_vars[col] = som_vars[col].astype(uni_ens_var_types[col])
+                        except ValueError:
+                            # there are some NaNs in there
+                            pass
+                # filter synonymous
                 if not synonymous:
                     som_vars = row_selector(som_vars, key='consequenceType',
                                             value='synonymous_variant', method="diffs")
