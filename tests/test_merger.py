@@ -21,11 +21,17 @@ from prointvar.sifts import SIFTSreader
 from prointvar.pdbx import PDBXreader, PDBXwriter, get_mmcif_selected_from_table
 from prointvar.arpeggio import ARPEGGIOreader
 
+from prointvar.fetchers import (fetch_uniprot_variants_ebi,
+                                fetch_ensembl_transcript_variants)
+from prointvar.variants import (VariantsAgreggator, flatten_uniprot_variants_ebi,
+                                flatten_ensembl_variants)
+
 from prointvar.merger import (TableMerger, table_merger,
                               mmcif_dssp_table_merger, mmcif_sifts_table_merger,
                               dssp_sifts_table_merger, table_generator,
                               dssp_dssp_table_merger, contacts_mmcif_table_merger,
-                              load_merged_table, dump_merged_table)
+                              load_merged_table, dump_merged_table,
+                              uniprot_vars_ensembl_vars_merger)
 
 from prointvar.config import config as c
 root = os.path.abspath(os.path.dirname(__file__))
@@ -67,6 +73,8 @@ class TestMerger(unittest.TestCase):
         self.dump_merged_table = dump_merged_table
         self.load_merged_table = load_merged_table
 
+        self.uni_ens_vars = uniprot_vars_ensembl_vars_merger
+
         logging.disable(logging.DEBUG)
 
     def tearDown(self):
@@ -85,7 +93,7 @@ class TestMerger(unittest.TestCase):
         self.dssp_bio = None
         self.dssp_unbound = None
         self.sifts = None
-        self.contacts= None
+        self.contacts = None
 
         self.mmcif_sifts = None
         self.mmcif_dssp = None
@@ -97,6 +105,8 @@ class TestMerger(unittest.TestCase):
         self.generator = None
         self.dump_merged_table = None
         self.load_merged_table = None
+
+        self.uni_ens_vars = None
 
         logging.disable(logging.NOTSET)
 
@@ -155,6 +165,17 @@ class TestMerger(unittest.TestCase):
                                   int_filter=True, int_mode='inter-chain',
                                   parse_special=True)
 
+        cls.uniprotid = 'P40227'
+        v = VariantsAgreggator(cls.uniprotid, uniprot=True, cached=False)
+        r = fetch_uniprot_variants_ebi(v.uniprot_id, cached=False)
+        if r is not None:
+            cls.uni_vars = flatten_uniprot_variants_ebi(r)
+
+        r = fetch_ensembl_transcript_variants(v.ensembl_id,
+                                              cached=False)
+        if r is not None:
+            cls.ens_vars = flatten_ensembl_variants(r)
+
     @classmethod
     def tearDownClass(cls):
 
@@ -170,6 +191,11 @@ class TestMerger(unittest.TestCase):
         cls.dssp = None
         cls.dssp_bio = None
         cls.sifts = None
+        cls.contacts = None
+
+        cls.uniprotid = None
+        cls.uni_vars = None
+        cls.ens_vars = None
 
     def test_mmcif_dssp_merger(self):
         table = self.mmcif_dssp(self.mmcif, self.dssp)
@@ -382,7 +408,7 @@ class TestMerger(unittest.TestCase):
 
     def test_table_merger_dump(self):
         filename = self.merger()._get_filename(pdb_id=self.pdbid, bio=True,
-                                               lines=('ATOM', ))
+                                               lines=('ATOM',))
         t = self.merger(self.mmcif_bio, self.dssp_bio, self.sifts)
         t.merge()
         self.dump_merged_table(t.merged_table, outputfile=filename)
@@ -537,6 +563,27 @@ class TestMerger(unittest.TestCase):
         self.assertTrue('366', table.loc[0, 'RES_FULL_A'])
         self.assertTrue(1.694, table.loc[0, 'VDW_DIST'])
         self.assertIn('Amide-Amide', table.loc[0, 'Int_Types'])
+
+    def test_uni_ens_vars_merger(self):
+        table = self.uni_ens_vars(self.uni_vars, self.ens_vars)
+        # UniProt
+        self.assertNotIn('translation', list(self.uni_vars))
+        self.assertNotIn('allele', list(self.uni_vars))
+        self.assertIn('taxid', list(self.uni_vars))
+        self.assertIn('description', list(self.uni_vars))
+        # Ensembl
+        self.assertIn('translation', list(self.ens_vars))
+        self.assertIn('allele', list(self.ens_vars))
+        self.assertNotIn('taxid', list(self.ens_vars))
+        self.assertNotIn('description', list(self.ens_vars))
+        # Merged Table
+        self.assertIn('translation', list(table))
+        self.assertIn('allele', list(table))
+        self.assertIn('taxid', list(table))
+        self.assertIn('description', list(table))
+        self.assertIn('begin', list(table))
+        self.assertIn('end', list(table))
+
 
 if __name__ == '__main__':
     logging.basicConfig(stream=sys.stderr)
