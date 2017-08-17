@@ -19,7 +19,6 @@ from prointvar.fetchers import fetch_ensembl_uniprot_ensembl_mapping
 from prointvar.fetchers import fetch_ensembl_ensembl_uniprot_mapping
 from prointvar.fetchers import fetch_ensembl_transcript_variants
 from prointvar.fetchers import fetch_ensembl_somatic_variants
-# from prointvar.fetchers import fetch_ensembl_variants_by_id
 from prointvar.fetchers import InvalidEnsemblSpecies
 
 from prointvar.merger import uniprot_vars_ensembl_vars_merger
@@ -141,6 +140,50 @@ def flatten_uniprot_variants_ebi(data, excluded=()):
     if table.empty:
         raise ValueError('Variants collapsing resulted in an empty DataFrame...')
 
+    return table
+
+
+def flatten_ensembl_variants(data, excluded=(), synonymous=True):
+    """
+    Flattens the json output obtained from the Proteins API variants
+     endpoint.
+
+    :param data: original response (json output)
+    :param excluded: option to exclude VAR columns
+    :param synonymous: (boolean)
+    :return: returns a pandas DataFrame
+    """
+
+    try:
+        data = data.json()
+    except AttributeError:
+        assert type(data) is dict
+
+    table = pd.DataFrame(data)
+    # rename columns
+    table.rename(columns=update_ensembl_to_uniprot, inplace=True)
+
+    if excluded is not None:
+        assert type(excluded) is tuple
+        try:
+            table = table.drop(list(excluded), axis=1)
+        except ValueError:
+            # most likely theses are not in there
+            pass
+
+    # enforce some specific column types
+    for col in table:
+        if col in uni_ens_var_types:
+            try:
+                table[col] = table[col].astype(uni_ens_var_types[col])
+            except ValueError:
+                # there are some NaNs in there
+                pass
+
+    # filter synonymous
+    if not synonymous:
+        table = row_selector(table, key='consequenceType',
+                             value='synonymous_variant', method="diffs")
     return table
 
 
@@ -334,42 +377,16 @@ class VariantsAgreggator(object):
                 (ensembl_transcript_vars or ensembl_somatic_vars)):
 
             if ensembl_transcript_vars:
-                data = fetch_ensembl_transcript_variants(self.ensembl_id,
-                                                         cached=self.cached).json()
-                trans_vars = pd.DataFrame(data)
-                # rename columns
-                trans_vars.rename(columns=update_ensembl_to_uniprot, inplace=True)
-                # enforce some specific column types
-                for col in trans_vars:
-                    if col in uni_ens_var_types:
-                        try:
-                            trans_vars[col] = trans_vars[col].astype(uni_ens_var_types[col])
-                        except ValueError:
-                            # there are some NaNs in there
-                            pass
-                # filter synonymous
-                if not synonymous:
-                    trans_vars = row_selector(trans_vars, key='consequenceType',
-                                              value='synonymous_variant', method="diffs")
+                r = fetch_ensembl_transcript_variants(self.ensembl_id,
+                                                      cached=self.cached)
+                if r is not None:
+                    trans_vars = flatten_ensembl_variants(r, synonymous=synonymous)
 
             if ensembl_somatic_vars:
-                data = fetch_ensembl_somatic_variants(self.ensembl_id,
-                                                      cached=self.cached).json()
-                som_vars = pd.DataFrame(data)
-                # rename columns
-                som_vars.rename(columns=update_ensembl_to_uniprot, inplace=True)
-                # enforce some specific column types
-                for col in som_vars:
-                    if col in uni_ens_var_types:
-                        try:
-                            som_vars[col] = som_vars[col].astype(uni_ens_var_types[col])
-                        except ValueError:
-                            # there are some NaNs in there
-                            pass
-                # filter synonymous
-                if not synonymous:
-                    som_vars = row_selector(som_vars, key='consequenceType',
-                                            value='synonymous_variant', method="diffs")
+                r = fetch_ensembl_somatic_variants(self.ensembl_id,
+                                                   cached=self.cached)
+                if r is not None:
+                    som_vars = flatten_ensembl_variants(r, synonymous=synonymous)
 
             if ensembl_transcript_vars and ensembl_somatic_vars:
                 ens_vars = pd.concat([trans_vars, som_vars]).reset_index(drop=True)
