@@ -12,6 +12,7 @@ Fábio Madeira, 2017+
 
 import os
 import logging
+import numpy as np
 import pandas as pd
 
 from prointvar.dssp import DSSPrunner
@@ -228,17 +229,19 @@ def uniprot_vars_ensembl_vars_merger(uniprot_vars_table, ensembl_vars_table):
     merge_on = ['begin', 'end', 'xrefs_id', 'frequency',
                 'consequenceType', 'siftScore', 'polyphenScore']
 
-    uniprot_vars_table = variants_combine_first(uniprot_vars_table,
-                                                duplicated_key='xrefs_id')
-    ensembl_vars_table = variants_combine_first(ensembl_vars_table,
-                                                duplicated_key='xrefs_id')
+    uniprot_vars_table = variants_merging_by_key(uniprot_vars_table,
+                                                 key='xrefs_id')
+
+    ensembl_vars_table = variants_merging_by_key(ensembl_vars_table,
+                                                 key='xrefs_id')
     if (set(merge_on).issubset(uniprot_vars_table.columns) and
             set(merge_on).issubset(ensembl_vars_table.columns)):
 
         table = uniprot_vars_table.merge(ensembl_vars_table, how='outer',
                                          on=merge_on).reset_index(drop=True)
 
-        table = variants_combine_first(table, duplicated_key='xrefs_id')
+        table = variants_merging_by_key(table, key='xrefs_id')
+        table.fillna(np.nan, inplace=True)
     else:
         raise TableMergerError('Not possible to merge UniProt and Ensembl Vars table! '
                                'Some of the necessary columns are missing...')
@@ -247,15 +250,17 @@ def uniprot_vars_ensembl_vars_merger(uniprot_vars_table, ensembl_vars_table):
     return table
 
 
-def variants_combine_first(table, duplicated_key="xrefs_id"):
+def variants_merging_by_key(table, key="xrefs_id"):
     """
-    Helper method that uses the 'combine_first' to collapse
-    rows containing data that have the same value, according to the
-    'key' passed to 'duplicated_key'.
+    Helper method that mergers the rows  containing data
+    that have the same value (e.g. ID), according
+    to the 'key' passed to 'duplicated_key'.
     This works as a collapse down (from many-to-one rows).
+    Aggregation is possible since multi-value cells are stored as
+    tuples which are hashable.
 
     :param table: pandas DataFrame
-    :param duplicated_key: key to base the 'combine_first' upon
+    :param key: key to base the 'merge down' upon
     :return: modified pandas DataFrame
     """
 
@@ -263,8 +268,8 @@ def variants_combine_first(table, duplicated_key="xrefs_id"):
     duplicated = {}
     drop_indexes = []
     for ix in table.index:
-        pid = table.loc[ix, duplicated_key]
-        dup = table[table[duplicated_key] == pid].index.tolist()
+        pid = table.loc[ix, key]
+        dup = table[table[key] == pid].index.tolist()
         duplicated[pid] = dup
         if len(dup) > 1:
             drop_indexes.append(ix)
@@ -272,12 +277,37 @@ def variants_combine_first(table, duplicated_key="xrefs_id"):
     new_table = new_table.drop(new_table.index[drop_indexes])
     for key, val in duplicated.items():
         if type(val) is list and len(val) > 1:
-            combined = table.loc[val[0], :]
-            for i in range(len(val)):
-                combined = combined.combine_first(table.loc[val[i], :])
+            rows = []
+            d = {}
+            for i in range(len(list(table))):
+                values = []
+                for j in range(len(val)):
+                    v = table.loc[val[j], list(table)[i]]
+                    if v not in values:
+                        if type(v) is tuple or type(v) is list:
+                            for g in v:
+                                values.append(g)
+                        else:
+                            values.append(v)
+                if not values:
+                    values = np.nan
+                elif len(values) == 1:
+                    values = values[0]
+                else:
+                    values = [v for v in values if not pd.isnull(v)]
+                    if not values:
+                        values = np.nan
+                    elif len(values) == 1:
+                        values = values[0]
+                    else:
+                        values = tuple(set(values))
+
+                d[list(table)[i]] = values
+            rows.append(d)
+            combined = pd.DataFrame(rows)
             new_table = new_table.append(combined)
 
-    return new_table.reset_index(drop=True, inplace=True)
+    return new_table.reset_index(drop=True)
 
 
 def table_merger(mmcif_table=None, dssp_table=None, sifts_table=None,
