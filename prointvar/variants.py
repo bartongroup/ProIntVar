@@ -219,9 +219,10 @@ def get_uniprot_id_from_mapping(data, full_entry=False, uniprot_id=None):
         if 'dbname' in entry and 'primary_id' in entry:
             if uniprot_id is not None and entry['primary_id'] == uniprot_id:
                 if full_entry:
-                    uniprots.append(entry)
+                    uniprots = [entry]
                 else:
-                    uniprots.append(entry['primary_id'])
+                    uniprots = [entry['primary_id']]
+                break
             elif entry['dbname'] == 'Uniprot/SWISSPROT':
                 if entry['primary_id'] not in uniprots:
                     if full_entry:
@@ -251,15 +252,19 @@ def get_preferred_uniprot_id_from_mapping(data):
     curr_ix = -1
     prev_identity = 0
     prev_coverage = 0
+    prev_id = "-" * 100
     for ix, entry in enumerate(data):
         if ('ensembl_identity' in entry and 'xref_identity' in entry and
                 'xref_start' in entry and 'xref_end' in entry):
             identity = entry['ensembl_identity'] + entry['xref_identity']
             coverage = entry['xref_end'] - entry['xref_start']
-            if identity + coverage > prev_identity + prev_coverage:
+            if identity + coverage >= prev_identity + prev_coverage:
                 prev_identity = identity
                 prev_coverage = coverage
-                curr_ix = ix
+                # preferring the smallest UniProt ID (for getting variants)
+                if len(entry['primary_id']) < len(prev_id):
+                    prev_id = entry['primary_id']
+                    curr_ix = ix
     if curr_ix != -1 and 'primary_id' in data[curr_ix]:
         best_match = data[curr_ix]['primary_id']
     return best_match
@@ -334,8 +339,8 @@ class VariantsAgreggator(object):
             self.ensembl_id = self._ensembl_id_from_uniprot()
         else:
             self.id_source = 'Ensembl'
-            self.uniprot_id = self._uniprot_id_from_ensembl()
             self.ensembl_id = identifier
+            self.uniprot_id = self._uniprot_id_from_ensembl()
 
     def _get_uniprot_species(self):
         info = fetch_uniprot_species_from_id(self.uniprot_id,
@@ -360,7 +365,7 @@ class VariantsAgreggator(object):
     def _uniprot_id_from_ensembl(self):
 
         info = fetch_ensembl_ensembl_uniprot_mapping(self.ensembl_id,
-                                                     cached=self.cached)
+                                                     cached=self.cached).json()
         data = get_uniprot_id_from_mapping(info, full_entry=True)
         best_match = get_preferred_uniprot_id_from_mapping(data)
         return best_match

@@ -8,8 +8,21 @@ import logging
 import unittest
 import numpy as np
 
+from prointvar.fetchers import (fetch_uniprot_variants_ebi,
+                                fetch_ensembl_transcript_variants,
+                                fetch_uniprot_species_from_id,
+                                fetch_ensembl_ensembl_uniprot_mapping,
+                                fetch_ensembl_uniprot_ensembl_mapping)
+
 from prointvar.variants import (flatten_uniprot_variants_ebi,
-                                collapse_unique_values, flatten_json)
+                                collapse_unique_values, flatten_json,
+                                get_ensembl_species_from_uniprot,
+                                get_uniprot_id_from_mapping,
+                                get_ensembl_protein_id_from_mapping,
+                                get_preferred_uniprot_id_from_mapping,
+                                get_preferred_ensembl_id_from_mapping,
+                                VariantsAgreggator,
+                                flatten_ensembl_variants)
 
 from prointvar.config import config as c
 
@@ -101,24 +114,55 @@ class TestVariants(unittest.TestCase):
     def setUp(self):
         """Initialize the framework for testing."""
 
+        self.uniprotid = "P40227"
+        self.uniprotid2 = "P00439"
+        self.ensemblid = "ENSP00000448059"
         self.data = example_uniprot_variants
         self.flatten_uniprot_variants_ebi = flatten_uniprot_variants_ebi
         self.flatten_json = flatten_json
         self.collapse_unique_values = collapse_unique_values
+        self.get_ensembl_species_from_uniprot = get_ensembl_species_from_uniprot
+        self.get_uniprot_id_from_mapping = get_uniprot_id_from_mapping
+        self.get_ensembl_protein_id_from_mapping = get_ensembl_protein_id_from_mapping
+        self.get_preferred_uniprot_id_from_mapping = get_preferred_uniprot_id_from_mapping
+        self.get_preferred_ensembl_id_from_mapping = get_preferred_ensembl_id_from_mapping
+        self.flatten_ensembl_variants = flatten_ensembl_variants
+        self.vagg = VariantsAgreggator
 
         logging.disable(logging.DEBUG)
 
     def tearDown(self):
         """Remove testing framework."""
 
+        self.uniprotid = None
+        self.uniprotid2 = None
+        self.ensemblid = None
         self.data = None
         self.flatten_uniprot_variants_ebi = None
         self.flatten_json = None
         self.collapse_unique_values = None
+        self.get_ensembl_species_from_uniprot = None
+        self.get_uniprot_id_from_mapping = None
+        self.get_ensembl_protein_id_from_mapping = None
+        self.get_preferred_uniprot_id_from_mapping = None
+        self.get_preferred_ensembl_id_from_mapping = None
+        self.flatten_ensembl_variants = None
+        self.vagg = VariantsAgreggator
 
         logging.disable(logging.NOTSET)
 
     def test_flatten_uniprot_variants_ebi(self):
+        r = fetch_uniprot_variants_ebi(self.uniprotid2, cached=False)
+        if r.ok:
+            table = self.flatten_uniprot_variants_ebi(r)
+            self.assertIn('accession', list(table))
+            self.assertIn('sequence', list(table))
+            self.assertIn('polyphenScore', list(table))
+            self.assertIn('siftScore', list(table))
+            self.assertIn('begin', list(table))
+            self.assertIn('end', list(table))
+
+    def test_flatten_uniprot_variants_ebi_mock(self):
         r = self.flatten_uniprot_variants_ebi(self.data)
 
         # flattening the accession
@@ -158,6 +202,82 @@ class TestVariants(unittest.TestCase):
         self.assertIn('1000Genomes', r['xrefs_name'])
         self.assertIn('rs148616984', r['xrefs_id'])
         self.assertEqual('VARIANT', r['type'])
+
+    def test_get_ensembl_species_from_uniprot(self):
+        data = fetch_uniprot_species_from_id(self.uniprotid)
+        species = self.get_ensembl_species_from_uniprot(data)
+        self.assertEqual(species, 'homo_sapiens')
+
+    def test_get_uniprot_id_from_mapping(self):
+        data = fetch_ensembl_ensembl_uniprot_mapping(self.ensemblid)
+
+        r = self.get_uniprot_id_from_mapping(data.json(), full_entry=False,
+                                             uniprot_id=None)
+        self.assertEqual(r, ['A0A024RBG4', self.uniprotid2])
+
+        r = self.get_uniprot_id_from_mapping(data.json(), full_entry=True,
+                                             uniprot_id=None)
+        self.assertIn('dbname', r[0])
+        self.assertIn('xref_start', r[0])
+        self.assertIn('ensembl_start', r[0])
+
+        r = self.get_uniprot_id_from_mapping(data.json(), full_entry=False,
+                                             uniprot_id=self.uniprotid2)
+        self.assertEqual(r, [self.uniprotid2])
+
+    def test_get_ensembl_protein_id_from_mapping(self):
+        data = fetch_ensembl_uniprot_ensembl_mapping(self.uniprotid2)
+
+        r = self.get_ensembl_protein_id_from_mapping(data.json())
+        self.assertEqual(r, [self.ensemblid])
+
+    def test_preferred_uniprot_id_from_mapping(self):
+        info = fetch_ensembl_ensembl_uniprot_mapping(self.ensemblid,
+                                                     cached=False)
+        data = get_uniprot_id_from_mapping(info.json(), full_entry=True)
+        best_match = get_preferred_uniprot_id_from_mapping(data)
+        self.assertEqual(best_match, 'P00439')
+
+    def test_preferred_ensembl_id_from_mapping(self):
+        data = fetch_uniprot_species_from_id(self.uniprotid)
+        species = self.get_ensembl_species_from_uniprot(data)
+        info = fetch_ensembl_uniprot_ensembl_mapping(self.uniprotid2,
+                                                     cached=False,
+                                                     species=species)
+        r = self.get_ensembl_protein_id_from_mapping(info.json())
+        best_match = self.get_preferred_ensembl_id_from_mapping(r, cached=False)
+        self.assertEqual(best_match, 'ENSP00000448059')
+
+    def test_flatten_ensembl_variants(self):
+        r = fetch_ensembl_transcript_variants(self.ensemblid, cached=False)
+        if r.ok:
+            table = self.flatten_ensembl_variants(r, synonymous=True)
+            self.assertIn('polyphenScore', list(table))
+            self.assertIn('siftScore', list(table))
+            self.assertIn('begin', list(table))
+            self.assertIn('end', list(table))
+
+    def test_variants_agreggator_uniprot(self):
+        v = self.vagg(self.uniprotid2)
+        table = v.run(uniprot_vars=True, synonymous=True,
+                      ensembl_transcript_vars=True,
+                      ensembl_somatic_vars=True)
+
+        self.assertIn('polyphenScore', list(table))
+        self.assertIn('siftScore', list(table))
+        self.assertIn('begin', list(table))
+        self.assertIn('end', list(table))
+
+    def test_variants_agreggator_ensembl(self):
+        v = self.vagg(self.ensemblid, uniprot=False)
+        table = v.run(uniprot_vars=True, synonymous=True,
+                      ensembl_transcript_vars=False,
+                      ensembl_somatic_vars=False)
+
+        self.assertIn('polyphenScore', list(table))
+        self.assertIn('siftScore', list(table))
+        self.assertIn('begin', list(table))
+        self.assertIn('end', list(table))
 
 
 if __name__ == '__main__':
