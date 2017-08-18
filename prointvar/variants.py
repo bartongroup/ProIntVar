@@ -24,6 +24,8 @@ from prointvar.fetchers import InvalidEnsemblSpecies
 from prointvar.merger import uniprot_vars_ensembl_vars_merger
 
 from prointvar.utils import row_selector
+from prointvar.utils import splitting_up_by_key
+from prointvar.utils import merging_down_by_key
 from prointvar.utils import flatten_nested_structure
 from prointvar.utils import refactor_key_val_singletons
 from prointvar.library import uni_ens_var_types
@@ -73,6 +75,12 @@ def flatten_uniprot_variants_ebi(data, excluded=()):
                 # there are some NaNs in there
                 pass
 
+    # split multi id rows
+    table = splitting_up_by_key(table, key='xrefs_id')
+
+    # merge down multi rows with same id
+    table = merging_down_by_key(table, key='xrefs_id')
+
     if table.empty:
         raise ValueError('Variants collapsing resulted in an empty DataFrame...')
 
@@ -115,6 +123,12 @@ def flatten_ensembl_variants(data, excluded=(), synonymous=True):
             except ValueError:
                 # there are some NaNs in there
                 pass
+
+    # split multi id rows
+    table = splitting_up_by_key(table, key='xrefs_id')
+
+    # merge down multi rows with same id
+    table = merging_down_by_key(table, key='xrefs_id')
 
     # filter synonymous
     if not synonymous:

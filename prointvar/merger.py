@@ -230,11 +230,6 @@ def uniprot_vars_ensembl_vars_merger(uniprot_vars_table, ensembl_vars_table):
     merge_on = ['begin', 'end', 'xrefs_id', 'frequency',
                 'consequenceType', 'siftScore', 'polyphenScore']
 
-    uniprot_vars_table = merging_down_by_key(uniprot_vars_table,
-                                             key='xrefs_id')
-
-    ensembl_vars_table = merging_down_by_key(ensembl_vars_table,
-                                             key='xrefs_id')
     if (set(merge_on).issubset(uniprot_vars_table.columns) and
             set(merge_on).issubset(ensembl_vars_table.columns)):
 
