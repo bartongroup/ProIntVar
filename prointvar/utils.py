@@ -508,6 +508,52 @@ def merging_down_by_key(table, key="xrefs_id"):
     return new_table.reset_index(drop=True)
 
 
+def flatten_nested_structure(data, dictionary, keys=None, values=None):
+    """
+    Flattens a deeply nested json structure to unique columns (keys),
+    where columns with multiple values are aggregated to the same column,
+    and the items grouped by order in a list. Also copes with
+
+    :param data: json.load() content
+    :param dictionary: mutable dictionary
+    :param keys: dict keys (used during recursion)
+    :param values: dict values (used during recursion)
+    :return: (side-effects) updates an input dictionary
+    """
+    if type(data) is tuple or type(data) is list:
+        for e in data:
+            flatten_nested_structure(e, dictionary, keys, values)
+    elif type(data) is dict:
+        for k, v in data.items():
+            if keys is not None:
+                k = '_'.join([keys, k])
+            flatten_nested_structure(v, dictionary, k, v)
+    else:
+        if keys is not None and values is not None:
+            if keys not in dictionary:
+                dictionary[keys] = [values]
+            else:
+                if values not in dictionary[keys]:
+                    dictionary[keys].append(values)
+
+
+def refactor_key_val_singletons(dictionary):
+    """
+    Simply updates a dictionary values that are singletons
+    i.e. len(val) == 1:
+
+    :param dictionary: mutable dictionary
+    :return: updated dictionary
+    """
+    new_dictionary = {}
+    for k, v in dictionary.items():
+        if (type(v) is list or type(v) is tuple) and len(v) == 1:
+            new_dictionary[k] = v[0]
+        else:
+            new_dictionary[k] = v
+    return new_dictionary
+
+
 def get_new_pro_ids():
     """
     Both DSSP and arpeggio work with single-letter characters such

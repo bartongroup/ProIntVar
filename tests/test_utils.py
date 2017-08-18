@@ -33,6 +33,8 @@ from prointvar.utils import string_split
 from prointvar.utils import get_new_pro_ids
 from prointvar.utils import row_selector
 from prointvar.utils import merging_down_by_key
+from prointvar.utils import flatten_nested_structure
+from prointvar.utils import refactor_key_val_singletons
 
 from prointvar.config import config as c
 
@@ -117,6 +119,22 @@ class TestUTILS(unittest.TestCase):
                                        {'xrefs_id': 'id2', 'other_key': 245},
                                        {'xrefs_id': 'id3', 'other_key': np.nan}])
 
+        self.flatten_nested_structure = flatten_nested_structure
+        self.refactor_key_val_singletons = refactor_key_val_singletons
+        self.json_mock = {
+            'M1': [{'d1': 1},
+                   {'d1': 2},
+                   {'d2': 3},
+                   {'d3': {'dd3': 'dd3'}}],
+            'M2': 'value',
+            'M3': {'x1':
+                       {'x2': 1, 'x3': 2}
+                   },
+            'M4': 'four',
+            'M5': [1, 2, 3],
+            'M6': {'z1': 'z1'}
+        }
+
         logging.disable(logging.DEBUG)
 
     def tearDown(self):
@@ -139,6 +157,9 @@ class TestUTILS(unittest.TestCase):
         self.row_selector = None
         self.merging_down_by_key = None
         self.vars_mock = None
+        self.flatten_nested_structure = None
+        self.refactor_key_val_singletons = None
+        self.json_mock = None
 
         logging.disable(logging.NOTSET)
 
@@ -190,7 +211,7 @@ class TestUTILS(unittest.TestCase):
         self.assertEqual(r, json.loads('{"data": "some json formatted output"}'))
 
     def test_fetch_from_url_or_retry_get_binary(self):
-                # mocked requests
+        # mocked requests
         identifier = "P00439"
         base_url = c.http_uniprot
         endpoint_url = "{}.fasta".format(identifier)
@@ -361,6 +382,60 @@ class TestUTILS(unittest.TestCase):
         self.assertEqual(table.loc[0, 'xrefs_id'], 'id1')
         self.assertEqual(table.loc[1, 'other_key'], (123, 245))
         self.assertEqual(table.loc[2, 'other_key'], 'string')
+
+    def test_flatten_nested_structure(self):
+        data = {}
+        self.flatten_nested_structure(self.json_mock, data)
+        # keys
+        self.assertIn('M1_d1', data)
+        self.assertIn('M1_d2', data)
+        self.assertIn('M1_d3_dd3', data)
+        self.assertNotIn('M1', data)
+        self.assertIn('M2', data)
+        self.assertIn('M3_x1_x2', data)
+        self.assertIn('M3_x1_x3', data)
+        self.assertNotIn('M3', data)
+        self.assertIn('M4', data)
+        self.assertIn('M5', data)
+        self.assertIn('M6_z1', data)
+        # values
+        self.assertEqual(data['M1_d1'], [1, 2])
+        self.assertEqual(data['M1_d2'], [3])
+        self.assertEqual(data['M1_d3_dd3'], ['dd3'])
+        self.assertEqual(data['M2'], ['value'])
+        self.assertEqual(data['M3_x1_x2'], [1])
+        self.assertEqual(data['M3_x1_x3'], [2])
+        self.assertEqual(data['M4'], ['four'])
+        self.assertEqual(data['M5'], [[1, 2, 3]])
+        self.assertEqual(data['M6_z1'], ['z1'])
+
+    def test_refactor_key_val_singletons(self):
+        data = {}
+        self.flatten_nested_structure(self.json_mock, data)
+        data = self.refactor_key_val_singletons(data)
+        # keys
+        self.assertIn('M1_d1', data)
+        self.assertIn('M1_d2', data)
+        self.assertIn('M1_d3_dd3', data)
+        self.assertNotIn('M1', data)
+        self.assertIn('M2', data)
+        self.assertIn('M3_x1_x2', data)
+        self.assertIn('M3_x1_x3', data)
+        self.assertNotIn('M3', data)
+        self.assertIn('M4', data)
+        self.assertIn('M5', data)
+        self.assertIn('M6_z1', data)
+        # values
+        self.assertEqual(data['M1_d1'], [1, 2])
+        self.assertEqual(data['M1_d2'], 3)
+        self.assertEqual(data['M1_d3_dd3'], 'dd3')
+        self.assertEqual(data['M2'], 'value')
+        self.assertEqual(data['M3_x1_x2'], 1)
+        self.assertEqual(data['M3_x1_x3'], 2)
+        self.assertEqual(data['M4'], 'four')
+        self.assertEqual(data['M5'], [1, 2, 3])
+        self.assertEqual(data['M6_z1'], 'z1')
+
 
 if __name__ == '__main__':
     logging.basicConfig(stream=sys.stderr)
