@@ -14,8 +14,9 @@ from prointvar.fetchers import (fetch_uniprot_variants_ebi,
                                 fetch_ensembl_ensembl_uniprot_mapping,
                                 fetch_ensembl_uniprot_ensembl_mapping)
 
+from prointvar.utils import flatten_nested_structure, refactor_key_val_singletons
+
 from prointvar.variants import (flatten_uniprot_variants_ebi,
-                                collapse_unique_values, flatten_json,
                                 get_ensembl_species_from_uniprot,
                                 get_uniprot_id_from_mapping,
                                 get_ensembl_protein_id_from_mapping,
@@ -119,8 +120,6 @@ class TestVariants(unittest.TestCase):
         self.ensemblid = "ENSP00000448059"
         self.data = example_uniprot_variants
         self.flatten_uniprot_variants_ebi = flatten_uniprot_variants_ebi
-        self.flatten_json = flatten_json
-        self.collapse_unique_values = collapse_unique_values
         self.get_ensembl_species_from_uniprot = get_ensembl_species_from_uniprot
         self.get_uniprot_id_from_mapping = get_uniprot_id_from_mapping
         self.get_ensembl_protein_id_from_mapping = get_ensembl_protein_id_from_mapping
@@ -139,8 +138,6 @@ class TestVariants(unittest.TestCase):
         self.ensemblid = None
         self.data = None
         self.flatten_uniprot_variants_ebi = None
-        self.flatten_json = None
-        self.collapse_unique_values = None
         self.get_ensembl_species_from_uniprot = None
         self.get_uniprot_id_from_mapping = None
         self.get_ensembl_protein_id_from_mapping = None
@@ -181,20 +178,8 @@ class TestVariants(unittest.TestCase):
 
     def test_flatten_json(self):
         modified = {}
-        self.flatten_json(self.data['features'][0], modified)
-        self.assertIn('1_xrefs_name', modified)
-        self.assertIn('2_xrefs_name', modified)
-        self.assertIn('3_xrefs_name', modified)
-        self.assertIn('1_xrefs_id', modified)
-        self.assertIn('2_xrefs_id', modified)
-        self.assertIn('3_xrefs_id', modified)
-        self.assertEqual('1000Genomes', modified['1_xrefs_name'])
-        self.assertEqual('rs148616984', modified['1_xrefs_id'])
-
-    def test_collapse_unique_values(self):
-        modified = {}
-        self.flatten_json(self.data['features'][0], modified)
-        r = self.collapse_unique_values(modified)
+        flatten_nested_structure(self.data['features'][0], modified)
+        r = refactor_key_val_singletons(modified)
         self.assertIn('type', r)
         self.assertIn('xrefs_name', r)
         self.assertIn('xrefs_id', r)
