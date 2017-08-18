@@ -16,6 +16,7 @@ import re
 import sys
 import time
 import json
+import copy
 import logging
 import requests
 import numpy as np
@@ -452,7 +453,7 @@ def merging_down_by_key(table, key="xrefs_id"):
     """
     Helper method that mergers the rows  containing data
     that have the same value (e.g. ID), according
-    to the 'key' passed to 'duplicated_key'.
+    to the 'key' passed to function.
     This works as a collapse down (from many-to-one rows).
     Aggregation is possible since multi-value cells are stored as
     tuples which are hashable.
@@ -504,6 +505,33 @@ def merging_down_by_key(table, key="xrefs_id"):
             rows.append(d)
             combined = pd.DataFrame(rows)
             new_table = new_table.append(combined)
+
+    return new_table.reset_index(drop=True)
+
+
+def splitting_up_by_key(table, key="xrefs_id"):
+    """
+    Helper method that splits the rows containing
+    multi-value entries (e.g. [ID_1, ID_2]), according
+    to the 'key' passed to the function.
+
+    :param table: pandas DataFrame
+    :param key: key to base the 'split up' upon
+    :return: modified pandas DataFrame
+    """
+    rows = []
+    for ix in table.index:
+        entries = {k: table.loc[ix, k] for k in list(table)}
+        val = table.loc[ix, key]
+        if type(val) is tuple or type(val) is list:
+            for v in val:
+                nentries = copy.deepcopy(entries)
+                nentries[key] = v
+                rows.append(nentries)
+        else:
+            rows.append(entries)
+
+    new_table = pd.DataFrame(rows)
 
     return new_table.reset_index(drop=True)
 

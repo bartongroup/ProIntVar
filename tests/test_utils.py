@@ -33,6 +33,7 @@ from prointvar.utils import string_split
 from prointvar.utils import get_new_pro_ids
 from prointvar.utils import row_selector
 from prointvar.utils import merging_down_by_key
+from prointvar.utils import splitting_up_by_key
 from prointvar.utils import flatten_nested_structure
 from prointvar.utils import refactor_key_val_singletons
 
@@ -112,12 +113,15 @@ class TestUTILS(unittest.TestCase):
         self.get_new_pro_ids = get_new_pro_ids
         self.row_selector = row_selector
         self.merging_down_by_key = merging_down_by_key
+        self.splitting_up_by_key = splitting_up_by_key
         self.vars_mock = pd.DataFrame([{'xrefs_id': 'id1', 'other_key': []},
                                        {'xrefs_id': 'id2', 'other_key': 123},
                                        {'xrefs_id': 'id1', 'other_key': []},
                                        {'xrefs_id': 'id3', 'other_key': 'string'},
                                        {'xrefs_id': 'id2', 'other_key': 245},
                                        {'xrefs_id': 'id3', 'other_key': np.nan}])
+        self.vars_mock2 = pd.DataFrame([{'xrefs_id': ['id1', 'id2'], 'other_key': 123},
+                                        {'xrefs_id': ['id1', 'id2', 'id3'], 'other_key': 456}])
 
         self.flatten_nested_structure = flatten_nested_structure
         self.refactor_key_val_singletons = refactor_key_val_singletons
@@ -156,7 +160,9 @@ class TestUTILS(unittest.TestCase):
         self.get_new_pro_ids = None
         self.row_selector = None
         self.merging_down_by_key = None
+        self.splitting_up_by_key = None
         self.vars_mock = None
+        self.vars_mock2 = None
         self.flatten_nested_structure = None
         self.refactor_key_val_singletons = None
         self.json_mock = None
@@ -375,13 +381,28 @@ class TestUTILS(unittest.TestCase):
         d = self.row_selector(data, key='value', value=(2, 3), method='isin')
         self.assertEqual(len(d.index), 2)
 
-    def test_test_merging_down_by_key(self):
+    def test_merging_down_by_key(self):
         table = self.merging_down_by_key(self.vars_mock, key='xrefs_id')
         self.assertEqual(len(self.vars_mock), 6)
         self.assertEqual(len(table), 3)
         self.assertEqual(table.loc[0, 'xrefs_id'], 'id1')
         self.assertEqual(table.loc[1, 'other_key'], (123, 245))
         self.assertEqual(table.loc[2, 'other_key'], 'string')
+
+    def test_splitting_up_by_key(self):
+        table = self.splitting_up_by_key(self.vars_mock2, key='xrefs_id')
+        self.assertEqual(len(self.vars_mock2), 2)
+        self.assertEqual(len(table), 5)
+        self.assertEqual(table.loc[0, 'xrefs_id'], 'id1')
+        self.assertEqual(table.loc[1, 'xrefs_id'], 'id2')
+        self.assertEqual(table.loc[0, 'other_key'], 123)
+        self.assertEqual(table.loc[1, 'other_key'], 123)
+        self.assertEqual(table.loc[2, 'xrefs_id'], 'id1')
+        self.assertEqual(table.loc[3, 'xrefs_id'], 'id2')
+        self.assertEqual(table.loc[4, 'xrefs_id'], 'id3')
+        self.assertEqual(table.loc[2, 'other_key'], 456)
+        self.assertEqual(table.loc[3, 'other_key'], 456)
+        self.assertEqual(table.loc[4, 'other_key'], 456)
 
     def test_flatten_nested_structure(self):
         data = {}
