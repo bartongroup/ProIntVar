@@ -323,6 +323,11 @@ class VariantsAgreggator(object):
     def run(self, synonymous=True, uniprot_vars=True,
             ensembl_transcript_vars=True, ensembl_somatic_vars=True):
 
+        uni_vars = None
+        trans_vars = None
+        som_vars = None
+        ens_vars = None
+
         if self.uniprot_id is not None and uniprot_vars:
             r = fetch_uniprot_variants_ebi(self.uniprot_id, cached=self.cached)
             if r is not None:
@@ -343,28 +348,23 @@ class VariantsAgreggator(object):
                 if r is not None:
                     som_vars = flatten_ensembl_variants(r, synonymous=synonymous)
 
-            if ensembl_transcript_vars and ensembl_somatic_vars:
+            if isinstance(trans_vars, pd.DataFrame) and isinstance(som_vars, pd.DataFrame):
                 ens_vars = pd.concat([trans_vars, som_vars]).reset_index(drop=True)
-            elif ensembl_transcript_vars:
+            elif isinstance(trans_vars, pd.DataFrame):
                 ens_vars = trans_vars
-            elif ensembl_somatic_vars:
+            elif isinstance(som_vars, pd.DataFrame):
                 ens_vars = som_vars
 
-        if ((self.uniprot_id is not None and uniprot_vars) and
-                (self.ensembl_id is not None and
-                    (ensembl_transcript_vars or ensembl_somatic_vars))):
+        if isinstance(uni_vars, pd.DataFrame) and isinstance(ens_vars, pd.DataFrame):
             self.data = uniprot_vars_ensembl_vars_merger(uni_vars, ens_vars)
-        elif self.uniprot_id is not None and uniprot_vars:
+        elif isinstance(uni_vars, pd.DataFrame):
             self.data = uni_vars
-        elif (self.ensembl_id is not None and
-                (ensembl_transcript_vars or ensembl_somatic_vars)):
+        elif isinstance(ens_vars, pd.DataFrame):
             self.data = ens_vars
         else:
-            raise ValueError('At least one of the variant sources needs to be used...')
+            logger.info('No variants found...')
+            self.data = pd.DataFrame()
 
-        if self.data.empty:
-            message = 'Resulted in an empty DataFrame...'
-            raise ValueError(message)
         return self.data
 
 
