@@ -102,7 +102,7 @@ def dssp_sifts_table_merger(dssp_table, sifts_table):
     """
     Merge the DSSP and SIFTS tables.
     
-    :param dssp_table: mmCIF pandas DataFrame
+    :param dssp_table: DSSP pandas DataFrame
     :param sifts_table: SIFTS pandas DataFrame
     :return: merged pandas DataFrame
     """
