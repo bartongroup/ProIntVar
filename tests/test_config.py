@@ -6,6 +6,7 @@ import os
 import sys
 import logging
 import unittest
+
 try:
     from mock import patch
 except ImportError:
@@ -13,7 +14,6 @@ except ImportError:
 
 from prointvar.config import Defaults
 from prointvar.config import config
-
 
 mock_config = """\
 [Global]

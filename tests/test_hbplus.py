@@ -22,6 +22,7 @@ from prointvar.hbplus import (HBPLUSreader, HBPLUSrunner,
                               get_hbplus_selected_from_table)
 
 from prointvar.config import config as c
+
 root = os.path.abspath(os.path.dirname(__file__))
 c.db_root = "{}/testdata/".format(root)
 

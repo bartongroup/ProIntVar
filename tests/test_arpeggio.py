@@ -29,6 +29,7 @@ from prointvar.arpeggio import (ARPEGGIOreader, ARPEGGIOrunner,
                                 add_special_cont_types)
 
 from prointvar.config import config as c
+
 root = os.path.abspath(os.path.dirname(__file__))
 c.db_root = "{}/testdata/".format(root)
 

@@ -34,6 +34,7 @@ from prointvar.merger import (TableMerger, table_merger,
                               uniprot_vars_ensembl_vars_merger)
 
 from prointvar.config import config as c
+
 root = os.path.abspath(os.path.dirname(__file__))
 c.db_root = "{}/testdata/".format(root)
 

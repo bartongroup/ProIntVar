@@ -23,6 +23,7 @@ from prointvar.dssp import (DSSPreader, DSSPrunner,
                             add_dssp_ss_reduced)
 
 from prointvar.config import config as c
+
 root = os.path.abspath(os.path.dirname(__file__))
 c.db_root = "{}/testdata/".format(root)
 

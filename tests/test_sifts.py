@@ -23,6 +23,7 @@ from prointvar.sifts import (SIFTSreader, parse_sifts_residues_from_file,
                              parse_sifts_dbs_from_file)
 
 from prointvar.config import config as c
+
 root = os.path.abspath(os.path.dirname(__file__))
 c.db_root = "{}/testdata/".format(root)
 
@@ -159,13 +160,13 @@ class TestSIFTS(unittest.TestCase):
     def test_filter_uniprot_id(self):
         reader = self.reader(self.inputsifts)
         reader.read(add_regions=False, add_dbs=False)
-        data = self.filter(reader.data, uniprot=('P00439', ))
+        data = self.filter(reader.data, uniprot=('P00439',))
         self.assertEqual("P00439", data.loc[0, 'UniProt_dbAccessionId'])
 
     def test_filter_chain(self):
         reader = self.reader(self.inputsifts)
         reader.read(add_regions=False, add_dbs=False)
-        data = self.filter(reader.data, chain=('A', ))
+        data = self.filter(reader.data, chain=('A',))
         self.assertIn("A", data.PDB_entityId.unique())
         self.assertNotIn("B", data.PDB_entityId.unique())
 

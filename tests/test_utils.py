@@ -53,6 +53,7 @@ def captured_output():
 
 class FakeDatetime(datetime):
     """A manipulable date replacement"""
+
     def __new__(cls, *args, **kwargs):
         return datetime.__new__(datetime, *args, **kwargs)
 
@@ -65,7 +66,7 @@ def response_mocker(kwargs, base_url, endpoint_url, status=200,
     """
 
     url = re.sub('\{\{(?P<m>[a-zA-Z_]+)\}\}', lambda m: "%s" % kwargs.get(m.group(1)),
-                      base_url + endpoint_url)
+                 base_url + endpoint_url)
     with responses.RequestsMock() as rsps:
         if post:
             rsps.add(responses.POST, url,
@@ -276,7 +277,7 @@ class TestUTILS(unittest.TestCase):
         self.fetch_from_url_or_retry = MagicMock(return_value=response)
         url = base_url + endpoint_url
         r = self.fetch_from_url_or_retry(url, json=True, header={'text/plain'},
-                                         retry_in=(500, ), wait=1,
+                                         retry_in=(500,), wait=1,
                                          n_retries=10, stream=False)
         self.assertEqual(r.status_code, 500)
         self.assertFalse(r.ok)

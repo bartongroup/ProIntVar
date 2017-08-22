@@ -263,14 +263,14 @@ class TestPDBX(unittest.TestCase):
     def test_filter_chain_id(self):
         reader = self.reader(self.inputcif)
         reader.atoms()
-        data = self.filter(reader.data, chain=('A', ))
+        data = self.filter(reader.data, chain=('A',))
         self.assertIn("A", data.label_asym_id.unique())
         self.assertNotIn("B", data.label_asym_id.unique())
 
     def test_filter_atom_lines(self):
         reader = self.reader(self.inputcif)
         reader.atoms()
-        data = self.filter(reader.data, lines=('ATOM', ))
+        data = self.filter(reader.data, lines=('ATOM',))
         self.assertIn("ATOM", data.group_PDB.unique())
         self.assertNotIn("HETATM", data.group_PDB.unique())
 
@@ -394,7 +394,7 @@ class TestPDBX(unittest.TestCase):
                 os.remove(self.outputcif)
             except FileNotFoundError:
                 pass
-            self.writer(self.inputcif, self.outputcif).run(lines=('HETATM', ))
+            self.writer(self.inputcif, self.outputcif).run(lines=('HETATM',))
             self.assertTrue(os.path.isfile(self.outputcif))
             # reading the output
             reader = self.reader(self.outputcif)
@@ -619,7 +619,6 @@ class TestPDBX(unittest.TestCase):
         self.assertEqual('N', data.loc[0, 'type_symbol'])
 
     def test_get_coordinates_pdbx(self):
-
         r = PDBXreader(inputfile=self.inputcif)
         table = r.atoms(format_type="mmcif")
         self.assertTrue(isinstance(table, pd.DataFrame))
