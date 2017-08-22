@@ -26,10 +26,11 @@ from prointvar.pdbx import (PDBXreader, PDBXwriter, parse_mmcif_atoms_from_file,
                             get_mmcif_res_split, get_atom_line, write_pdb_from_table,
                             add_mmcif_atom_altloc, residues_aggregation,
                             remove_multiple_altlocs, add_mmcif_new_pro_ids,
-                            remove_partial_residues,
+                            remove_partial_residues, get_coordinates,
                             fix_label_alt_id, fix_pdb_ins_code, fix_type_symbol)
 
 from prointvar.config import config as c
+
 root = os.path.abspath(os.path.dirname(__file__))
 c.db_root = "{}/testdata/".format(root)
 
@@ -74,6 +75,7 @@ class TestPDBX(unittest.TestCase):
         self.fix_label_alt_id = fix_label_alt_id
         self.fix_pdb_ins_code = fix_pdb_ins_code
         self.fix_type_symbol = fix_type_symbol
+        self.get_coordinates = get_coordinates
 
         logging.disable(logging.DEBUG)
 
@@ -112,6 +114,7 @@ class TestPDBX(unittest.TestCase):
         self.fix_label_alt_id = None
         self.fix_pdb_ins_code = None
         self.fix_type_symbol = None
+        self.get_coordinates = None
 
         logging.disable(logging.NOTSET)
 
@@ -612,6 +615,24 @@ class TestPDBX(unittest.TestCase):
         data = self.fix_type_symbol(data)
         self.assertEqual(1, data.loc[0, 'id'])
         self.assertEqual('N', data.loc[0, 'type_symbol'])
+
+    def test_get_coordinates_pdbx(self):
+
+        r = PDBXreader(inputfile=self.inputcif)
+        table = r.atoms(format_type="mmcif")
+        self.assertTrue(isinstance(table, pd.DataFrame))
+
+        atoms = [table.loc[i, 'type_symbol'] for i in table.index]
+        self.assertEqual('N', atoms[0])
+        self.assertEqual('C', atoms[1])
+        self.assertEqual('C', atoms[2])
+
+        coords = self.get_coordinates(table)
+        self.assertEqual(len(atoms), len(coords))
+        self.assertEqual([-7.069, 21.943, 18.77], coords[0].tolist())
+        self.assertEqual([-7.077, 21.688, 20.244], coords[1].tolist())
+        self.assertEqual([-5.756, 21.077, 20.7], coords[2].tolist())
+
 
 if __name__ == '__main__':
     logging.basicConfig(stream=sys.stderr)
