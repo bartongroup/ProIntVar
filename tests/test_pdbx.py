@@ -26,7 +26,7 @@ from prointvar.pdbx import (PDBXreader, PDBXwriter, parse_mmcif_atoms_from_file,
                             get_mmcif_res_split, get_atom_line, write_pdb_from_table,
                             add_mmcif_atom_altloc, residues_aggregation,
                             remove_multiple_altlocs, add_mmcif_new_pro_ids,
-                            remove_partial_residues, get_coordinates,
+                            remove_partial_residues, get_coordinates, get_sequence,
                             fix_label_alt_id, fix_pdb_ins_code, fix_type_symbol)
 
 from prointvar.config import config as c
@@ -76,6 +76,7 @@ class TestPDBX(unittest.TestCase):
         self.fix_pdb_ins_code = fix_pdb_ins_code
         self.fix_type_symbol = fix_type_symbol
         self.get_coordinates = get_coordinates
+        self.get_sequence = get_sequence
 
         logging.disable(logging.DEBUG)
 
@@ -115,6 +116,7 @@ class TestPDBX(unittest.TestCase):
         self.fix_pdb_ins_code = None
         self.fix_type_symbol = None
         self.get_coordinates = None
+        self.get_sequence = None
 
         logging.disable(logging.NOTSET)
 
@@ -632,6 +634,16 @@ class TestPDBX(unittest.TestCase):
         self.assertEqual([-7.069, 21.943, 18.77], coords[0].tolist())
         self.assertEqual([-7.077, 21.688, 20.244], coords[1].tolist())
         self.assertEqual([-5.756, 21.077, 20.7], coords[2].tolist())
+
+    def test_get_sequence_pdbx(self):
+        r = PDBXreader(inputfile=self.inputcif)
+        table = r.atoms(format_type="mmcif")
+        self.assertTrue(isinstance(table, pd.DataFrame))
+        table = self.filter(table, chain=('A',), lines=('ATOM',))
+        table = self.residues_aggregation(table)
+        seq = self.get_sequence(table)
+        self.assertEqual(329, len(seq))
+        self.assertEqual('VECGFHEDNIPQLLEDVSQFLQTDC', seq[0:25])
 
 
 if __name__ == '__main__':

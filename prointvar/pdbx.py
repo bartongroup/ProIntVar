@@ -24,8 +24,10 @@ from collections import OrderedDict
 from prointvar.utils import row_selector
 from prointvar.utils import string_split
 from prointvar.utils import get_new_pro_ids
+from prointvar.utils import check_sequence
 from prointvar.library import mmcif_types
 from prointvar.library import aa_default_atoms
+from prointvar.library import aa_codes_3to1_extended
 
 logger = logging.getLogger("prointvar")
 
@@ -935,6 +937,33 @@ def get_coordinates(table):
     else:
         return ValueError("Pandas DataFrame is not valid...")
     return coords
+
+
+def get_sequence(table, category="label", ambiguous='X'):
+    """
+    Get the sequence for the PDBx table.
+
+    :param table: pandas DataFrame from PDBXreader
+    :param category: data category to be used as precedence in _atom_site.*_*
+        asym_id, seq_id and atom_id
+    :param ambiguous: (str) 1-letter symbol for ambiguous residues
+    :returns: (str) 1-letter sequence
+    """
+
+    # assumes it's a valid PDBx table
+    if isinstance(table, pd.DataFrame):
+        sequence = ""
+        for ix in table.index:
+            aa3 = table.loc[ix, "{}_comp_id".format(category)]
+            aa1 = aa_codes_3to1_extended[aa3]
+            if len(aa1) == 1:
+                sequence += aa1
+            else:
+                sequence += 'X'
+        sequence = check_sequence(sequence=sequence, ambiguous=ambiguous)
+    else:
+        return ValueError("Pandas DataFrame is not valid...")
+    return sequence
 
 
 class PDBXreader(object):
