@@ -9,7 +9,6 @@ Fábio Madeira, 2017+
 
 """
 
-
 import os
 import json
 import logging
@@ -30,7 +29,6 @@ from prointvar.library import dssp_types
 from prointvar.config import config
 
 logger = logging.getLogger("prointvar")
-
 
 """
 Useful info from http://web.expasy.org/docs/userman.html#FT_line
@@ -144,7 +142,7 @@ def parse_dssp_from_file(inputfile, excluded=(), add_full_chain=True, add_ss_red
               (115, 123), (123, 130), (130, 137))
 
     all_str = {key: str for key in header}
-    table = pd.read_fwf(StringIO(lines), names=header, colspecs=widths, # skiprows=28
+    table = pd.read_fwf(StringIO(lines), names=header, colspecs=widths,  # skiprows=28
                         compression=None, converters=all_str, keep_default_na=False)
 
     # table modular extensions
@@ -444,7 +442,7 @@ class DSSPrunner(object):
                         w = PDBXwriter(inputfile=None, outputfile=outputpdb)
                         try:
                             w.run(data=data, chain=(chain,), res=None, atom=None,
-                                  lines=('ATOM', ), override=override, format_type="pdb")
+                                  lines=('ATOM',), override=override, format_type="pdb")
                         except ValueError:
                             # skipping only HETATM chains or (generally) empty tables
                             continue

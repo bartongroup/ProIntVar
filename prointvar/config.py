@@ -55,7 +55,6 @@ config = Defaults()
 @click.command()
 @click.argument("filename")
 def config_setup(filename):
-
     if os.path.isfile(filename):
         click.confirm("Config file already exist. Do you want to override it?",
                       abort=True)
@@ -71,7 +70,6 @@ def config_setup(filename):
 @click.confirmation_option()
 @click.argument("filename")
 def config_load(filename):
-
     if not os.path.isfile(filename):
         raise IOError("{filename} not available!")
 

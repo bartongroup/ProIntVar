@@ -350,9 +350,9 @@ def add_contact_info(data, info, col_name="Amide-Amide", int_type="res-res"):
         return "_".join([data[k] for k in keys])
 
     table.is_copy = False
-    table['a2b'] = table.apply(new_column, axis=1, args=(a2b, ))
-    table['b2a'] = table.apply(new_column, axis=1, args=(b2a, ))
-    info['a2b'] = info.apply(new_column, axis=1, args=(a2b, ))
+    table['a2b'] = table.apply(new_column, axis=1, args=(a2b,))
+    table['b2a'] = table.apply(new_column, axis=1, args=(b2a,))
+    info['a2b'] = info.apply(new_column, axis=1, args=(a2b,))
 
     conts = []
     for ix in info.index:
@@ -524,7 +524,7 @@ def collapsed_contacts(data, col_method='full'):
     col_names = [k for k in list(arpeggio_col_renames.values()) if k in table]
     if col_method == 'minimal':
         col_min = (
-            "Steric-Clash",  "VDW-Bond", "Hydrogen-Bond", "Halogen-Bond", "Ionic-Bond",
+            "Steric-Clash", "VDW-Bond", "Hydrogen-Bond", "Halogen-Bond", "Ionic-Bond",
             "Aromatic-Bond", "Hydrophobic-Bond", "Carbonyl-Bond", "Polar-Bond",
             "Amide-Amide", "Amide-Aromatic", "Aromatic-Aromatic", "Atom-Ring",
         )
@@ -685,16 +685,16 @@ class ARPEGGIOrunner(object):
 
         filename, extension = os.path.splitext(self.inputfile)
         input_arpeggio = filename + ".pdb"
-        output_arpeggio = filename + ".contacts" # atom-atom contact information
+        output_arpeggio = filename + ".contacts"  # atom-atom contact information
         output_bs_contacts = filename + ".bs_contacts"
-        output_atomtypes = filename + ".atomtypes" # atom types
+        output_atomtypes = filename + ".atomtypes"  # atom types
         output_hydro = filename + "_hydrogenated.pdb"
 
-        output_amam = filename + ".amam" # res-res amide-amide
-        output_amri = filename + ".amri" # res-res amide-ring
-        output_ari = filename + ".ari" # atom-res atom-ring
-        output_ri = filename + ".ri" # res-res aromatic ring-aromatic ring
-        output_rings = filename + ".rings" # list of res rings
+        output_amam = filename + ".amam"  # res-res amide-amide
+        output_amri = filename + ".amri"  # res-res amide-ring
+        output_ari = filename + ".ari"  # atom-res atom-ring
+        output_ri = filename + ".ri"  # res-res aromatic ring-aromatic ring
+        output_rings = filename + ".rings"  # list of res rings
         output_residue_sifts = filename + ".residue_sifts"
         output_sift = filename + ".sift"
         output_siftmatch = filename + ".siftmatch"

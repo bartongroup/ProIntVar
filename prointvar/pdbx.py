@@ -660,6 +660,7 @@ def fix_type_symbol(data):
             return data[key]
         else:
             return ''.join([x for x in data[key_fix] if x in ascii_uppercase])[0]
+
     table.is_copy = False
     table['type_symbol'] = table.apply(get_type_symbol, axis=1,
                                        args=('type_symbol', 'label_atom_id'))
@@ -686,9 +687,9 @@ def add_mmcif_atom_altloc(data):
 
     data.is_copy = False
     data['label_atom_altloc_id'] = data.apply(join_atom_altloc,
-                                              axis=1, args=('label', ))
+                                              axis=1, args=('label',))
     data['auth_atom_altloc_id'] = data.apply(join_atom_altloc,
-                                             axis=1, args=('auth', ))
+                                             axis=1, args=('auth',))
     return data
 
 

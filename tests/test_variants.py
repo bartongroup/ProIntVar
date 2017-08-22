@@ -25,11 +25,6 @@ from prointvar.variants import (flatten_uniprot_variants_ebi,
                                 VariantsAgreggator,
                                 flatten_ensembl_variants)
 
-from prointvar.config import config as c
-
-root = os.path.abspath(os.path.dirname(__file__))
-c.db_root = "{}/testdata/".format(root)
-
 example_uniprot_variants = {
     'accession': 'P40227',
     'entryName': 'TCPZ_HUMAN',

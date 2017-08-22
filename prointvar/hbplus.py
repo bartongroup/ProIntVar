@@ -9,7 +9,6 @@ Fábio Madeira, 2017+
 
 """
 
-
 import os
 import json
 import shutil
@@ -79,6 +78,7 @@ def parse_hb2_from_file(inputfile, excluded=()):
         if resid[0] == "0":
             resid = resid[1:]
         return resid
+
     table.is_copy = False
     table['RES_D'] = table.apply(fix_res_id, axis=1, args=('RES_D',))
     table['RES_A'] = table.apply(fix_res_id, axis=1, args=('RES_A',))
@@ -229,7 +229,7 @@ class HBPLUSrunner(object):
         output_clean_log = basename + ".clean.log"
         output_hbplus = basename + ".hb2"
         output_hbplus_log = basename + ".hbplus.log"
-        output_hbplus_h = basename + ".h" # '-o' option
+        output_hbplus_h = basename + ".h"  # '-o' option
         # output_hbplus_hhb = basename + ".hhb" # '-L' option
 
         # it is recommended that the clean tool is run before calling hbplus
