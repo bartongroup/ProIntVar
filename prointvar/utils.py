@@ -37,6 +37,13 @@ from prointvar.library import aa_codes_1to3_extended
 logger = logging.getLogger("prointvar")
 
 
+class Make:
+    """Variable factory"""
+    def __getattr__(self, name):
+        self.__dict__[name] = Make()
+        return self.__dict__[name]
+
+
 def string_split(s):
     """
     Splits string on numbers. Example:
@@ -270,6 +277,19 @@ def check_sequence(sequence, gap_symbol='-', new_gap_symbol='-', ambiguous='X'):
     return new_sequence
 
 
+def is_gap(aa, gap_symbol='-'):
+    """
+    Tests if residue is a gap or not.
+
+    :param aa: (str) ith sequence char
+    :param gap_symbol: (str)
+    :return: Boolean
+    """
+    if aa == gap_symbol:
+        return True
+    return False
+
+
 def count_mismatches(sequence1, sequence2):
     """
     Counts the number of mismatches between two sequences
@@ -344,6 +364,47 @@ def get_pairwise_alignment(sequence1, sequence2, method="global",
         raise AssertionError("Error: Something went wrong when trying to align sequences...")
 
     return sequence1, sequence2
+
+
+def get_pairwise_indexes(sequence1, sequence2):
+    """
+    Returns the index of the matching re-aligned (re-positioned)
+    elements of sequence 1 and sequence 2. Also returns the indexes
+    of the mismatched positions, that are then used to drop rows in
+    a pandas DataFrame.
+
+    :param sequence1: (str) sequence
+    :param sequence2: (str) sequence
+    :return: two lists of indexes
+    """
+
+    match_ix1 = []
+    match_ix2 = []
+    drop_ix1 = []
+    drop_ix2 = []
+    i = -1
+    for a, b in zip(sequence1, sequence2):
+        i += 1
+        gap_a = is_gap(a, gap_symbol='X')
+        gap_b = is_gap(b, gap_symbol='X')
+
+        if not gap_a and not gap_b:
+            match_ix1.append(i)
+            match_ix2.append(i)
+        elif gap_a:
+            drop_ix2.append(i)
+        elif gap_b:
+            drop_ix1.append(i)
+
+    drop = Make()
+    match = Make()
+
+    match.ix1 = match_ix1
+    match.ix2 = match_ix2
+    drop.ix1 = drop_ix1
+    drop.ix2 = drop_ix2
+
+    return match, drop
 
 
 def get_rsa_class(rsa):

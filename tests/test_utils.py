@@ -36,6 +36,8 @@ from prointvar.utils import merging_down_by_key
 from prointvar.utils import splitting_up_by_key
 from prointvar.utils import flatten_nested_structure
 from prointvar.utils import refactor_key_val_singletons
+from prointvar.utils import is_gap
+from prointvar.utils import get_pairwise_indexes
 
 from prointvar.config import config as c
 
@@ -139,6 +141,8 @@ class TestUTILS(unittest.TestCase):
             'M5': [1, 2, 3],
             'M6': {'z1': 'z1'}
         }
+        self.is_gap = is_gap
+        self.get_pairwise_indexes = get_pairwise_indexes
 
         logging.disable(logging.DEBUG)
 
@@ -167,6 +171,8 @@ class TestUTILS(unittest.TestCase):
         self.flatten_nested_structure = None
         self.refactor_key_val_singletons = None
         self.json_mock = None
+        self.is_gap = None
+        self.get_pairwise_indexes = None
 
         logging.disable(logging.NOTSET)
 
@@ -457,6 +463,24 @@ class TestUTILS(unittest.TestCase):
         self.assertEqual(data['M4'], 'four')
         self.assertEqual(data['M5'], [1, 2, 3])
         self.assertEqual(data['M6_z1'], 'z1')
+
+    def test_is_gap(self):
+        self.assertTrue(self.is_gap('-'))
+        self.assertFalse(self.is_gap('A'))
+        self.assertFalse(self.is_gap('-', gap_symbol='*'))
+
+    def test_get_pairwise_indexes(self):
+        sequence1 = "TPEDIKKLCDWRPLLLLVIPLRMGINS-INPVYIQ--"
+        sequence2 = "--EDISN---WRPLV-LFIPLRLGLTEM-NVVYNEEE"
+        seq1, seq2 = get_pairwise_alignment(sequence1, sequence2)
+
+        match, drop = self.get_pairwise_indexes(seq1, seq2)
+        self.assertEqual(len(sequence1), 37)
+        self.assertEqual(len(sequence2), 37)
+        self.assertEqual(len(match.ix1), 27)
+        self.assertEqual(len(match.ix2), 27)
+        self.assertEqual(drop.ix1, [0, 1, 7, 8, 9, 15, 28])
+        self.assertEqual(drop.ix2, [27, 35, 36])
 
 
 if __name__ == '__main__':
