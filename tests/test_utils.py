@@ -472,9 +472,8 @@ class TestUTILS(unittest.TestCase):
     def test_get_pairwise_indexes(self):
         sequence1 = "TPEDIKKLCDWRPLLLLVIPLRMGINS-INPVYIQ--"
         sequence2 = "--EDISN---WRPLV-LFIPLRLGLTEM-NVVYNEEE"
-        seq1, seq2 = get_pairwise_alignment(sequence1, sequence2)
-
-        match, drop = self.get_pairwise_indexes(seq1, seq2)
+        match, drop = self.get_pairwise_indexes(sequence1, sequence2,
+                                                gap_symbol="-")
         self.assertEqual(len(sequence1), 37)
         self.assertEqual(len(sequence2), 37)
         self.assertEqual(len(match.ix1), 27)

@@ -366,7 +366,7 @@ def get_pairwise_alignment(sequence1, sequence2, method="global",
     return sequence1, sequence2
 
 
-def get_pairwise_indexes(sequence1, sequence2):
+def get_pairwise_indexes(sequence1, sequence2, gap_symbol="-"):
     """
     Returns the index of the matching re-aligned (re-positioned)
     elements of sequence 1 and sequence 2. Also returns the indexes
@@ -375,6 +375,7 @@ def get_pairwise_indexes(sequence1, sequence2):
 
     :param sequence1: (str) sequence
     :param sequence2: (str) sequence
+    :param gap_symbol: (str) 1-letter symbol for gaps
     :return: two lists of indexes
     """
 
@@ -385,8 +386,8 @@ def get_pairwise_indexes(sequence1, sequence2):
     i = -1
     for a, b in zip(sequence1, sequence2):
         i += 1
-        gap_a = is_gap(a, gap_symbol='X')
-        gap_b = is_gap(b, gap_symbol='X')
+        gap_a = is_gap(a, gap_symbol=gap_symbol)
+        gap_b = is_gap(b, gap_symbol=gap_symbol)
 
         if not gap_a and not gap_b:
             match_ix1.append(i)
