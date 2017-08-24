@@ -38,6 +38,7 @@ from prointvar.utils import flatten_nested_structure
 from prointvar.utils import refactor_key_val_singletons
 from prointvar.utils import is_gap
 from prointvar.utils import get_pairwise_indexes
+from prointvar.utils import Make
 
 from prointvar.config import config as c
 
@@ -143,6 +144,7 @@ class TestUTILS(unittest.TestCase):
         }
         self.is_gap = is_gap
         self.get_pairwise_indexes = get_pairwise_indexes
+        self.make_class = Make
 
         logging.disable(logging.DEBUG)
 
@@ -173,6 +175,7 @@ class TestUTILS(unittest.TestCase):
         self.json_mock = None
         self.is_gap = None
         self.get_pairwise_indexes = None
+        self.make_class = None
 
         logging.disable(logging.NOTSET)
 
@@ -480,6 +483,19 @@ class TestUTILS(unittest.TestCase):
         self.assertEqual(len(match.ix2), 27)
         self.assertEqual(drop.ix1, [0, 1, 7, 8, 9, 15, 28])
         self.assertEqual(drop.ix2, [27, 35, 36])
+
+    def test_make_class(self):
+        t = self.make_class()
+        t.some_var = "test1"
+        self.assertTrue(hasattr(t, "some_var"))
+        self.assertTrue(t.some_var == "test1")
+
+        t.some.more.nested.var = "test2"
+        self.assertTrue(hasattr(t, "some"))
+        self.assertTrue(hasattr(t.some, "more"))
+        self.assertTrue(hasattr(t.some.more, "nested"))
+        self.assertTrue(hasattr(t.some.more.nested, "var"))
+        self.assertTrue(t.some.more.nested.var == "test2")
 
 
 if __name__ == '__main__':
