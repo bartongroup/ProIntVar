@@ -182,6 +182,23 @@ arpeggio_types = {
 
 probe_types = {}
 
+stamp_types = {
+    "Domain1": str,
+    "Domain2": str,
+    "Fits": int,
+    "Sc": float,
+    "RMS": float,
+    "A_Len": int,
+    "B_Len": int,
+    "Align_Len": int,
+    "N_Fit": int,
+    "N_Equiv": int,
+    "N_SS_Equiv": int,
+    "PID": float,
+    "SS_PID": float,
+    "Pm": float,
+}
+
 uni_ens_var_types = {
     'begin': int,
     'end': int,
