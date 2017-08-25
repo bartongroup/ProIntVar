@@ -82,7 +82,7 @@ def parse_mmcif_atoms_from_file(inputfile, excluded=(), add_res_full=True,
         for line in inlines:
             if line.startswith("_atom_site."):
                 header.append(line.split('.')[1].rstrip())
-            elif line.startswith("ATOM"):
+            elif line.startswith("ATOM") or "ATOM" in line[0:6]:
                 lines.append(line)
             elif line.startswith("HETATM"):
                 lines.append(line)
