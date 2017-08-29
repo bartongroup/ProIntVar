@@ -4,8 +4,10 @@
 
 import os
 import sys
+import json
 import logging
 import unittest
+import pandas as pd
 
 try:
     from StringIO import StringIO
@@ -22,6 +24,7 @@ from prointvar.merger import TableMerger
 
 from prointvar.stamp import (parse_stamp_scan_scores_from_file,
                              get_stamp_domain_line,
+                             parse_stamp_domain_definitions_from_line,
                              parse_stamp_domain_definitions_from_from_file,
                              write_stamp_domain_definitions_from_table)
 
@@ -49,8 +52,11 @@ class TestSTAMP(unittest.TestCase):
 
         self.parse_stamp_scan_scores_from_file = parse_stamp_scan_scores_from_file
         self.get_stamp_domain_line = get_stamp_domain_line
+        self.parse_stamp_domain_definition = parse_stamp_domain_definitions_from_line
         self.parse_stamp_domain_definitions = parse_stamp_domain_definitions_from_from_file
         self.write_stamp_domain_definitions = write_stamp_domain_definitions_from_table
+
+        self.domain_def = "testdata/pdbx/2pah_A_1.pdb 2pah_A_1 { A 118 _ TO A 331 _ }"
 
         logging.disable(logging.DEBUG)
 
@@ -68,8 +74,11 @@ class TestSTAMP(unittest.TestCase):
 
         self.parse_stamp_scan_scores_from_file = None
         self.get_stamp_domain_line = None
+        self.parse_stamp_domain_definition = None
         self.parse_stamp_domain_definitions = None
         self.write_stamp_domain_definitions = None
+
+        self.domain_def = None
 
         logging.disable(logging.NOTSET)
 
@@ -80,7 +89,7 @@ class TestSTAMP(unittest.TestCase):
 
         cls.pdb_id = "2pah"
         cls.chain_id = "A"
-        cls.domains_info = []
+        domains_info = []
         inputsifts = os.path.join(c.db_root, c.db_sifts, "%s.xml" % cls.pdb_id)
         s = SIFTSreader(inputfile=inputsifts)
         r = s.regions()
@@ -121,13 +130,16 @@ class TestSTAMP(unittest.TestCase):
                 start_inscode = table.loc[list(table.index)[0], "pdbx_PDB_ins_code"]
                 end = table.loc[list(table.index)[-1], "auth_seq_id"]
                 end_inscode = table.loc[list(table.index)[-1], "pdbx_PDB_ins_code"]
-                info = {'pdb_id': cls.pdb_id, 'chain_id': cls.chain_id,
+                info = {'pdb_id': cls.pdb_id,
+                        'start_chain': (cls.chain_id,),
+                        'end_chain': (cls.chain_id,),
                         'start': (start,), 'end': (end,),
                         'start_inscode': (start_inscode,),
                         'end_inscode': (end_inscode,),
                         'path': outputpdb,
                         'domain_id': '%s_%s_%s' % (cls.pdb_id, cls.chain_id, reg)}
-                cls.domains_info.append(info)
+                domains_info.append(info)
+        cls.domains_info = pd.DataFrame(domains_info)
 
     @classmethod
     def tearDownClass(cls):
@@ -150,11 +162,42 @@ class TestSTAMP(unittest.TestCase):
         self.assertEqual(280, table.loc[0, 'A_Len'])
         self.assertEqual(98.57, table.loc[0, 'PID'])
 
+    def test_parse_stamp_domain_definition_from_line(self):
+        r = self.parse_stamp_domain_definition(self.domain_def)
+        self.assertEqual(r["domain_id"], '2pah_A_1')
+        self.assertEqual(r["start_chain"], ('A',))
+        self.assertEqual(r["start"], ('118',))
+        self.assertEqual(r["start_inscode"], ('_',))
+        self.assertEqual(r["end_chain"], ('A',))
+        self.assertEqual(r["end"], ('331',))
+        self.assertEqual(r["end_inscode"], ('_',))
+
+    def test_get_stamp_domain_line(self):
+        data = self.get_stamp_domain_line(self.domains_info)
+        r = self.parse_stamp_domain_definition(data)
+        self.assertEqual(r["domain_id"], '2pah_A_1')
+        self.assertEqual(r["start_chain"], ('A',))
+        self.assertEqual(r["start"], ('118',))
+        self.assertEqual(r["start_inscode"], ('_',))
+        self.assertEqual(r["end_chain"], ('A',))
+        self.assertEqual(r["end"], ('331',))
+        self.assertEqual(r["end_inscode"], ('_',))
+
     def test_write_stamp_domain_definitions(self):
         self.write_stamp_domain_definitions(self.domainfile,
                                             self.domains_info,
                                             override=True)
         self.assertTrue(os.path.isfile(self.domainfile))
+
+    def test_parse_stamp_domain_definitions(self):
+        r = self.parse_stamp_domain_definitions(self.domainfile)
+        self.assertEqual(r.loc[0, "domain_id"], '2pah_A_1')
+        self.assertEqual(r.loc[0, "start_chain"], ('A',))
+        self.assertEqual(r.loc[0, "start"], ('118',))
+        self.assertEqual(r.loc[0, "start_inscode"], ('_',))
+        self.assertEqual(r.loc[0, "end_chain"], ('A',))
+        self.assertEqual(r.loc[0, "end"], ('331',))
+        self.assertEqual(r.loc[0, "end_inscode"], ('_',))
 
 
 if __name__ == '__main__':

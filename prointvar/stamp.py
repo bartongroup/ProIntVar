@@ -15,6 +15,7 @@ Fábio Madeira, 2017+
 # Domain description file
 
 import os
+import re
 import logging
 import pandas as pd
 from io import StringIO
@@ -28,9 +29,10 @@ from prointvar.config import config
 logger = logging.getLogger("prointvar")
 
 
-def parse_stamp_domain_definitions_from_from_file(inputfile):
+
+def parse_stamp_domain_definitions_from_line(string):
     """
-    Parses a STAMP domain definitions file.
+    Parses STAMP domain definitions from a line String.
 
     STAMP domain definition format:
       <file_path> <domain_id> { <residue_ranges> }
@@ -44,6 +46,46 @@ def parse_stamp_domain_definitions_from_from_file(inputfile):
 
             1hww.pdb 1hwwB { A 648 b TO A 650 _  A 655 _ TO A 927 _ }
 
+    :param string: input string
+    :return: returns a dictionary with parsed items
+    """
+
+    string = string.replace('}', '')
+    dom_info = string.split('{')[0]
+    ranges = string.split('{')[1]
+    start = []
+    start_inscode = []
+    start_chain = []
+    end = []
+    end_inscode = []
+    end_chain = []
+    pattern = re.compile("([A-Z]) ([1-9])+ ([A-Za-z1-9_?]) TO "
+                         "([A-Z]) ([1-9])+ ([A-Za-z1-9_?])")
+    match = re.finditer(pattern, ranges, flags=0)
+    for m in match:
+        m = m.group()
+        start_chain.append(m.split()[0])
+        start.append(m.split()[1])
+        start_inscode.append(m.split()[2])
+        end_chain.append(m.split()[4])
+        end.append(m.split()[5])
+        end_inscode.append(m.split()[6])
+
+    info = {'path': dom_info.split()[0],
+            'domain_id': dom_info.split()[1],
+            'start_chain': tuple(start_chain),
+            'end_chain': tuple(end_chain),
+            'start': tuple(start),
+            'end': tuple(end),
+            'start_inscode': tuple(start_inscode),
+            'end_inscode': tuple(end_inscode)}
+    return info
+
+
+def parse_stamp_domain_definitions_from_from_file(inputfile):
+    """
+    Parses a STAMP domain definitions file.
+
     :param inputfile: path to input file
     :return: pandas DataFrame
     """
@@ -52,18 +94,12 @@ def parse_stamp_domain_definitions_from_from_file(inputfile):
     with open(inputfile, 'r') as inlines:
         for line in inlines:
             if not line.startswith('% STAMP'):
-
-                info = {'path': path,
-                        'domain_id': domain_id,
-                        'start': start,
-                        'end': end,
-                        'start_inscode': start_inscode,
-                        'end_inscode': end_inscode}
+                info = parse_stamp_domain_definitions_from_line(line)
                 lines.append(info)
     return pd.DataFrame(lines)
 
 
-def get_stamp_domain_line(data):
+def get_stamp_domain_line(data, index=0):
     """
     Returns a STAMP domain definition line.
 
@@ -80,32 +116,49 @@ def get_stamp_domain_line(data):
             1hww.pdb 1hwwB { A 648 b TO A 650 _  A 655 _ TO A 927 _ }
 
     :param data: pandas DataFrame object
+    :param index: (int) index
     :return: returns a STAMP domain-formatted line
     """
 
     table = data
-    path = table["path"]
-    domain = table["domain_id"]
-    start = table["start"]
-    start_inscode = table["start_inscode"]
-    end = table["end"]
-    end_inscode = table["end_inscode"]
-    chain = table["chain_id"]
+    ix = index
+    keys = ["path", "domain_id", "start", "end", "start_inscode", "end_inscode",
+            "start_chain", "end_chain"]
 
-    assert type(start) is tuple
-    assert type(start_inscode) is tuple
-    assert type(end) is tuple
-    assert type(end_inscode) is tuple
+    if set(keys).issubset(table.columns):
 
-    string = []
-    for i, j, k, l in zip(start, start_inscode, end, end_inscode):
-        if j == " " or j == "?":
-            j = "_"
-        if l == " " or l == "?":
-            l = "_"
-        string.append("%s %s %s TO %s %s %s" % (chain, i, j, chain, k, l))
-    string = "{ %s }" % (" ".join(string))
-    domain_definition = " ".join([path, domain, string])
+        path = table.loc[ix, "path"]
+        domain = table.loc[ix, "domain_id"]
+        start_chain = table.loc[ix, "start_chain"]
+        start = table.loc[ix, "start"]
+        start_inscode = table.loc[ix, "start_inscode"]
+        end_chain = table.loc[ix, "end_chain"]
+        end = table.loc[ix, "end"]
+        end_inscode = table.loc[ix, "end_inscode"]
+
+        assert type(start) is tuple
+        assert type(start_chain) is tuple
+        assert type(start_inscode) is tuple
+        assert type(end) is tuple
+        assert type(end_chain) is tuple
+        assert type(end_inscode) is tuple
+
+        string = []
+        for i, j, k, l, a, b in zip(start, start_inscode,
+                                    end, end_inscode,
+                                    start_chain, end_chain):
+            if j == " " or j == "?":
+                j = "_"
+            if l == " " or l == "?":
+                l = "_"
+            string.append("%s %s %s TO %s %s %s" % (a, i, j, b, k, l))
+        string = "{ %s }" % (" ".join(string))
+        domain_definition = " ".join([path, domain, string])
+
+    else:
+        message = "Expected columns not found in the Pandas Table..."
+        logger.debug(message)
+        raise ValueError(message)
 
     return domain_definition
 
@@ -122,8 +175,8 @@ def write_stamp_domain_definitions_from_table(outputfile, data, override=False):
     """
 
     domain_lines = ['% STAMP domains file generated by ProIntVar']
-    for entry in data:
-        domain_lines.append(get_stamp_domain_line(data=entry))
+    for ix in data.index:
+        domain_lines.append(get_stamp_domain_line(data=data, index=ix))
 
     # write the final output
     if not os.path.exists(outputfile) or override:
