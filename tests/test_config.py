@@ -26,7 +26,7 @@ test = /test/value
 
 @patch("prointvar.config.config.db_root", "/root/")
 @patch("prointvar.config.config.db_tmp", "/tmp/")
-class TestUTILS(unittest.TestCase):
+class TestConfig(unittest.TestCase):
     """Test the Config methods."""
 
     def setUp(self):
@@ -85,5 +85,5 @@ class TestUTILS(unittest.TestCase):
 if __name__ == '__main__':
     logging.basicConfig(stream=sys.stderr)
     logging.getLogger("prointvar").setLevel(logging.DEBUG)
-    suite = unittest.TestLoader().loadTestsFromTestCase(TestUTILS)
+    suite = unittest.TestLoader().loadTestsFromTestCase(TestConfig)
     unittest.TextTestRunner(verbosity=2).run(suite)
