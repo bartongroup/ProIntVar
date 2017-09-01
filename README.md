@@ -154,7 +154,7 @@ from prointvar.dssp import DSSPrunner, DSSPreader
 
 input_struct = os.path.join(cfg.db_root, cfg.db_pdbx, '2pah.cif')
 output_dssp = os.path.join(cfg.db_root, cfg.db_dssp, '2pah.dssp')
-DSSPrunner(inputfile=input_structure, outputfile=output_dssp).write()
+DSSPrunner(inputfile=input_struct, outputfile=output_dssp).write()
 
 df2 = DSSPreader(inputfile=output_dssp).read()
 # pandas DataFrame
