@@ -92,8 +92,8 @@ Testing that the new values are correctly loaded by ProIntVar
 ```sh
 $ python
 >>> from prointvar.config import config
->>> config.tmp_dir
-'/new_config_path_to_tmp_dir/'
+>>> config.db_tmp
+'tmp'
 ```
 
 
