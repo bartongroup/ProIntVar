@@ -2,8 +2,16 @@
 # -*- coding: utf-8 -*-
 
 
+import os
 from setuptools import setup
 from setuptools import find_packages
+
+
+def gather_dependencies():
+    with open('requirements.txt', 'r') as f_in:
+        return [l for l in f_in.read().rsplit(os.linesep)
+                if l and not l.startswith("#")]
+DEPENDENCIES = gather_dependencies()
 
 
 setup(
@@ -11,16 +19,7 @@ setup(
     version="0.1",
     packages=find_packages(exclude=["tests", 'tests.*']),
     # should always match the entries in requirements.txt
-    install_requires=[
-        "click",
-        "numpy",
-        "scipy",
-        "requests",
-        "responses",
-        "pandas",
-        "biopython",
-        "lxml"
-    ],
+    install_requires=DEPENDENCIES,
     package_data={'prointvar': ['config_template.ini']},
     include_package_data=True,
 
