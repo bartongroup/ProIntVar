@@ -11,5 +11,6 @@ requests
 pandas
 lxml
 click
+click_log
 responses
 scipy
