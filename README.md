@@ -125,7 +125,9 @@ Using PDBXreader to parse a mmCIF formatted macromolecular structure.
 import os
 from prointvar.config import config as cfg
 from prointvar.pdbx import PDBXreader
+from prointvar.fetchers import download_structure_from_pdbe
 
+download_structure_from_pdbe('2pah')
 input_struct = os.path.join(cfg.db_root, cfg.db_pdbx, '2pah.cif')
 df = PDBXreader(inputfile=input_struct).atoms(format_type="mmcif")
 # pandas DataFrame
@@ -169,7 +171,9 @@ Parsing the SIFTS UniProt-PDB cross-mapping is as simple.
 ```python
 
 from prointvar.sifts import SIFTSreader
+from prointvar.fetchers import download_sifts_from_ebi
 
+download_sifts_from_ebi('2pah')
 input_sifts = os.path.join(cfg.db_root, cfg.db_sifts, '2pah.xml')
 df3 = SIFTSreader(inputfile=input_sifts).read()
 # pandas DataFrame
