@@ -36,6 +36,7 @@ class Defaults(object):
         _config.read(config_file)
         self.__config = _config
         self.__populate_attributes()
+        self._validate_db_directories()
         # log.info("Loaded values from {}".format(config_file))
 
     def __populate_attributes(self):
@@ -48,6 +49,13 @@ class Defaults(object):
             for var_name, var_par in self.__config.items(section):
                 yield var_name, var_par
 
+    def _validate_db_directories(self):
+        for section in self.__config.sections():
+            for var_name, var_par in self.__config.items(section):
+                if var_name.startswith('db') and var_name != 'db_root':
+                    db_dir = os.path.join(self.db_root, var_par)
+                    if not os.path.exists(db_dir):
+                        os.makedirs(db_dir, exist_ok=True)
 
 config = Defaults()
 

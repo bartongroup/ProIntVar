@@ -4,6 +4,7 @@
 
 import os
 import sys
+import shutil
 import logging
 import unittest
 
@@ -21,6 +22,9 @@ stamp_bin = /stamp_dir/
 
 [Other]
 test = /test/value
+
+db_root = .
+db_test = test
 """
 
 
@@ -80,6 +84,19 @@ class TestConfig(unittest.TestCase):
         os.remove(new_config_file)
         if didnt_exist:
             os.removedirs(self.config.db_tmp)
+
+    def test_config_make_db_dirs(self):
+        new_config_file = os.path.join(self.config.db_tmp, "mock_config.ini")
+        with open(new_config_file, 'w') as out:
+            out.write(mock_config)
+        config = self.defaults(config_file=new_config_file)
+        os.remove(new_config_file)
+        # update the root so that the test can makedirs
+        root = os.path.abspath(os.path.dirname(__file__))
+        config.db_root = "{}".format(root)
+        test_path = os.path.join(os.path.join(config.db_root, config.db_test))
+        self.assertTrue(test_path)
+        shutil.rmtree(os.path.join(config.db_root, config.db_test))
 
 
 if __name__ == '__main__':
