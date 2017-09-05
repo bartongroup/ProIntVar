@@ -447,7 +447,7 @@ def residues_aggregation(data, agg_method='centroid', category='label'):
                       for col in table.columns if col not in agg_cols}
     columns_to_agg['id'] = 'first'
     table = table.groupby(by=agg_cols, as_index=False).agg(columns_to_agg)
-    table.sort_values(by='id').reset_index()
+    table = table.sort_values(by='id').reset_index()
     return table
 
 

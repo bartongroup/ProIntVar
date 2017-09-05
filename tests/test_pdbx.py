@@ -642,7 +642,7 @@ class TestPDBX(unittest.TestCase):
         table = self.residues_aggregation(table)
         seq = self.get_sequence(table)
         self.assertEqual(329, len(seq))
-        self.assertEqual('VECGFHEDNIPQLLEDVSQFLQTDC', seq[0:25])
+        self.assertEqual('VPWFPRTIQELDRFANQILDADHPG', seq[0:25])
 
 
 if __name__ == '__main__':
