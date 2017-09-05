@@ -59,8 +59,8 @@ def parse_stamp_domain_definitions_from_line(string):
     end = []
     end_inscode = []
     end_chain = []
-    pattern = re.compile("([A-Z]) ([1-9])+ ([A-Za-z1-9_?]) TO "
-                         "([A-Z]) ([1-9])+ ([A-Za-z1-9_?])")
+    pattern = re.compile("([A-Z]) ([0-9])+ ([A-Za-z0-9_?]) TO "
+                         "([A-Z]) ([0-9])+ ([A-Za-z0-9_?])")
     match = re.finditer(pattern, ranges, flags=0)
     for m in match:
         m = m.group()
