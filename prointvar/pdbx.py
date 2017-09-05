@@ -477,7 +477,8 @@ def write_mmcif_from_table(outputfile, data, override=False):
     return
 
 
-def write_pdb_from_table(outputfile, data, override=False, pro_format=False):
+def write_pdb_from_table(outputfile, data, override=False, pro_format=False,
+                         category="auth"):
     """
     Generic method that writes 'atom' lines in PDB format.
     
@@ -486,6 +487,8 @@ def write_pdb_from_table(outputfile, data, override=False, pro_format=False):
     :param override: boolean
     :param pro_format: ProIntVar internal format where asym_id and seq_id
         are outputted from new_asyn_id and new_seq_id
+    :param category: data category to be used as precedence in _atom_site.*_*
+        asym_id, seq_id and atom_id
     :return: (side effects) writes to file
     """
 
@@ -496,7 +499,8 @@ def write_pdb_from_table(outputfile, data, override=False, pro_format=False):
         atom_number += 1
         atom_lines.append(get_atom_line(data=table, index=i,
                                         atom_number=atom_number,
-                                        pro_format=pro_format))
+                                        pro_format=pro_format,
+                                        category=category))
 
     # write the final output
     if not os.path.exists(outputfile) or override:
@@ -1101,7 +1105,8 @@ class PDBXwriter(object):
                                    override=override)
         elif format_type == "pdb":
             write_pdb_from_table(outputfile=self.outputfile, data=self.data,
-                                 override=override, pro_format=pro_format)
+                                 override=override, pro_format=pro_format,
+                                 category=category)
         else:
             message = 'The provided format {} is not implemented...'.format(format_type)
             raise ValueError(message)
