@@ -88,6 +88,7 @@ class TestSTAMP(unittest.TestCase):
         super(TestSTAMP, cls).setUpClass()
 
         cls.pdb_id = "2pah"
+        # mmCIF / PDB_entityId
         cls.chain_id = "A"
         domains_info = []
         inputsifts = os.path.join(c.db_root, c.db_sifts, "%s.xml" % cls.pdb_id)
@@ -101,21 +102,17 @@ class TestSTAMP(unittest.TestCase):
 
                 inputcif = os.path.join(c.db_root, c.db_pdbx, "%s.cif" % cls.pdb_id)
                 p = PDBXreader(inputfile=inputcif)
-                cif_table = p.atoms(category='auth', format_type="mmcif")
+                cif_table = p.atoms(format_type="mmcif")
                 cif_table = get_mmcif_selected_from_table(cif_table, chain=(cls.chain_id,),
-                                                          category='auth',
                                                           lines=("ATOM",))
-                inputsifts = os.path.join(c.db_root, c.db_sifts, "%s.xml" % cls.pdb_id)
-                s = SIFTSreader(inputfile=inputsifts)
-                r = s.regions()
                 sifts_table = s.residues()
                 sifts_table = get_sifts_selected_from_table(sifts_table,
-                                                            chain_auth=(cls.chain_id,))
+                                                            chain=(cls.chain_id,))
 
                 t = TableMerger(pdbx_table=cif_table, sifts_table=sifts_table, store=False)
                 table = t.merge()
                 uni_sites = tuple([str(i) for i in range(start, end)])
-                table = get_sifts_selected_from_table(table, chain_auth=(cls.chain_id,),
+                table = get_sifts_selected_from_table(table, chain=(cls.chain_id,),
                                                       site=uni_sites)
 
                 outputpdb = os.path.join(c.db_root, c.db_pdbx, "%s_%s_%s.pdb" % (cls.pdb_id,
