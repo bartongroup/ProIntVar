@@ -39,6 +39,7 @@ from prointvar.utils import refactor_key_val_singletons
 from prointvar.utils import is_gap
 from prointvar.utils import get_pairwise_indexes
 from prointvar.utils import Make
+from prointvar.utils import get_start_end_ranges_consecutive_ints
 
 from prointvar.config import config as c
 
@@ -145,6 +146,7 @@ class TestUTILS(unittest.TestCase):
         self.is_gap = is_gap
         self.get_pairwise_indexes = get_pairwise_indexes
         self.make_class = Make
+        self.get_start_end_ranges_consecutive_ints = get_start_end_ranges_consecutive_ints
 
         logging.disable(logging.DEBUG)
 
@@ -176,6 +178,7 @@ class TestUTILS(unittest.TestCase):
         self.is_gap = None
         self.get_pairwise_indexes = None
         self.make_class = None
+        self.get_start_end_ranges_consecutive_ints = None
 
         logging.disable(logging.NOTSET)
 
@@ -496,6 +499,17 @@ class TestUTILS(unittest.TestCase):
         self.assertTrue(hasattr(t.some.more, "nested"))
         self.assertTrue(hasattr(t.some.more.nested, "var"))
         self.assertTrue(t.some.more.nested.var == "test2")
+
+    def test_get_real_ranges(self):
+        data = list(range(1, 51, 1))
+        drop = [4, 5, 6, 10, 11, 12, 20, 21, 22, 30, 31, 43, 44, 45, 46]
+        for d in drop:
+            data.remove(d)
+
+        starts, ends = self.get_start_end_ranges_consecutive_ints(data)
+        self.assertTrue(len(starts) == len(ends))
+        self.assertEqual(starts, (1, 7, 13, 23, 32, 47))
+        self.assertEqual(ends, (3, 9, 19, 29, 42, 50))
 
 
 if __name__ == '__main__':

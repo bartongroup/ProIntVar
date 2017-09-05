@@ -659,5 +659,25 @@ def get_new_pro_ids():
             yield char, str(seqid)
 
 
+def get_start_end_ranges_consecutive_ints(data):
+    """
+    Gets the real ranges: starts and ends for an interrupted list
+    of real numbers.
+
+    :param data: list of ints
+    :return: two tuples with starts and ends, respectively
+    """
+    starts = [data[0]]
+    ends = []
+    prev = data[0]
+    for d in data:
+        if d not in starts and d - 1 != prev:
+            starts.append(d)
+            ends.append(prev)
+        prev = d
+    ends.append(data[-1])
+    return tuple(starts), tuple(ends)
+
+
 if __name__ == '__main__':
     pass
