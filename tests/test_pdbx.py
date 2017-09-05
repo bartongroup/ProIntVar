@@ -27,7 +27,8 @@ from prointvar.pdbx import (PDBXreader, PDBXwriter, parse_mmcif_atoms_from_file,
                             add_mmcif_atom_altloc, residues_aggregation,
                             remove_multiple_altlocs, add_mmcif_new_pro_ids,
                             remove_partial_residues, get_coordinates, get_sequence,
-                            fix_label_alt_id, fix_pdb_ins_code, fix_type_symbol)
+                            fix_label_alt_id, fix_pdb_ins_code, fix_type_symbol,
+                            get_real_residue_ranges)
 
 from prointvar.config import config as c
 
@@ -77,6 +78,7 @@ class TestPDBX(unittest.TestCase):
         self.fix_type_symbol = fix_type_symbol
         self.get_coordinates = get_coordinates
         self.get_sequence = get_sequence
+        self.get_real_residue_ranges = get_real_residue_ranges
 
         logging.disable(logging.DEBUG)
 
@@ -117,6 +119,7 @@ class TestPDBX(unittest.TestCase):
         self.fix_type_symbol = None
         self.get_coordinates = None
         self.get_sequence = None
+        self.get_real_residue_ranges = None
 
         logging.disable(logging.NOTSET)
 
@@ -644,6 +647,17 @@ class TestPDBX(unittest.TestCase):
         self.assertEqual(329, len(seq))
         self.assertEqual('VPWFPRTIQELDRFANQILDADHPG', seq[0:25])
 
+    def test_get_real_residue_ranges(self):
+        r = PDBXreader(inputfile=self.inputcif)
+        table = r.atoms(format_type="mmcif")
+        self.assertTrue(isinstance(table, pd.DataFrame))
+        table = self.filter(table, chain=('A',), lines=('ATOM',))
+        starts, start_inscodes, ends, end_inscodes = \
+            self.get_real_residue_ranges(table, category="auth")
+        self.assertEqual(starts, ('118', '143'))
+        self.assertEqual(start_inscodes, ('?', '?'))
+        self.assertEqual(ends, ('136', '452'))
+        self.assertEqual(end_inscodes, ('?', '?'))
 
 if __name__ == '__main__':
     logging.basicConfig(stream=sys.stderr)

@@ -970,6 +970,44 @@ def get_sequence(table, category="label", ambiguous='X'):
     return sequence
 
 
+def get_real_residue_ranges(data, category="label"):
+    """
+    Gets the real ranges: starts and ends for an interrupted list
+    of residues. Expects a pre-filtered table containing records
+    from a single CHAIN/Entity!
+
+    :param data: pandas DataFrame from PDBXreader
+    :param category: data category to be used as precedence in _atom_site.*_*
+        asym_id, seq_id and atom_id
+    :return: two tuples with starts and ends, respectively
+    """
+    table = data
+    table = residues_aggregation(table, agg_method="first")
+
+    starts = [table.loc[list(table.index)[0], "{}_seq_id".format(category)]]
+    start_inscodes = [table.loc[list(table.index)[0], "pdbx_PDB_ins_code"]]
+    ends = []
+    end_inscodes = []
+
+    prev = table.loc[list(table.index)[0], "{}_seq_id".format(category)]
+    prev_icode = table.loc[list(table.index)[0], "pdbx_PDB_ins_code"]
+    for ix in table.index:
+        res = table.loc[ix, "{}_seq_id".format(category)]
+        icode = table.loc[ix, "pdbx_PDB_ins_code"]
+        if res not in starts and int(res) - 1 != prev:
+            starts.append(res)
+            start_inscodes.append(icode)
+            ends.append(str(prev))
+            end_inscodes.append(prev_icode)
+        prev = int(res)
+        prev_icode = icode
+
+    ends.append(table.loc[list(table.index)[-1], "{}_seq_id".format(category)])
+    end_inscodes.append(table.loc[list(table.index)[-1], "pdbx_PDB_ins_code"])
+
+    return tuple(starts), tuple(start_inscodes), tuple(ends), tuple(end_inscodes)
+
+
 class PDBXreader(object):
     def __init__(self, inputfile):
         """
