@@ -94,48 +94,50 @@ class TestSTAMP(unittest.TestCase):
         inputsifts = os.path.join(c.db_root, c.db_sifts, "%s.xml" % cls.pdb_id)
         s = SIFTSreader(inputfile=inputsifts)
         r = s.regions()
-        if 'Pfam' in r[cls.chain_id]:
-            for reg in r[cls.chain_id]['Pfam']:
-                # UniProt Coordinates
-                start = r[cls.chain_id]['Pfam'][reg]['start']
-                end = r[cls.chain_id]['Pfam'][reg]['end']
+        for chain_id in r:
+            if 'Pfam' in r[chain_id]:
+                for reg in r[chain_id]['Pfam']:
+                    # UniProt Coordinates
+                    start = r[chain_id]['Pfam'][reg]['start']
+                    end = r[chain_id]['Pfam'][reg]['end']
 
-                inputcif = os.path.join(c.db_root, c.db_pdbx, "%s.cif" % cls.pdb_id)
-                p = PDBXreader(inputfile=inputcif)
-                cif_table = p.atoms(format_type="mmcif")
-                cif_table = get_mmcif_selected_from_table(cif_table, chain=(cls.chain_id,),
-                                                          lines=("ATOM",))
-                sifts_table = s.residues()
-                sifts_table = get_sifts_selected_from_table(sifts_table,
-                                                            chain=(cls.chain_id,))
+                    inputcif = os.path.join(c.db_root, c.db_pdbx, "%s.cif" % cls.pdb_id)
+                    p = PDBXreader(inputfile=inputcif)
+                    cif_table = p.atoms(format_type="mmcif", remove_altloc=True,
+                                        remove_hydrogens=True, remove_partial_res=True)
+                    cif_table = get_mmcif_selected_from_table(cif_table, chain=(chain_id,),
+                                                              lines=("ATOM",))
+                    sifts_table = s.residues()
+                    sifts_table = get_sifts_selected_from_table(sifts_table,
+                                                                chain=(chain_id,))
 
-                t = TableMerger(pdbx_table=cif_table, sifts_table=sifts_table, store=False)
-                table = t.merge()
-                uni_sites = tuple([str(i) for i in range(start, end)])
-                table = get_sifts_selected_from_table(table, chain=(cls.chain_id,),
-                                                      site=uni_sites)
+                    t = TableMerger(pdbx_table=cif_table, sifts_table=sifts_table, store=False)
+                    table = t.merge()
+                    uni_sites = tuple([str(i) for i in range(start, end)])
+                    table = get_sifts_selected_from_table(table, chain=(chain_id,),
+                                                          site=uni_sites)
 
-                outputpdb = os.path.join(c.db_root, c.db_pdbx, "%s_%s_%s.pdb" % (cls.pdb_id,
-                                                                                 cls.chain_id,
-                                                                                 reg))
-                p = PDBXwriter(outputfile=outputpdb)
-                p.run(data=cif_table, format_type="pdb")
+                    outputpdb = os.path.join(c.db_root, c.db_pdbx, "%s_%s_%s.pdb" % (cls.pdb_id,
+                                                                                     chain_id,
+                                                                                     reg))
+                    p = PDBXwriter(outputfile=outputpdb)
+                    p.run(data=cif_table, format_type="pdb", category="auth")
 
-                # TODO loop over residues for getting the actual res ranges in the table
-                # this is needed for STAMP
-                start = table.loc[list(table.index)[0], "auth_seq_id"]
-                start_inscode = table.loc[list(table.index)[0], "pdbx_PDB_ins_code"]
-                end = table.loc[list(table.index)[-1], "auth_seq_id"]
-                end_inscode = table.loc[list(table.index)[-1], "pdbx_PDB_ins_code"]
-                info = {'pdb_id': cls.pdb_id,
-                        'start_chain': (cls.chain_id,),
-                        'end_chain': (cls.chain_id,),
-                        'start': (start,), 'end': (end,),
-                        'start_inscode': (start_inscode,),
-                        'end_inscode': (end_inscode,),
-                        'path': outputpdb,
-                        'domain_id': '%s_%s_%s' % (cls.pdb_id, cls.chain_id, reg)}
-                domains_info.append(info)
+                    # TODO loop over residues for getting the actual res ranges in the table
+                    # this is needed for STAMP
+                    start = table.loc[list(table.index)[0], "auth_seq_id"]
+                    start_inscode = table.loc[list(table.index)[0], "pdbx_PDB_ins_code"]
+                    end = table.loc[list(table.index)[-1], "auth_seq_id"]
+                    end_inscode = table.loc[list(table.index)[-1], "pdbx_PDB_ins_code"]
+                    info = {'pdb_id': cls.pdb_id,
+                            'start_chain': (chain_id,),
+                            'end_chain': (chain_id,),
+                            'start': (start,), 'end': (end,),
+                            'start_inscode': (start_inscode,),
+                            'end_inscode': (end_inscode,),
+                            'path': outputpdb,
+                            'domain_id': '%s_%s_%s' % (cls.pdb_id, chain_id, reg)}
+                    domains_info.append(info)
         cls.domains_info = pd.DataFrame(domains_info)
 
     @classmethod
