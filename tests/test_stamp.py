@@ -19,7 +19,8 @@ except ImportError:
     from unittest.mock import patch
 
 from prointvar.sifts import SIFTSreader, get_sifts_selected_from_table
-from prointvar.pdbx import PDBXreader, PDBXwriter, get_mmcif_selected_from_table
+from prointvar.pdbx import (PDBXreader, PDBXwriter, get_mmcif_selected_from_table,
+                            get_real_residue_ranges)
 from prointvar.merger import TableMerger
 
 from prointvar.stamp import (parse_stamp_scan_scores_from_file,
@@ -123,18 +124,14 @@ class TestSTAMP(unittest.TestCase):
                     p = PDBXwriter(outputfile=outputpdb)
                     p.run(data=cif_table, format_type="pdb", category="auth")
 
-                    # TODO loop over residues for getting the actual res ranges in the table
-                    # this is needed for STAMP
-                    start = table.loc[list(table.index)[0], "auth_seq_id"]
-                    start_inscode = table.loc[list(table.index)[0], "pdbx_PDB_ins_code"]
-                    end = table.loc[list(table.index)[-1], "auth_seq_id"]
-                    end_inscode = table.loc[list(table.index)[-1], "pdbx_PDB_ins_code"]
+                    starts, start_inscodes, ends, end_inscodes = \
+                        get_real_residue_ranges(table, category="auth")
                     info = {'pdb_id': cls.pdb_id,
-                            'start_chain': (chain_id,),
-                            'end_chain': (chain_id,),
-                            'start': (start,), 'end': (end,),
-                            'start_inscode': (start_inscode,),
-                            'end_inscode': (end_inscode,),
+                            'start_chain': len(starts) * (chain_id,),
+                            'end_chain': len(ends) * (chain_id,),
+                            'start': starts, 'end': ends,
+                            'start_inscode': start_inscodes,
+                            'end_inscode': end_inscodes,
                             'path': outputpdb,
                             'domain_id': '%s_%s_%s' % (cls.pdb_id, chain_id, reg)}
                     domains_info.append(info)
@@ -175,12 +172,12 @@ class TestSTAMP(unittest.TestCase):
         data = self.get_stamp_domain_line(self.domains_info)
         r = self.parse_stamp_domain_definition(data)
         self.assertEqual(r["domain_id"], '2pah_A_1')
-        self.assertEqual(r["start_chain"], ('A',))
-        self.assertEqual(r["start"], ('118',))
-        self.assertEqual(r["start_inscode"], ('_',))
-        self.assertEqual(r["end_chain"], ('A',))
-        self.assertEqual(r["end"], ('331',))
-        self.assertEqual(r["end_inscode"], ('_',))
+        self.assertEqual(r["start_chain"], ('A', 'A'))
+        self.assertEqual(r["start"], ('118', '143'))
+        self.assertEqual(r["start_inscode"], ('_', '_'))
+        self.assertEqual(r["end_chain"], ('A', 'A'))
+        self.assertEqual(r["end"], ('136', '331'))
+        self.assertEqual(r["end_inscode"], ('_', '_'))
 
     def test_write_stamp_domain_definitions(self):
         self.write_stamp_domain_definitions(self.domainfile,
@@ -190,13 +187,13 @@ class TestSTAMP(unittest.TestCase):
 
     def test_parse_stamp_domain_definitions(self):
         r = self.parse_stamp_domain_definitions(self.domainfile)
-        self.assertEqual(r.loc[0, "domain_id"], '2pah_A_1')
-        self.assertEqual(r.loc[0, "start_chain"], ('A',))
-        self.assertEqual(r.loc[0, "start"], ('118',))
-        self.assertEqual(r.loc[0, "start_inscode"], ('_',))
-        self.assertEqual(r.loc[0, "end_chain"], ('A',))
-        self.assertEqual(r.loc[0, "end"], ('331',))
-        self.assertEqual(r.loc[0, "end_inscode"], ('_',))
+        self.assertEqual(r.loc[1, "domain_id"], '2pah_B_1')
+        self.assertEqual(r.loc[1, "start_chain"], ('B', 'B'))
+        self.assertEqual(r.loc[1, "start"], ('118', '144'))
+        self.assertEqual(r.loc[1, "start_inscode"], ('_', '_'))
+        self.assertEqual(r.loc[1, "end_chain"], ('B', 'B'))
+        self.assertEqual(r.loc[1, "end"], ('130', '331'))
+        self.assertEqual(r.loc[1, "end_inscode"], ('_', '_'))
 
 
 if __name__ == '__main__':
