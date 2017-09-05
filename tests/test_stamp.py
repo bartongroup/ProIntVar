@@ -25,7 +25,7 @@ from prointvar.merger import TableMerger
 from prointvar.stamp import (parse_stamp_scan_scores_from_file,
                              get_stamp_domain_line,
                              parse_stamp_domain_definitions_from_line,
-                             parse_stamp_domain_definitions_from_from_file,
+                             parse_stamp_domain_definitions_from_file,
                              write_stamp_domain_definitions_from_table)
 
 from prointvar.config import config as c
@@ -53,7 +53,7 @@ class TestSTAMP(unittest.TestCase):
         self.parse_stamp_scan_scores_from_file = parse_stamp_scan_scores_from_file
         self.get_stamp_domain_line = get_stamp_domain_line
         self.parse_stamp_domain_definition = parse_stamp_domain_definitions_from_line
-        self.parse_stamp_domain_definitions = parse_stamp_domain_definitions_from_from_file
+        self.parse_stamp_domain_definitions = parse_stamp_domain_definitions_from_file
         self.write_stamp_domain_definitions = write_stamp_domain_definitions_from_table
 
         self.domain_def = "testdata/pdbx/2pah_A_1.pdb 2pah_A_1 { A 118 _ TO A 331 _ }"

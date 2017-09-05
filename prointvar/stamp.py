@@ -82,7 +82,7 @@ def parse_stamp_domain_definitions_from_line(string):
     return info
 
 
-def parse_stamp_domain_definitions_from_from_file(inputfile):
+def parse_stamp_domain_definitions_from_file(inputfile):
     """
     Parses a STAMP domain definitions file.
 
