@@ -17,6 +17,7 @@ import sys
 import time
 import json
 import copy
+import shutil
 import logging
 import requests
 import numpy as np
@@ -25,7 +26,6 @@ from string import digits
 from string import ascii_lowercase
 from string import ascii_uppercase
 from datetime import datetime
-from contextlib import suppress
 from collections import OrderedDict
 
 from Bio import pairwise2
@@ -92,8 +92,8 @@ def create_directory(directory):
 
 
 def lazy_file_remover(filename):
-    with suppress(FileNotFoundError):
-        os.remove(filename)
+    if os.path.exists(filename):
+        shutil.rmtree(filename)
 
 
 def flash(message):
