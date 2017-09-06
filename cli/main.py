@@ -235,8 +235,7 @@ def file_downloader(ids, pdb=False, mmcif=False, bio=False, sifts=False,
 
 @cli.command('download')
 @click.argument('ids', nargs=-1, required=True)
-@click_log.init("biodownloader")
-@click_log.simple_verbosity_option()
+@click_log.simple_verbosity_option(logger)
 @click.option('--pdb', 'pdb', multiple=False,
               help='Structure in PDB format (expects PDB ID).',
               default=False, is_flag=True, required=False)

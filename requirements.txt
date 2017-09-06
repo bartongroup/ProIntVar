@@ -11,6 +11,6 @@ requests
 pandas
 lxml
 click
-click_log
+click_log>=0.2.0
 responses
 scipy
