@@ -346,7 +346,8 @@ class TestPDBX(unittest.TestCase):
     def test_writer_pdb_atom(self):
         if os.path.isfile(self.inputcif):
             self.writer(self.inputcif, self.outputpdb).run(atom=('CA',),
-                                                           format_type="pdb")
+                                                           format_type="pdb",
+                                                           category="auth")
             self.assertTrue(os.path.isfile(self.outputpdb))
             # reading the output
             reader = self.reader(self.outputpdb)
