@@ -442,7 +442,8 @@ class DSSPrunner(object):
                         w = PDBXwriter(inputfile=None, outputfile=outputpdb)
                         try:
                             w.run(data=data, chain=(chain,), res=None, atom=None,
-                                  lines=('ATOM',), override=override, format_type="pdb")
+                                  lines=('ATOM',), override=override, format_type="pdb",
+                                  category=category)
                         except ValueError:
                             # skipping only HETATM chains or (generally) empty tables
                             continue
@@ -483,7 +484,7 @@ class DSSPrunner(object):
         return self.run(**kwargs)
 
     def run(self, run_unbound=False, override=False, save_new_input=False,
-            clean_output=True):
+            clean_output=True, category='label'):
 
         # generate outputfile if missing
         if not self.outputfile:
@@ -497,7 +498,8 @@ class DSSPrunner(object):
 
             # run dssp and generate output
             self._run(dssp_bin, run_unbound=run_unbound, override=override,
-                      save_new_input=save_new_input, clean_output=clean_output)
+                      save_new_input=save_new_input, clean_output=clean_output,
+                      category=category)
         else:
             logger.info("DSSP for %s already available...", self.outputfile)
         return

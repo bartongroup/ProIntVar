@@ -387,7 +387,7 @@ def table_generator(uniprot_id=None, pdb_id=None, chain=None, res=None,
 
                 if not os.path.isfile(outputdssp_unb) or override:
                     w = DSSPrunner(inputcif, outputdssp_unb)
-                    w.run(override=override, run_unbound=dssp_unbound)
+                    w.run(override=override, run_unbound=dssp_unbound, category="auth")
                 if os.path.exists(outputdssp_unb):
                     r = DSSPreader(outputdssp_unb)
                     dssp_unb_table = r.residues(add_ss_reduced=True, add_rsa_class=True,
