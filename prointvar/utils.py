@@ -93,7 +93,7 @@ def create_directory(directory):
 
 def lazy_file_remover(filename):
     if os.path.exists(filename):
-        shutil.rmtree(filename)
+        os.remove(filename)
 
 
 def flash(message):
