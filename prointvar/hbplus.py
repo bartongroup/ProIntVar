@@ -20,6 +20,7 @@ from prointvar.pdbx import PDBXwriter
 from prointvar.utils import row_selector
 from prointvar.utils import lazy_file_remover
 from prointvar.utils import constrain_column_types
+from prointvar.utils import exclude_columns
 from prointvar.library import hbplus_types
 
 from prointvar.config import config
@@ -89,13 +90,8 @@ def parse_hb2_from_file(inputfile, excluded=()):
     table.INSCODE_D[table.INSCODE_D == "-"] = "?"
     table.INSCODE_A[table.INSCODE_A == "-"] = "?"
 
-    if excluded is not None:
-        assert type(excluded) is tuple
-        try:
-            table = table.drop(list(excluded), axis=1)
-        except ValueError:
-            # most likely theses are not in there
-            pass
+    # excluding columns
+    table = exclude_columns(table, excluded=excluded)
 
     # enforce some specific column types
     table = constrain_column_types(table, hbplus_types)

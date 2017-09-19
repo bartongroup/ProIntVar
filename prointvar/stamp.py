@@ -23,6 +23,7 @@ from io import StringIO
 from prointvar.pdbx import PDBXwriter
 
 from prointvar.utils import constrain_column_types
+from prointvar.utils import exclude_columns
 from prointvar.library import stamp_types
 
 from prointvar.config import config
@@ -229,13 +230,7 @@ def parse_stamp_scan_scores_from_file(inputfile, excluded=()):
                           keep_default_na=False)
 
     # excluding columns
-    if excluded is not None:
-        assert type(excluded) is tuple
-        try:
-            table = table.drop(list(excluded), axis=1)
-        except ValueError:
-            # most likely theses are not in there
-            pass
+    table = exclude_columns(table, excluded=excluded)
 
     # enforce some specific column types
     table = constrain_column_types(table, stamp_types)

@@ -29,6 +29,7 @@ from prointvar.utils import merging_down_by_key
 from prointvar.utils import flatten_nested_structure
 from prointvar.utils import refactor_key_val_singletons
 from prointvar.utils import constrain_column_types
+from prointvar.utils import exclude_columns
 from prointvar.library import uni_ens_var_types
 from prointvar.library import update_ensembl_to_uniprot
 
@@ -59,13 +60,8 @@ def flatten_uniprot_variants_ebi(data, excluded=()):
 
     table = pd.DataFrame(var_rows)
 
-    if excluded is not None:
-        assert type(excluded) is tuple
-        try:
-            table = table.drop(list(excluded), axis=1)
-        except ValueError:
-            # most likely theses are not in there
-            pass
+    # excluding columns
+    table = exclude_columns(table, excluded=excluded)
 
     # enforce some specific column types
     table = constrain_column_types(table, uni_ens_var_types)
@@ -102,13 +98,8 @@ def flatten_ensembl_variants(data, excluded=(), synonymous=True):
     # rename columns
     table.rename(columns=update_ensembl_to_uniprot, inplace=True)
 
-    if excluded is not None:
-        assert type(excluded) is tuple
-        try:
-            table = table.drop(list(excluded), axis=1)
-        except ValueError:
-            # most likely theses are not in there
-            pass
+    # excluding columns
+    table = exclude_columns(table, excluded=excluded)
 
     # enforce some specific column types
     table = constrain_column_types(table, uni_ens_var_types)
