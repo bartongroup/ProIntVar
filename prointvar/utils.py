@@ -20,6 +20,7 @@ import copy
 import shutil
 import logging
 import requests
+import requests_cache
 import numpy as np
 import pandas as pd
 from string import digits
@@ -35,6 +36,7 @@ from prointvar.library import (ASA_Miller, ASA_Wilke, ASA_Sander)
 from prointvar.library import aa_codes_1to3_extended
 
 logger = logging.getLogger("prointvar")
+requests_cache.install_cache('prointvar')
 
 
 class Make:
