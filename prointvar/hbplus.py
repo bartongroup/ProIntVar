@@ -19,6 +19,7 @@ from prointvar.pdbx import PDBXwriter
 
 from prointvar.utils import row_selector
 from prointvar.utils import lazy_file_remover
+from prointvar.utils import constrain_column_types
 from prointvar.library import hbplus_types
 
 from prointvar.config import config
@@ -97,13 +98,7 @@ def parse_hb2_from_file(inputfile, excluded=()):
             pass
 
     # enforce some specific column types
-    for col in table:
-        if col in hbplus_types:
-            try:
-                table[col] = table[col].astype(hbplus_types[col])
-            except ValueError:
-                # there are some NaNs in there
-                pass
+    table = constrain_column_types(table, hbplus_types)
 
     if table.empty:
         raise ValueError('{} resulted in an empty DataFrame...'.format(inputfile))

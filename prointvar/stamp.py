@@ -22,6 +22,7 @@ from io import StringIO
 
 from prointvar.pdbx import PDBXwriter
 
+from prointvar.utils import constrain_column_types
 from prointvar.library import stamp_types
 
 from prointvar.config import config
@@ -237,13 +238,7 @@ def parse_stamp_scan_scores_from_file(inputfile, excluded=()):
             pass
 
     # enforce some specific column types
-    for col in table:
-        if col in stamp_types:
-            try:
-                table[col] = table[col].astype(stamp_types[col])
-            except ValueError:
-                # there are some NaNs in there
-                pass
+    table = constrain_column_types(table, stamp_types)
 
     if table.empty:
         raise ValueError('{} resulted in an empty DataFrame...'.format(inputfile))

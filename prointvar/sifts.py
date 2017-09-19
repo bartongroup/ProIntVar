@@ -18,6 +18,7 @@ from lxml import etree
 from collections import OrderedDict
 
 from prointvar.utils import row_selector
+from prointvar.utils import constrain_column_types
 from prointvar.library import sifts_types
 
 logger = logging.getLogger("prointvar")
@@ -210,13 +211,7 @@ def parse_sifts_residues_from_file(inputfile, excluded=(),
     table = pd.DataFrame(rows)
 
     # enforce some specific column types
-    for col in table:
-        if col in sifts_types:
-            try:
-                table[col] = table[col].astype(sifts_types[col])
-            except ValueError:
-                # there are some NaNs in there
-                pass
+    table = constrain_column_types(table, sifts_types)
 
     for c in list(table):
         if '_regionId' in c:

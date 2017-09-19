@@ -20,6 +20,7 @@ import pandas as pd
 from Bio import AlignIO
 
 from prointvar.fetchers import fetch_uniprot_id_from_name
+from prointvar.utils import constrain_column_types
 
 logger = logging.getLogger("prointvar")
 
@@ -92,12 +93,7 @@ def parse_msa_sequences_from_file(inputfile, excluded=(), get_uniprot_id=False,
 
     # enforce some specific column types
     msa_types = {key: str for key in list(table) if key != 'Start' and key != 'End'}
-    for col in table:
-        try:
-            table[col] = table[col].astype(msa_types[col])
-        except (ValueError, KeyError):
-            # there are some NaNs in there
-            pass
+    table = constrain_column_types(table, msa_types)
 
     if table.empty:
         raise ValueError('{} resulted in an empty DataFrame...'.format(inputfile))
