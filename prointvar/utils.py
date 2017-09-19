@@ -679,5 +679,29 @@ def get_start_end_ranges_consecutive_ints(data):
     return tuple(starts), tuple(ends)
 
 
+def constrain_column_types(data, dictionary, nan_value=None):
+    """
+    Helper method that helps in constrain data types for the
+    various DataFrame columns.
+
+    :param data: pandas DataFrame
+    :param dictionary: (dict) defines common types
+    :param nan_value: optional new value passed to replace NaNs
+    :return: modified pandas DataFrame
+    """
+
+    table = data
+    for col in table:
+        if col in dictionary:
+            try:
+                table[col] = table[col].astype(dictionary[col])
+            except (ValueError, KeyError):
+                # probably there are some NaNs in there
+                pass
+            if table[col].isnull().any().any() and nan_value is not None:
+                table[col] = table[col].fillna(nan_value, axis=1)
+    return table
+
+
 if __name__ == '__main__':
     pass
