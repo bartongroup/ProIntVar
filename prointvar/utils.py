@@ -703,5 +703,26 @@ def constrain_column_types(data, dictionary, nan_value=None):
     return table
 
 
+def exclude_columns(data, excluded=()):
+    """
+    Helper method that helps in filtering out columns based
+    on the column name.
+
+    :param data: pandas DataFrame
+    :param excluded: (tuple) optional columns to be excluded
+    :return: modified pandas DataFrame
+    """
+
+    table = data
+    if excluded is not None:
+        assert type(excluded) is tuple
+        try:
+            table = table.drop(list(excluded), axis=1)
+        except ValueError:
+            # most likely theses are not in there
+            pass
+    return table
+
+
 if __name__ == '__main__':
     pass
