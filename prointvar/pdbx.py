@@ -25,6 +25,8 @@ from prointvar.utils import row_selector
 from prointvar.utils import string_split
 from prointvar.utils import get_new_pro_ids
 from prointvar.utils import check_sequence
+from prointvar.utils import constrain_column_types
+from prointvar.utils import exclude_columns
 from prointvar.library import mmcif_types
 from prointvar.library import aa_default_atoms
 from prointvar.library import aa_codes_3to1_extended
@@ -94,13 +96,7 @@ def parse_mmcif_atoms_from_file(inputfile, excluded=(), add_res_full=True,
                           keep_default_na=False)
 
     # excluding columns
-    if excluded is not None:
-        assert type(excluded) is tuple
-        try:
-            table = table.drop(list(excluded), axis=1)
-        except ValueError:
-            # most likely theses are not in there
-            pass
+    table = exclude_columns(table, excluded=excluded)
 
     # if only first model (>1 in NMR structures)
     if first_model:
@@ -144,13 +140,7 @@ def parse_mmcif_atoms_from_file(inputfile, excluded=(), add_res_full=True,
         logger.info("PDBx reset atom numbers...")
 
     # enforce some specific column types
-    for col in table:
-        if col in mmcif_types:
-            try:
-                table[col] = table[col].astype(mmcif_types[col])
-            except ValueError:
-                # there are some NaNs in there
-                pass
+    table = constrain_column_types(table, mmcif_types)
 
     if table.empty:
         raise ValueError('{} resulted in an empty DataFrame...'.format(inputfile))
@@ -226,13 +216,7 @@ def parse_pdb_atoms_from_file(inputfile, excluded=(), add_contacts=False,
                         compression=None, converters=all_str, keep_default_na=False)
 
     # excluding columns
-    if excluded is not None:
-        assert type(excluded) is tuple
-        try:
-            table = table.drop(list(excluded), axis=1)
-        except ValueError:
-            # most likely theses are not in there
-            pass
+    table = exclude_columns(table, excluded=excluded)
 
     # if only first model (>1 in NMR structures)
     if first_model:
@@ -279,13 +263,7 @@ def parse_pdb_atoms_from_file(inputfile, excluded=(), add_contacts=False,
         logger.info("PDBx reset atom numbers...")
 
     # enforce some specific column types
-    for col in table:
-        if col in mmcif_types:
-            try:
-                table[col] = table[col].astype(mmcif_types[col])
-            except ValueError:
-                # there are some NaNs in there
-                pass
+    table = constrain_column_types(table, mmcif_types)
 
     if table.empty:
         raise ValueError('{} resulted in an empty DataFrame...'.format(inputfile))

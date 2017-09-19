@@ -39,6 +39,8 @@ from prointvar.hbplus import HBPLUSrunner
 from prointvar.utils import lazy_file_remover
 from prointvar.utils import row_selector
 from prointvar.utils import string_split
+from prointvar.utils import constrain_column_types
+from prointvar.utils import exclude_columns
 from prointvar.library import arpeggio_types
 from prointvar.library import arpeggio_col_renames
 
@@ -97,22 +99,11 @@ def parse_arpeggio_from_file(inputfile, excluded=(), add_res_split=True,
         table = add_special_cont_types(inputfile, table)
         logger.info("Parsed special contact-types...")
 
-    if excluded is not None:
-        assert type(excluded) is tuple
-        try:
-            table = table.drop(list(excluded), axis=1)
-        except ValueError:
-            # most likely theses are not in there
-            pass
+    # excluding columns
+    table = exclude_columns(table, excluded=excluded)
 
     # enforce some specific column types
-    for col in table:
-        if col in arpeggio_types:
-            try:
-                table[col] = table[col].astype(arpeggio_types[col])
-            except ValueError:
-                # there are some NaNs in there
-                pass
+    table = constrain_column_types(table, arpeggio_types)
 
     if table.empty:
         raise ValueError('{} resulted in an empty DataFrame...'.format(inputfile))
@@ -184,14 +175,8 @@ def parse_arpeggio_spec_from_file(inputfile, excluded=(), add_res_split=True,
     if add_res_split:
         table = add_arpeggio_res_split(table)
 
-    if excluded is not None:
-        excluded = tuple([k for k in excluded if k in header])
-        assert type(excluded) is tuple
-        try:
-            table = table.drop(list(excluded), axis=1)
-        except ValueError:
-            # most likely theses are not in there
-            pass
+    # excluding columns
+    table = exclude_columns(table, excluded=excluded)
 
     if table.empty:
         raise ValueError('{} resulted in an empty DataFrame...'.format(inputfile))

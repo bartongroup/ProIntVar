@@ -20,6 +20,8 @@ import pandas as pd
 from Bio import AlignIO
 
 from prointvar.fetchers import fetch_uniprot_id_from_name
+from prointvar.utils import constrain_column_types
+from prointvar.utils import exclude_columns
 
 logger = logging.getLogger("prointvar")
 
@@ -82,22 +84,11 @@ def parse_msa_sequences_from_file(inputfile, excluded=(), get_uniprot_id=False,
     table = pd.DataFrame(rows)
 
     # excluding columns
-    if excluded is not None:
-        assert type(excluded) is tuple
-        try:
-            table = table.drop(list(excluded), axis=1)
-        except ValueError:
-            # most likely theses are not in there
-            pass
+    table = exclude_columns(table, excluded=excluded)
 
     # enforce some specific column types
     msa_types = {key: str for key in list(table) if key != 'Start' and key != 'End'}
-    for col in table:
-        try:
-            table[col] = table[col].astype(msa_types[col])
-        except (ValueError, KeyError):
-            # there are some NaNs in there
-            pass
+    table = constrain_column_types(table, msa_types)
 
     if table.empty:
         raise ValueError('{} resulted in an empty DataFrame...'.format(inputfile))
