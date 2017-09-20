@@ -11,6 +11,7 @@ import unittest
 import datetime
 import numpy as np
 import pandas as pd
+import requests_cache
 from io import StringIO
 from datetime import datetime
 from contextlib import contextmanager
@@ -102,6 +103,7 @@ class TestUTILS(unittest.TestCase):
     def setUp(self):
         """Initialize the framework for testing."""
 
+        requests_cache.uninstall_cache()
         self.flash = flash
         self.string_split = string_split
         self.fetch_from_url_or_retry = fetch_from_url_or_retry
