@@ -41,6 +41,8 @@ from prointvar.utils import is_gap
 from prointvar.utils import get_pairwise_indexes
 from prointvar.utils import Make
 from prointvar.utils import get_start_end_ranges_consecutive_ints
+from prointvar.utils import constrain_column_types
+from prointvar.utils import exclude_columns
 
 from prointvar.config import config as c
 
@@ -149,6 +151,14 @@ class TestUTILS(unittest.TestCase):
         self.get_pairwise_indexes = get_pairwise_indexes
         self.make_class = Make
         self.get_start_end_ranges_consecutive_ints = get_start_end_ranges_consecutive_ints
+        self.mock_df = pd.DataFrame(
+            [{'label': '1', 'value': 1, 'type': 23.4},
+             {'label': '2', 'value': 1, 'type': 1},
+             {'label': '3', 'value': 2, 'type': np.nan},
+             {'label': '4', 'value': 3, 'type': 123.1},
+             {'label': '5', 'value': 5, 'type': 0.32}])
+        self.constrain_column_types = constrain_column_types
+        self.exclude_columns = exclude_columns
 
         logging.disable(logging.DEBUG)
 
@@ -181,6 +191,9 @@ class TestUTILS(unittest.TestCase):
         self.get_pairwise_indexes = None
         self.make_class = None
         self.get_start_end_ranges_consecutive_ints = None
+        self.mock_df = None
+        self.constrain_column_types = None
+        self.exclude_columns = None
 
         logging.disable(logging.NOTSET)
 
@@ -382,18 +395,13 @@ class TestUTILS(unittest.TestCase):
         self.assertEqual(seq_id_2, '2')
 
     def test_row_selector(self):
-        data = pd.DataFrame([{'label': '1', 'value': 1},
-                             {'label': '2', 'value': 1},
-                             {'label': '3', 'value': 2},
-                             {'label': '4', 'value': 3},
-                             {'label': '5', 'value': 5}])
-        d = self.row_selector(data, key='value', value=3, method='equals')
+        d = self.row_selector(self.mock_df, key='value', value=3, method='equals')
         self.assertEqual(len(d.index), 1)
-        d = self.row_selector(data, key='value', value=3, method='diffs')
+        d = self.row_selector(self.mock_df, key='value', value=3, method='diffs')
         self.assertEqual(len(d.index), 4)
-        d = self.row_selector(data, key='value', value=None, method='first')
+        d = self.row_selector(self.mock_df, key='value', value=None, method='first')
         self.assertEqual(len(d.index), 2)
-        d = self.row_selector(data, key='value', value=(2, 3), method='isin')
+        d = self.row_selector(self.mock_df, key='value', value=(2, 3), method='isin')
         self.assertEqual(len(d.index), 2)
 
     def test_merging_down_by_key(self):
@@ -512,6 +520,27 @@ class TestUTILS(unittest.TestCase):
         self.assertTrue(len(starts) == len(ends))
         self.assertEqual(starts, (1, 7, 13, 23, 32, 47))
         self.assertEqual(ends, (3, 9, 19, 29, 42, 50))
+
+    def test_constrain_column_types(self):
+        dtypes = {'type': 'float64',
+                  'value': 'int64',
+                  'label': 'object'}
+
+        self.mock_df = self.constrain_column_types(self.mock_df, dtypes)
+        self.assertEqual(self.mock_df["type"].dtype, np.float64)
+        self.assertEqual(self.mock_df["value"].dtype, np.int64)
+        self.assertEqual(self.mock_df["label"].dtype, np.object)
+
+        self.mock_df = self.constrain_column_types(self.mock_df, dtypes,
+                                                   nan_value=0.0)
+        self.assertEqual(self.mock_df["type"].dtype, np.float64)
+        self.assertEqual(self.mock_df.loc[2, "type"], 0.0)
+
+    def test_exclude_columns(self):
+        self.assertEqual(len(self.mock_df.columns), 3)
+        self.mock_df = self.exclude_columns(self.mock_df, excluded=("type",))
+        self.assertEqual(len(self.mock_df.columns), 2)
+        self.assertNotIn("type", self.mock_df)
 
 
 if __name__ == '__main__':

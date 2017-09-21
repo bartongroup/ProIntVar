@@ -492,7 +492,7 @@ def row_selector(data, key=None, value=None, method="isin"):
         assert type(method) is str
         if key in table:
             if method == "isin":
-                assert type(value) is tuple
+                assert hasattr(value, '__iter__')
                 table = table.loc[table[key].isin(value)]
             elif method == "equals":
                 # assert type(values) is str
@@ -701,7 +701,7 @@ def constrain_column_types(data, dictionary, nan_value=None):
                 # probably there are some NaNs in there
                 pass
             if table[col].isnull().any().any() and nan_value is not None:
-                table[col] = table[col].fillna(nan_value, axis=1)
+                table[col] = table[col].fillna(nan_value)
     return table
 
 
@@ -717,7 +717,7 @@ def exclude_columns(data, excluded=()):
 
     table = data
     if excluded is not None:
-        assert type(excluded) is tuple
+        assert hasattr(excluded, '__iter__')
         try:
             table = table.drop(list(excluded), axis=1)
         except ValueError:
