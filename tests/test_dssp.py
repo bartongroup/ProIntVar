@@ -265,7 +265,7 @@ class TestDSSP(unittest.TestCase):
         if os.path.isfile(self.inputcif):
             filename, extension = os.path.splitext(self.inputdssp)
             g = self.generator(self.inputcif, filename + '_unbound.dssp')
-            g.run(run_unbound=True, override=True)
+            g.run(run_unbound=True, override=True, category='auth')
             self.assertTrue(os.path.isfile(filename + '_unbound.dssp'))
         else:
             raise IOError("%s" % self.inputcif)
