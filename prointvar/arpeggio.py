@@ -382,35 +382,35 @@ def get_arpeggio_selected_from_table(data, chain_A=None, chain_B=None,
     table = data
 
     if chain_A is not None:
-        table = row_selector(table, 'CHAIN_A', chain_A, method="isin")
+        table = row_selector(table, 'CHAIN_A', chain_A)
         logger.info("Arpeggio table filtered by CHAIN_A...")
 
     if chain_B is not None:
-        table = row_selector(table, 'CHAIN_B', chain_B, method="isin")
+        table = row_selector(table, 'CHAIN_B', chain_B)
         logger.info("Arpeggio table filtered by CHAIN_B...")
 
     if res_A is not None:
-        table = row_selector(table, 'RES_A', res_A, method="isin")
+        table = row_selector(table, 'RES_A', res_A)
         logger.info("Arpeggio table filtered by RES_A...")
 
     if res_B is not None:
-        table = row_selector(table, 'RES_B', res_B, method="isin")
+        table = row_selector(table, 'RES_B', res_B)
         logger.info("Arpeggio table filtered by RES_B...")
 
     if res_full_A is not None:
-        table = row_selector(table, 'RES_FULL_A', res_full_A, method="isin")
+        table = row_selector(table, 'RES_FULL_A', res_full_A)
         logger.info("Arpeggio table filtered by RES_FULL_A...")
 
     if res_full_B is not None:
-        table = row_selector(table, 'RES_FULL_B', res_full_B, method="isin")
+        table = row_selector(table, 'RES_FULL_B', res_full_B)
         logger.info("Arpeggio table filtered by RES_FULL_B...")
 
     if atom_A is not None:
-        table = row_selector(table, 'ATOM_A', atom_A, method="isin")
+        table = row_selector(table, 'ATOM_A', atom_A)
         logger.info("Arpeggio table filtered by ATOM_A...")
 
     if atom_B is not None:
-        table = row_selector(table, 'ATOM_B', atom_B, method="isin")
+        table = row_selector(table, 'ATOM_B', atom_B)
         logger.info("Arpeggio table filtered by ATOM_B...")
 
     return table

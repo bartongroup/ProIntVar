@@ -355,23 +355,23 @@ def get_sifts_selected_from_table(data, chain=None, chain_auth=None, res=None,
     # excluding rows
     table = data
     if chain is not None:
-        table = row_selector(table, 'PDB_entityId', chain, method="isin")
+        table = row_selector(table, 'PDB_entityId', chain)
         logger.info("SIFTS table filtered by PDB_entityId...")
 
     if chain_auth is not None:
-        table = row_selector(table, 'PDB_dbChainId', chain_auth, method="isin")
+        table = row_selector(table, 'PDB_dbChainId', chain_auth)
         logger.info("SIFTS table filtered by PDB_dbChainId...")
 
     if res is not None:
-        table = row_selector(table, 'PDB_dbResNum', res, method="isin")
+        table = row_selector(table, 'PDB_dbResNum', res)
         logger.info("SIFTS table filtered by PDB_dbResNum...")
 
     if uniprot is not None:
-        table = row_selector(table, 'UniProt_dbAccessionId', uniprot, method="isin")
+        table = row_selector(table, 'UniProt_dbAccessionId', uniprot)
         logger.info("SIFTS table filtered by UniProt_dbAccessionId...")
 
     if site is not None:
-        table = row_selector(table, 'UniProt_dbResNum', site, method="isin")
+        table = row_selector(table, 'UniProt_dbResNum', site)
         logger.info("SIFTS table filtered by UniProt_dbResNum...")
 
     return table

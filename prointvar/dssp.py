@@ -201,15 +201,15 @@ def get_dssp_selected_from_table(data, chain=None, chain_full=None, res=None):
     # excluding rows
     table = data
     if chain is not None:
-        table = row_selector(table, 'CHAIN', chain, method="isin")
+        table = row_selector(table, 'CHAIN', chain)
         logger.info("DSSP table filtered by CHAIN...")
 
     if chain_full is not None:
-        table = row_selector(table, 'CHAIN_FULL', chain_full, method="isin")
+        table = row_selector(table, 'CHAIN_FULL', chain_full)
         logger.info("DSSP table filtered by CHAIN_FULL...")
 
     if res is not None:
-        table = row_selector(table, 'RES', res, method="isin")
+        table = row_selector(table, 'RES', res)
         logger.info("DSSP table filtered by RES...")
 
     return table

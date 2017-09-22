@@ -100,8 +100,7 @@ def parse_mmcif_atoms_from_file(inputfile, excluded=(), add_res_full=True,
 
     # if only first model (>1 in NMR structures)
     if first_model:
-        table = row_selector(table, key='pdbx_PDB_model_num', value=None,
-                             method='first')
+        table = row_selector(table, key='pdbx_PDB_model_num', value='first')
 
     # table modular extensions
     if add_contacts:
@@ -126,7 +125,7 @@ def parse_mmcif_atoms_from_file(inputfile, excluded=(), add_res_full=True,
         logger.info("PDBx removed altlocs...")
 
     if remove_hydrogens:
-        table = row_selector(table, key='type_symbol', value='H', method='diffs')
+        table = row_selector(table, key='type_symbol', value='H', reverse=True)
         logger.info("PDBx removed existing hydrogens...")
 
     if remove_partial_res:
@@ -220,8 +219,7 @@ def parse_pdb_atoms_from_file(inputfile, excluded=(), add_contacts=False,
 
     # if only first model (>1 in NMR structures)
     if first_model:
-        table = row_selector(table, key='pdbx_PDB_model_num', value=None,
-                             method='first')
+        table = row_selector(table, key='pdbx_PDB_model_num', value='first')
 
     # fixes the 'pdbx_PDB_ins_code'
     table = fix_pdb_ins_code(table)
@@ -249,7 +247,7 @@ def parse_pdb_atoms_from_file(inputfile, excluded=(), add_contacts=False,
         logger.info("PDBx removed altlocs...")
 
     if remove_hydrogens:
-        table = row_selector(table, key='type_symbol', value='H', method='diffs')
+        table = row_selector(table, key='type_symbol', value='H', reverse=True)
         logger.info("PDBx removed existing hydrogens...")
 
     if remove_partial_res:
@@ -375,27 +373,27 @@ def get_mmcif_selected_from_table(data, chain=None, res=None, res_full=None, com
     # excluding rows
     table = data
     if chain is not None:
-        table = row_selector(table, '{}_asym_id'.format(category), chain, method="isin")
+        table = row_selector(table, '{}_asym_id'.format(category), chain)
         logger.info("PDBx table filtered by %s_asym_id...", category)
 
     if res is not None:
-        table = row_selector(table, '{}_seq_id'.format(category), res, method="isin")
+        table = row_selector(table, '{}_seq_id'.format(category), res)
         logger.info("PDBx table filtered by %s_seq_id...", category)
 
     if res_full is not None:
-        table = row_selector(table, '{}_seq_id_full'.format(category), res_full, method="isin")
+        table = row_selector(table, '{}_seq_id_full'.format(category), res_full)
         logger.info("PDBx table filtered by %s_seq_id_full...", category)
 
     if comp is not None:
-        table = row_selector(table, '{}_comp_id'.format(category), comp, method="isin")
+        table = row_selector(table, '{}_comp_id'.format(category), comp)
         logger.info("PDBx table filtered by %s_comp_id...", category)
 
     if atom is not None:
-        table = row_selector(table, '{}_atom_id'.format(category), atom, method="isin")
+        table = row_selector(table, '{}_atom_id'.format(category), atom)
         logger.info("PDBx table filtered by %s_atom_id...", category)
 
     if lines is not None:
-        table = row_selector(table, 'group_PDB', lines, method="isin")
+        table = row_selector(table, 'group_PDB', lines)
         logger.info("PDBx table filtered by group_PDB...")
 
     return table

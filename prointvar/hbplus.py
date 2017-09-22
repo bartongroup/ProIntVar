@@ -118,19 +118,19 @@ def get_hbplus_selected_from_table(data, chain_A=None, chain_D=None,
     # excluding rows
     table = data
     if chain_D is not None:
-        table = row_selector(table, 'CHAIN_D', chain_D, method="isin")
+        table = row_selector(table, 'CHAIN_D', chain_D)
         logger.info("HBPLUS table filtered by CHAIN_D...")
 
     if chain_A is not None:
-        table = row_selector(table, 'CHAIN_A', chain_A, method="isin")
+        table = row_selector(table, 'CHAIN_A', chain_A)
         logger.info("HBPLUS table filtered by CHAIN_A...")
 
     if res_D is not None:
-        table = row_selector(table, 'RES_D', res_D, method="isin")
+        table = row_selector(table, 'RES_D', res_D)
         logger.info("HBPLUS table filtered by RES_D...")
 
     if res_A is not None:
-        table = row_selector(table, 'RES_A', res_A, method="isin")
+        table = row_selector(table, 'RES_A', res_A)
         logger.info("HBPLUS table filtered by RES_A...")
 
     return table

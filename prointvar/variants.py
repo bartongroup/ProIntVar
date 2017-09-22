@@ -113,7 +113,7 @@ def flatten_ensembl_variants(data, excluded=(), synonymous=True):
     # filter synonymous
     if not synonymous:
         table = row_selector(table, key='consequenceType',
-                             value='synonymous_variant', method="diffs")
+                             value='synonymous_variant', reverse=True)
     return table
 
 

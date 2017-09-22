@@ -395,13 +395,13 @@ class TestUTILS(unittest.TestCase):
         self.assertEqual(seq_id_2, '2')
 
     def test_row_selector(self):
-        d = self.row_selector(self.mock_df, key='value', value=3, method='equals')
+        d = self.row_selector(self.mock_df, key='value', value=3)
         self.assertEqual(len(d.index), 1)
-        d = self.row_selector(self.mock_df, key='value', value=3, method='diffs')
+        d = self.row_selector(self.mock_df, key='value', value=3, reverse=True)
         self.assertEqual(len(d.index), 4)
-        d = self.row_selector(self.mock_df, key='value', value=None, method='first')
+        d = self.row_selector(self.mock_df, key='value', value='first')
         self.assertEqual(len(d.index), 2)
-        d = self.row_selector(self.mock_df, key='value', value=(2, 3), method='isin')
+        d = self.row_selector(self.mock_df, key='value', value=(2, 3))
         self.assertEqual(len(d.index), 2)
 
     def test_merging_down_by_key(self):
