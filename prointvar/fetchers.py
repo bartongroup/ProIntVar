@@ -77,7 +77,7 @@ def fetch_uniprot_fasta(identifier, cached=False, retry_in=(429,)):
     url = url_root + url_endpoint
     b = BioFetcher(url=url, cached=cached,
                    cache_output="{}_fasta.pkl".format(identifier),
-                   json=True, retry_in=retry_in)
+                   json=False, retry_in=retry_in)
     return b.response
 
 

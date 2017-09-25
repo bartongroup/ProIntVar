@@ -270,7 +270,7 @@ class TestFetchers(unittest.TestCase):
         self.assertTrue(r.ok)
 
     def fetch_fetch_ensembl_sequence_from_id(self):
-        r = fetch_ensembl_sequence_from_id(self.ensemblid)
+        r = self.fetch_ensembl_sequence_from_id(self.ensemblid)
         self.assertTrue(r.ok)
 
     def test_biofetcher_uniprot_fasta(self):
