@@ -12,6 +12,7 @@ import os
 import sys
 import logging
 import unittest
+import requests_cache
 
 try:
     from StringIO import StringIO
@@ -62,6 +63,8 @@ class TestFetchers(unittest.TestCase):
 
     def setUp(self):
         """Initialize the framework for testing."""
+
+        requests_cache.uninstall_cache()
 
         self.uniprotid = "P00439"
         self.pdbid = "2pah"
