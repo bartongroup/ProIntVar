@@ -435,7 +435,7 @@ def get_rsa_class(rsa):
     return rsa_class
 
 
-def compute_rsa(acc, resname, method="Sander"):
+def get_rsa(acc, resname, method="Sander"):
     """
     Computes Relative Solvent Accessibility (RSA) from an input
     DSSP ACC value, and according to ASA standard values.

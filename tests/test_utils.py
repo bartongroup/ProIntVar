@@ -43,6 +43,8 @@ from prointvar.utils import Make
 from prointvar.utils import get_start_end_ranges_consecutive_ints
 from prointvar.utils import constrain_column_types
 from prointvar.utils import exclude_columns
+from prointvar.utils import get_rsa
+from prointvar.utils import get_rsa_class
 
 from prointvar.config import config as c
 
@@ -159,6 +161,8 @@ class TestUTILS(unittest.TestCase):
              {'label': '5', 'value': 5, 'type': 0.32}])
         self.constrain_column_types = constrain_column_types
         self.exclude_columns = exclude_columns
+        self.get_rsa = get_rsa
+        self.get_rsa_class = get_rsa_class
 
         logging.disable(logging.DEBUG)
 
@@ -194,6 +198,8 @@ class TestUTILS(unittest.TestCase):
         self.mock_df = None
         self.constrain_column_types = None
         self.exclude_columns = None
+        self.get_rsa = None
+        self.get_rsa_class = None
 
         logging.disable(logging.NOTSET)
 
@@ -541,6 +547,22 @@ class TestUTILS(unittest.TestCase):
         self.mock_df = self.exclude_columns(self.mock_df, excluded=("type",))
         self.assertEqual(len(self.mock_df.columns), 2)
         self.assertNotIn("type", self.mock_df)
+
+    def test_get_rsa(self):
+        rsa = self.get_rsa(10.0, "A", method="Sander")
+        self.assertEqual(9.434, rsa)
+        rsa = self.get_rsa(20.0, "A", method="Miller")
+        self.assertEqual(17.699, rsa)
+        rsa = self.get_rsa(30.0, "A", method="Wilke")
+        self.assertEqual(23.256, rsa)
+
+    def test_get_rsa_class(self):
+        rsa_class = self.get_rsa_class(25.5)
+        self.assertEqual('Surface', rsa_class)
+        rsa_class = self.get_rsa_class(7.5)
+        self.assertEqual('Part. Exposed', rsa_class)
+        rsa_class = self.get_rsa_class(1.5)
+        self.assertEqual('Core', rsa_class)
 
 
 if __name__ == '__main__':

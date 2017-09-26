@@ -20,7 +20,7 @@ from string import ascii_uppercase
 from prointvar.pdbx import PDBXreader
 from prointvar.pdbx import PDBXwriter
 
-from prointvar.utils import compute_rsa
+from prointvar.utils import get_rsa
 from prointvar.utils import get_rsa_class
 from prointvar.utils import row_selector
 from prointvar.utils import lazy_file_remover
@@ -272,8 +272,8 @@ def add_dssp_rsa(data, method="Sander"):
     table = data
     rsas = []
     for i in table.index:
-        rsas.append(compute_rsa(table.loc[i, "ACC"], table.loc[i, "AA"],
-                                method=method))
+        rsas.append(get_rsa(table.loc[i, "ACC"], table.loc[i, "AA"],
+                            method=method))
     table["RSA"] = rsas
     return table
 
