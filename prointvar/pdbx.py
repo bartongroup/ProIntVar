@@ -553,37 +553,6 @@ def add_mmcif_res_full(data):
     return table
 
 
-def get_mmcif_res_split(data):
-    """
-    Utility that adds new columns to the table.
-    Adds new columns from the 'full res' (i.e. seq_id + ins_code).
-    
-    adds: 'label_seq_id', 'auth_seq_id', and 'pdbx_PDB_ins_code'
-    
-    :param data: pandas DataFrame object
-    :return: returns a modified pandas DataFrame
-    """
-
-    table = data
-    seq_ids = []
-    ins_codes = []
-    for i in table.index:
-        values = string_split(table.loc[i, "label_seq_id_full"])
-        if len(values) == 1:
-            values.append('?')
-        elif len(values) == 2 and values[0] == '-':
-            values = ["".join(values), '?']
-        elif len(values) == 3 and values[0] == '-':
-            values = ["".join(values[0] + values[1]), values[2]]
-        seq_ids.append(values[0])
-        ins_codes.append(values[1])
-    table["label_seq_id"] = seq_ids
-    table["auth_seq_id"] = seq_ids
-    table["pdbx_PDB_ins_code"] = ins_codes
-
-    return table
-
-
 def fix_pdb_ins_code(data):
     """
     Utility that fixes the 'pdbx_PDB_ins_code' column to match is expected
