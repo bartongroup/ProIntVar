@@ -675,16 +675,16 @@ def add_mmcif_atom_altloc(data):
     def join_atom_altloc(data, category='label'):
         atom = data['{}_atom_id'.format(category)]
         altloc = data['label_alt_id']
-        if altloc == "." or altloc == '' or altloc == ' ':
-            return atom
-        else:
-            return atom + '.' + altloc
 
-    data.is_copy = False
-    data['label_atom_altloc_id'] = data.apply(join_atom_altloc,
-                                              axis=1, args=('label',))
-    data['auth_atom_altloc_id'] = data.apply(join_atom_altloc,
-                                             axis=1, args=('auth',))
+        new_column = (atom + '.' + altloc)
+        has_no_alt = altloc.isin(['.', '', ' '])
+        new_column[has_no_alt] = atom.loc[has_no_alt]
+
+        return new_column
+
+    # NB. Use of assign prevents inplace modification
+    data = data.assign(label_atom_altloc_id=join_atom_altloc(data, 'label'))
+    data = data.assign(auth_atom_altloc_id=join_atom_altloc(data, 'auth'))
     return data
 
 
