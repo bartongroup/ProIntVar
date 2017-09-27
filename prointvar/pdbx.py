@@ -558,21 +558,9 @@ def add_mmcif_res_full(data):
     table = data
     # adds both 'label' and 'auth' entries
     if 'label_seq_id' in table:
-        seqs_full = []
-        for ix in table.index:
-            seq = "{}{}".format(table.loc[ix, 'label_seq_id'],
-                                table.loc[ix, 'pdbx_PDB_ins_code']).replace('?', '')
-            seqs_full.append(seq)
-        assert len(seqs_full) == len(table)
-        table['label_seq_id_full'] = seqs_full
+        table['label_seq_id_full'] = table['label_seq_id'] + table['pdbx_PDB_ins_code'].str.replace('?', '')
     if 'auth_seq_id' in table:
-        seqs_full = []
-        for ix in table.index:
-            seq = "{}{}".format(table.loc[ix, 'auth_seq_id'],
-                                table.loc[ix, 'pdbx_PDB_ins_code']).replace('?', '')
-            seqs_full.append(seq)
-        assert len(seqs_full) == len(table)
-        table['auth_seq_id_full'] = seqs_full
+        table['auth_seq_id_full'] = table['auth_seq_id'] + table['pdbx_PDB_ins_code'].str.replace('?', '')
 
     return table
 
