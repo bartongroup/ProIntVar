@@ -500,16 +500,10 @@ def collapsed_contacts(data, col_method='full'):
         col_names = list(col_min)
         table = table.drop(excluded, axis=1)
     # aggregate results
-    int_types = []
-    for ix in table.index:
-        try:
-            agg = [k for k in col_names if k in table if bool(table.loc[ix, k])]
-        except ValueError:
-            # checking on a pre-aggregated entry (i.e. agg_method=='unique')
-            agg = [k for k in col_names if k in table if bool(table.loc[ix, k].any())]
-        int_types.append(agg)
-    assert len(table) == len(int_types)
-    table['Int_Types'] = int_types
+    melted = pd.melt(table.reset_index(), id_vars=['index'], value_vars=col_names, var_name='Int_Types')
+    melted.query('value == 1', inplace=True)
+    aggregated = melted.groupby(['index'])['Int_Types'].aggregate(lambda x: set(x))
+    table = table.join(aggregated)
     # finally remove all the columns that are not needed anymore
     table = table.drop(col_names, axis=1)
     return table
