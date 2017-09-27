@@ -15,7 +15,7 @@ Fábio Madeira, 2015+
 
 """
 
-mmcif_types = {
+_mmcif_types = {
     'group_PDB': str,
     'id': int,
     'type_symbol': str,
@@ -52,7 +52,7 @@ mmcif_types = {
     'contact_indexes': str,
 }
 
-dssp_types = {
+_dssp_types = {
     'LINE': int,
     'RES': str,
     'CHAIN': str,
@@ -85,7 +85,7 @@ dssp_types = {
     'Z-CA': float
 }
 
-sifts_types = {
+_sifts_types = {
     'PDB_regionId': int,
     'PDB_regionStart': int,
     'PDB_regionEnd': int,
@@ -127,7 +127,7 @@ sifts_types = {
     'Pfam_dbAccessionId': str
 }
 
-hbplus_types = {
+_hbplus_types = {
     "CHAIN_D": str,
     "RES_D": str,
     "INSCODE_D": str,
@@ -147,7 +147,7 @@ hbplus_types = {
     "ID": int
 }
 
-arpeggio_types = {
+_arpeggio_types = {
     "ENTRY_A": str,
     "CHAIN_A": str,
     "RES_A": str,
@@ -180,9 +180,9 @@ arpeggio_types = {
     "ENTITIES": str
 }
 
-probe_types = {}
+_probe_types = {}
 
-stamp_types = {
+_stamp_types = {
     "Domain1": str,
     "Domain2": str,
     "Fits": int,
@@ -199,12 +199,27 @@ stamp_types = {
     "Pm": float,
 }
 
-uni_ens_var_types = {
+_uni_ens_var_types = {
     'begin': int,
     'end': int,
     'polyphenScore': float,
     'siftScore': float,
 }
+
+_dtypes_convert = {
+    int: 'int64',
+    float: 'float64',
+    str: 'object'
+}
+
+mmcif_types = {k: _dtypes_convert[v] for k, v in _mmcif_types.items()}
+dssp_types = {k: _dtypes_convert[v] for k, v in _dssp_types.items()}
+sifts_types = {k: _dtypes_convert[v] for k, v in _sifts_types.items()}
+hbplus_types = {k: _dtypes_convert[v] for k, v in _hbplus_types.items()}
+arpeggio_types = {k: _dtypes_convert[v] for k, v in _arpeggio_types.items()}
+probe_types = {k: _dtypes_convert[v] for k, v in _probe_types.items()}
+stamp_types = {k: _dtypes_convert[v] for k, v in _stamp_types.items()}
+uni_ens_var_types = {k: _dtypes_convert[v] for k, v in _uni_ens_var_types.items()}
 
 arpeggio_col_renames = {
     "STERIC_CLASH": "Steric-Clash",
