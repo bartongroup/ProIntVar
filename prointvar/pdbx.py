@@ -534,21 +534,9 @@ def add_mmcif_res_full(data):
     table = data
     # adds both 'label' and 'auth' entries
     if 'label_seq_id' in table:
-        seqs_full = []
-        for ix in table.index:
-            seq = "{}{}".format(table.loc[ix, 'label_seq_id'],
-                                table.loc[ix, 'pdbx_PDB_ins_code']).replace('?', '')
-            seqs_full.append(seq)
-        assert len(seqs_full) == len(table)
-        table['label_seq_id_full'] = seqs_full
+        table['label_seq_id_full'] = table['label_seq_id'] + table['pdbx_PDB_ins_code'].str.replace('?', '')
     if 'auth_seq_id' in table:
-        seqs_full = []
-        for ix in table.index:
-            seq = "{}{}".format(table.loc[ix, 'auth_seq_id'],
-                                table.loc[ix, 'pdbx_PDB_ins_code']).replace('?', '')
-            seqs_full.append(seq)
-        assert len(seqs_full) == len(table)
-        table['auth_seq_id_full'] = seqs_full
+        table['auth_seq_id_full'] = table['auth_seq_id'] + table['pdbx_PDB_ins_code'].str.replace('?', '')
 
     return table
 
@@ -632,16 +620,16 @@ def add_mmcif_atom_altloc(data):
     def join_atom_altloc(data, category='label'):
         atom = data['{}_atom_id'.format(category)]
         altloc = data['label_alt_id']
-        if altloc == "." or altloc == '' or altloc == ' ':
-            return atom
-        else:
-            return atom + '.' + altloc
 
-    data.is_copy = False
-    data['label_atom_altloc_id'] = data.apply(join_atom_altloc,
-                                              axis=1, args=('label',))
-    data['auth_atom_altloc_id'] = data.apply(join_atom_altloc,
-                                             axis=1, args=('auth',))
+        new_column = (atom + '.' + altloc)
+        has_no_alt = altloc.isin(['.', '', ' '])
+        new_column[has_no_alt] = atom.loc[has_no_alt]
+
+        return new_column
+
+    # NB. Use of assign prevents inplace modification
+    data = data.assign(label_atom_altloc_id=join_atom_altloc(data, 'label'))
+    data = data.assign(auth_atom_altloc_id=join_atom_altloc(data, 'auth'))
     return data
 
 
@@ -696,12 +684,13 @@ def remove_multiple_altlocs(data):
 
     table = data
     drop_ixs = []
-    for ix in table.index:
-        altloc = table.loc[ix, 'label_alt_id']
+    for row in table.itertuples():
+        altloc = getattr(row, 'label_alt_id')
         if altloc != '.':
             # table.loc[ix, 'label_alt_id'] = '.'
+            ix = getattr(row, 'Index')
             table.set_value(ix, 'label_alt_id', '.')
-            atomid = table.loc[ix, 'label_atom_id']
+            atomid = getattr(row, 'label_atom_id')
             try:
                 for nx in range(1, 100, 1):
                     altnx = table.loc[ix + nx, 'label_alt_id']
@@ -736,15 +725,15 @@ def remove_partial_residues(data, category='label'):
     next_res_for_rm = False
     table.reset_index(inplace=True)
     table = table.drop(['index'], axis=1)
-    for ix in table.index:
-        group = table.loc[ix, 'group_PDB']
+    for row in table.itertuples():
+        group = getattr(row, 'group_PDB')
         if group == 'ATOM':
-            curr_res = table.loc[ix, '{}_comp_id'.format(category)]
-            curr_seq = table.loc[ix, '{}_seq_id'.format(category)]
+            curr_res = getattr(row, '{}_comp_id'.format(category))
+            curr_seq = getattr(row, '{}_seq_id'.format(category))
             if curr_res in aa_default_atoms:
-                curr_atom = table.loc[ix, '{}_atom_id'.format(category)]
+                curr_atom = getattr(row, '{}_atom_id'.format(category))
                 if prev_res == curr_res and prev_seq == curr_seq:
-                    curr_ixs.append(ix)
+                    curr_ixs.append(getattr(row, 'Index'))
                     curr_atoms.append(curr_atom)
                 else:
                     if curr_ixs:
@@ -763,7 +752,7 @@ def remove_partial_residues(data, category='label'):
                     # resetting variables
                     prev_res = curr_res
                     prev_seq = curr_seq
-                    curr_ixs = [ix]
+                    curr_ixs = [getattr(row, 'Index')]
                     curr_atoms = [curr_atom]
 
     return table.drop(table.index[drop_ixs])
