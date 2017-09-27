@@ -273,8 +273,8 @@ class TestARPEGGIO(unittest.TestCase):
         data = reader.contacts(collapsed_cont=True, col_method='full')
         self.assertNotIn('IONIC', list(data))
         self.assertIn('Int_Types', list(data))
-        self.assertEqual('VDW-Proximal, Polar-Bond',
-                         ', '.join(list(data.loc[3, 'Int_Types'])))
+        self.assertEqual('Polar-Bond, VDW-Proximal',
+                         ', '.join(sorted(list(data.loc[3, 'Int_Types']))))
         reader = self.reader(self.inputarpeggio)
         data = reader.contacts()
         data = self.collapsed_contacts(data, col_method='minimal')

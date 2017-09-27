@@ -139,7 +139,7 @@ class TestVariants(unittest.TestCase):
         self.get_preferred_uniprot_id_from_mapping = None
         self.get_preferred_ensembl_id_from_mapping = None
         self.flatten_ensembl_variants = None
-        self.vagg = VariantsAgreggator
+        self.vagg = None
 
         logging.disable(logging.NOTSET)
 

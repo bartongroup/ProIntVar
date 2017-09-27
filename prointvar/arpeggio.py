@@ -232,10 +232,10 @@ def add_arpeggio_res_split(data):
 
         return table
 
-    tbA = _parse_arpeggio_atom(table['ENTRY_A'])
-    tbB = _parse_arpeggio_atom(table['ENTRY_B'])
-    table = table.join(tbA.join(tbB))
-
+    if not table.empty:
+        tbA = _parse_arpeggio_atom(table['ENTRY_A'])
+        tbB = _parse_arpeggio_atom(table['ENTRY_B'])
+        table = table.join(tbA.join(tbB))
     return table
 
 
