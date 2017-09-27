@@ -739,12 +739,13 @@ def remove_multiple_altlocs(data):
 
     table = data
     drop_ixs = []
-    for ix in table.index:
-        altloc = table.loc[ix, 'label_alt_id']
+    for row in table.itertuples():
+        altloc = getattr(row, 'label_alt_id')
         if altloc != '.':
             # table.loc[ix, 'label_alt_id'] = '.'
+            ix = getattr(row, 'Index')
             table.set_value(ix, 'label_alt_id', '.')
-            atomid = table.loc[ix, 'label_atom_id']
+            atomid = getattr(row, 'label_atom_id')
             try:
                 for nx in range(1, 100, 1):
                     altnx = table.loc[ix + nx, 'label_alt_id']
@@ -779,15 +780,15 @@ def remove_partial_residues(data, category='label'):
     next_res_for_rm = False
     table.reset_index(inplace=True)
     table = table.drop(['index'], axis=1)
-    for ix in table.index:
-        group = table.loc[ix, 'group_PDB']
+    for row in table.itertuples():
+        group = getattr(row, 'group_PDB')
         if group == 'ATOM':
-            curr_res = table.loc[ix, '{}_comp_id'.format(category)]
-            curr_seq = table.loc[ix, '{}_seq_id'.format(category)]
+            curr_res = getattr(row, '{}_comp_id'.format(category))
+            curr_seq = getattr(row, '{}_seq_id'.format(category))
             if curr_res in aa_default_atoms:
-                curr_atom = table.loc[ix, '{}_atom_id'.format(category)]
+                curr_atom = getattr(row, '{}_atom_id'.format(category))
                 if prev_res == curr_res and prev_seq == curr_seq:
-                    curr_ixs.append(ix)
+                    curr_ixs.append(getattr(row, 'Index'))
                     curr_atoms.append(curr_atom)
                 else:
                     if curr_ixs:
@@ -806,7 +807,7 @@ def remove_partial_residues(data, category='label'):
                     # resetting variables
                     prev_res = curr_res
                     prev_seq = curr_seq
-                    curr_ixs = [ix]
+                    curr_ixs = [getattr(row, 'Index')]
                     curr_atoms = [curr_atom]
 
     return table.drop(table.index[drop_ixs])
