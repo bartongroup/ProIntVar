@@ -151,7 +151,8 @@ def parse_pdb_atoms_from_file(inputfile, excluded=(), add_contacts=False,
                               dist=5, first_model=True, add_atom_altloc=False,
                               remove_altloc=False, remove_hydrogens=True,
                               reset_atom_id=True, add_new_pro_id=False,
-                              remove_partial_res=True):
+                              remove_partial_res=True, fix_label_alt_id=True,
+                              fix_ins_code=True, fix_type_symbol=True):
     """
     Parse PDB ATOM and HETATM lines.
 
@@ -166,6 +167,9 @@ def parse_pdb_atoms_from_file(inputfile, excluded=(), add_contacts=False,
     :param reset_atom_id: boolean
     :param add_new_pro_id: (boolean) used for chain_id mapping
     :param remove_partial_res: (boolean) removes amino acids with missing atoms
+    :param fix_label_alt_id: boolean
+    :param fix_ins_code: boolean
+    :param fix_type_symbol: boolean
     :return: returns a pandas DataFrame
     """
 
@@ -222,11 +226,14 @@ def parse_pdb_atoms_from_file(inputfile, excluded=(), add_contacts=False,
         table = row_selector(table, key='pdbx_PDB_model_num', value='first')
 
     # fixes the 'pdbx_PDB_ins_code'
-    table = fix_pdb_ins_code(table)
+    if fix_ins_code:
+        table = pdb_fix_pdb_ins_code(table)
     # fixes the 'label_alt_id
-    table = fix_label_alt_id(table)
+    if fix_label_alt_id:
+        table = pdb_fix_label_alt_id(table)
     # fixes 'type_symbol' if missing
-    table = fix_type_symbol(table)
+    if fix_type_symbol:
+        table = pdb_fix_type_symbol(table)
 
     # table modular extensions
     if add_contacts:
@@ -541,7 +548,7 @@ def add_mmcif_res_full(data):
     return table
 
 
-def fix_pdb_ins_code(data):
+def pdb_fix_pdb_ins_code(data):
     """
     Utility that fixes the 'pdbx_PDB_ins_code' column to match is expected
     in the mmcif format.
@@ -551,18 +558,12 @@ def fix_pdb_ins_code(data):
     """
 
     table = data
-    ins_codes = []
-    for i in table.index:
-        value = table.loc[i, "pdbx_PDB_ins_code"]
-        if value == '' or value == ' ' or value == '?':
-            value = '?'
-        ins_codes.append(value)
-    table["pdbx_PDB_ins_code"] = ins_codes
+    table['pdbx_PDB_ins_code'] = table['pdbx_PDB_ins_code'].str.replace('| ', '?')
     table['pdbx_PDB_ins_code'] = table['pdbx_PDB_ins_code'].fillna('?').astype(str)
     return table
 
 
-def fix_label_alt_id(data):
+def pdb_fix_label_alt_id(data):
     """
     Utility that fixes the 'label_alt_id' column to match what is
     expected in the mmCIF format.
@@ -572,18 +573,12 @@ def fix_label_alt_id(data):
     """
 
     table = data
-    alt_locs = []
-    for i in table.index:
-        value = table.loc[i, "label_alt_id"]
-        if value == '' or value == ' ' or value == '?':
-            value = '.'
-        alt_locs.append(value)
-    table["label_alt_id"] = alt_locs
+    table['label_alt_id'] = table['label_alt_id'].str.replace('""|" "|"?"', '.')
     table['label_alt_id'] = table['label_alt_id'].fillna('.').astype(str)
     return table
 
 
-def fix_type_symbol(data):
+def pdb_fix_type_symbol(data):
     """
     Utility that fixes the 'type_symbol' column to match what is
     expected in the mmCIF format - when missing in the Structure.
