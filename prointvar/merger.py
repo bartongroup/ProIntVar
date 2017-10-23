@@ -261,7 +261,7 @@ def table_merger(mmcif_table=None, dssp_table=None, sifts_table=None,
     available = [mmcif_table, dssp_table, sifts_table, contacts_table]
     available = [k for k in available if k is not None]
     if len(available) < 2:
-        return TableMergerError('Nothing to merge...')
+        raise TableMergerError('Nothing to merge...')
 
     table = None
     if mmcif_table is not None:
