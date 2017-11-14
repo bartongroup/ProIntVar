@@ -239,4 +239,4 @@ TODO
 
 
 ## Licensing
-[GNU GPL3](LICENSE.md)
+The MIT License (MIT). See [license](LICENSE.md) for details. 

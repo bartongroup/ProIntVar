@@ -35,7 +35,7 @@ setup(
     author_email="fabiomadeira@me.com",
     url="https://github.com/bartongroup/FM_ProIntVar-Core",
     download_url="https://github.com/bartongroup/FM_ProIntVar-Core/archive/master.zip",
-    license='GPL-3.0',
+    license='MIT',
     keywords='python pdb structures pandas dssp sifts ensembl uniprot alignments',
     description=('Python module that implements methods for working with Protein Structures '
                  'and Genetic Variation'),
@@ -45,6 +45,7 @@ setup(
         "Programming Language :: Python :: 3.5",
         "Programming Language :: Python :: 3.6",
         "Programming Language :: Python :: 3 :: Only",
-        "Topic :: Scientific/Engineering :: Bio-Informatics"
+        "Topic :: Scientific/Engineering :: Bio-Informatics",
+        "License :: OSI Approved :: MIT License"
     ]
 )
