@@ -6,6 +6,8 @@ import os
 from setuptools import setup
 from setuptools import find_packages
 
+from prointvar import __version__
+
 
 def gather_dependencies():
     with open('requirements.txt', 'r') as f_in:
@@ -15,8 +17,8 @@ DEPENDENCIES = gather_dependencies()
 
 
 setup(
-    name="ProIntVar-Core",
-    version="0.1",
+    name="ProIntVar",
+    version=__version__,
     packages=find_packages(exclude=["tests", 'tests.*']),
     # should always match the entries in requirements.txt
     install_requires=DEPENDENCIES,
@@ -25,16 +27,16 @@ setup(
 
     entry_points={
         "console_scripts": [
-            "ProIntVar-Core-config-setup=prointvar.config:config_setup",
-            "ProIntVar-Core-config-load=prointvar.config:config_load",
+            "ProIntVar-config-setup=prointvar.config:config_setup",
+            "ProIntVar-config-load=prointvar.config:config_load",
             "ProIntVar=cli.main:cli",
         ]
     },
 
     author="Fábio Madeira",
     author_email="fabiomadeira@me.com",
-    url="https://github.com/bartongroup/FM_ProIntVar-Core",
-    download_url="https://github.com/bartongroup/FM_ProIntVar-Core/archive/master.zip",
+    url="https://github.com/bartongroup/ProIntVar",
+    download_url="https://github.com/bartongroup/ProIntVar/archive/master.zip",
     license='MIT',
     keywords='python pdb structures pandas dssp sifts ensembl uniprot alignments',
     description=('Python module that implements methods for working with Protein Structures '
