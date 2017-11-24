@@ -2,16 +2,15 @@
 #
 # Run 'pip install -r requirements.txt' to install these dependencies
 
-# These days I would just recommend a fresh install of Anaconda which comes with
-# all the goodies and work within a virtual environment.
-
-numpy
-biopython
-requests
-pandas
-lxml
-click
-click_log>=0.2.0
-responses
-scipy
-requests_cache
+numpy>=1.13.3
+scipy>=0.19.1
+pandas>=0.20.3
+requests>=2.18.2
+requests_cache>=0.4.13
+responses>=0.8.1
+lxml>=3.7.3
+click>=6.7
+click_log>=0.2.1
+lxml>=4.1.0
+biopython>=1.68
+proteofav>=0.2.0
