@@ -33,6 +33,8 @@ class TestDSSP(unittest.TestCase):
                                          "dssp", "{}_bio.dssp".format(self.pdbid))
 
         self.notfound = ""
+        self.run_dssp = run_dssp
+        self.generate_output_filename = dssp_generate_output_filename
         self.DSSP = DSSP
 
         logging.disable(logging.DEBUG)
@@ -46,6 +48,8 @@ class TestDSSP(unittest.TestCase):
         self.inputbiocif = None
         self.inputbiodssp = None
         self.notfound = None
+        self.run_dssp = None
+        self.generate_output_filename = None
         self.DSSP = None
 
         logging.disable(logging.NOTSET)
@@ -53,6 +57,32 @@ class TestDSSP(unittest.TestCase):
     def test_file_not_found_generator(self):
         with self.assertRaises(OSError):
             self.DSSP.generate(self.notfound)
+
+    def test_run_dssp(self):
+        if os.path.isfile(self.inputcif):
+            self.run_dssp(filename_input=self.inputcif,
+                          filename_output=self.inputdssp + '.test',
+                          overwrite=True)
+            msg = ("DSSP execution failed: make sure the settings "
+                   "are set properly in config.ini!")
+            self.assertTrue(os.path.isfile(self.inputdssp + '.test'), msg)
+            os.remove(self.inputdssp + '.test')
+        else:
+            raise IOError("%s" % self.inputcif)
+
+    def test_generate_output_filename(self):
+        output = dssp_generate_output_filename(self.inputcif, run_unbound=False)
+        self.assertEqual(output, self.inputcif.replace('.cif', '.dssp'))
+
+        output = dssp_generate_output_filename(self.inputbiocif, run_unbound=False)
+        self.assertEqual(output, self.inputbiocif.replace('.cif', '.dssp'))
+
+    def test_generate_output_filename_unbound(self):
+        output = dssp_generate_output_filename(self.inputcif, run_unbound=True)
+        self.assertEqual(output, self.inputcif.replace('.cif', '_unbound.dssp'))
+
+        output = dssp_generate_output_filename(self.inputbiocif, run_unbound=True)
+        self.assertEqual(output, self.inputbiocif.replace('.cif', '_unbound.dssp'))
 
     def test_generator_cif_exec(self):
         if os.path.isfile(self.inputcif):

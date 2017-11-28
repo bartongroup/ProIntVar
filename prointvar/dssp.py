@@ -10,7 +10,8 @@ import os
 import logging
 
 from proteofav.structures import mmCIF, PDB, filter_structures
-from proteofav.utils import GenericInputs, InputFileHandler
+from proteofav.dssp import _DSSP as _proteofav_DSSP
+from proteofav.utils import InputFileHandler
 
 from prointvar.utils import lazy_file_remover
 from prointvar.config import config
@@ -76,7 +77,7 @@ def dssp_generate_output_filename(filename, run_unbound=False):
     return filename_output
 
 
-def run_dssp(filename_input,  filename_output=None, dssp_bin=None,
+def run_dssp(filename_input, filename_output=None, dssp_bin=None,
              run_unbound=False, overwrite=False, save_new_input=False,
              clean_output=True, category='label'):
     """
@@ -185,13 +186,10 @@ def run_dssp(filename_input,  filename_output=None, dssp_bin=None,
     return
 
 
-class DSSP(GenericInputs):
+class _DSSP(_proteofav_DSSP):
     def generate(self, filename_input=None, filename_output=None, **kwargs):
         self.table = run_dssp(filename_input, filename_output, **kwargs)
         return self.table
 
 
-DSSP = DSSP()
-
-if __name__ == '__main__':
-    pass
+DSSP = _DSSP()
