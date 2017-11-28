@@ -1,33 +1,18 @@
-#!/usr/bin/env python
 # -*- coding: utf-8 -*-
 
 """
-
 This defines the methods that work with DSSP files.
 
 Fábio Madeira, 2017+
-
 """
 
 import os
-import json
 import logging
-import pandas as pd
-from io import StringIO
-from string import digits
-from string import ascii_uppercase
 
-from prointvar.pdbx import PDBXreader
-from prointvar.pdbx import PDBXwriter
+from proteofav.structures import mmCIF, PDB, filter_structures
+from proteofav.utils import GenericInputs, InputFileHandler
 
-from prointvar.utils import get_rsa
-from prointvar.utils import get_rsa_class
-from prointvar.utils import row_selector
 from prointvar.utils import lazy_file_remover
-from prointvar.utils import constrain_column_types
-from prointvar.utils import exclude_columns
-from prointvar.library import dssp_types
-
 from prointvar.config import config
 
 logger = logging.getLogger("prointvar")
@@ -73,380 +58,105 @@ Model (i.e. theoretical) structure.
 """
 
 
-def parse_dssp_from_file(inputfile, excluded=(), add_full_chain=True, add_ss_reduced=False,
-                         add_rsa=True, method="Sander", add_rsa_class=False,
-                         reset_res_id=False):
+def dssp_generate_output_filename(filename, run_unbound=False):
     """
-    Parse lines of the DSSP file to get entries for every Residue
-    in each CHAIN. The hierachy is maintained. CHAIN->RESIDUE->[...].
+    Little helper function to generate the output filename,
+    if it was missing.
 
-    :param inputfile: path to the DSSP file
-    :param excluded: option to exclude DSSP columns
-    :param add_full_chain: boolean
-    :param add_ss_reduced: boolean
-    :param add_rsa: boolean
-    :param add_rsa_class: boolean
-    :param method: name of the method
-    :param reset_res_id: boolean
-    :return: returns a pandas DataFrame
+    :param filename: path to input file
+    :param run_unbound: boolean
+    :return: (str)
     """
 
-    logger.info("Parsing DSSP from lines...")
-
-    # example lines with some problems
-    """
-      #  RESIDUE AA STRUCTURE BP1 BP2  ACC     N-H-->O    O-->H-N    N-H-->O    O-->H-N    TCO  KAPPA ALPHA  PHI   PSI    X-CA   Y-CA   Z-CA
-        1    1 A M              0   0  127      0, 0.0   345,-0.1     0, 0.0     3,-0.1   0.000 360.0 360.0 360.0 162.0  -18.7   21.6  -55.4
-        2    2 A R        +     0   0  117      1,-0.1    28,-0.4   343,-0.1     2,-0.3   0.455 360.0  81.5-136.8 -28.7  -17.0   22.3  -52.1
-
-      381  394 A K              0   0  125     -2,-0.4   -21,-0.1   -21,-0.2    -2,-0.0  -0.421 360.0 360.0  64.1 360.0  -22.5   44.2  -25.4
-      382        !*             0   0    0      0, 0.0     0, 0.0     0, 0.0     0, 0.0   0.000 360.0 360.0 360.0 360.0    0.0    0.0    0.0
-      383    1 A M              0   0  127      0, 0.0   345,-0.1     0, 0.0     3,-0.1   0.000 360.0 360.0 360.0 162.0  -10.0   71.4  -55.4
-
-    10278  103 H H  E     -XZ1023010269W  69     -9,-2.3    -9,-2.2    -2,-0.3     2,-1.0  -0.884  22.6-128.4-108.1 141.6  -97.0   28.7  112.2
-    10279  104 H I  E     +XZ1022910268W   0    -50,-2.2   -50,-0.6    -2,-0.4   -11,-0.3  -0.801  30.6 175.4 -90.4  95.6  -98.5   32.0  111.3
-    10280  105 H L  E     +     0   0   21    -13,-1.7   -55,-2.5    -2,-1.0     2,-0.3   0.812  62.6   4.9 -70.5 -35.5  -96.3   34.5  113.1
-
-    # missing segment break
-      145        !              0   0    0      0, 0.0     0, 0.0     0, 0.0     0, 0.0   0.000 360.0 360.0 360.0 360.0    0.0    0.0    0.0
-
-    # chain break
-      382        !*             0   0    0      0, 0.0     0, 0.0     0, 0.0     0, 0.0   0.000 360.0 360.0 360.0 360.0    0.0    0.0    0.0
-    """
-
-    if not os.path.isfile(inputfile):
-        raise IOError("{} not available or could not be read...".format(inputfile))
-
-    lines = []
-    parse = False
-    with open(inputfile) as inlines:
-        for line in inlines:
-            line = line.rstrip()
-            if parse:
-                lines.append(line)
-            if line.startswith("  #"):
-                parse = True
-    lines = "\n".join(lines)
-
-    # column width descriptors
-    header = ("LINE", "RES", "CHAIN", "AA", "SS", "STRUCTURE",
-              "BP1", "BP2", "BP2_CHAIN", "ACC",
-              "NH_O_1", "NH_O_1_nrg", "O_HN_1", "O_HN_1_nrg",
-              "NH_O_2", "NH_O_2_nrg", "O_HN_2", "O_HN_2_nrg",
-              "TCO", "KAPPA", "ALPHA", "PHI", "PSI",
-              "X-CA", "Y-CA", "Z-CA")
-
-    widths = ((0, 5), (5, 11), (11, 12), (12, 15), (16, 17), (17, 25),
-              (25, 29), (29, 33), (33, 34), (34, 38),
-              (38, 45), (46, 50), (50, 56), (57, 61),
-              (61, 67), (68, 72), (72, 78), (79, 84),
-              (85, 91), (91, 97), (97, 103), (103, 109), (109, 115),
-              (115, 123), (123, 130), (130, 137))
-
-    all_str = {key: str for key in header}
-    table = pd.read_fwf(StringIO(lines), names=header, colspecs=widths,  # skiprows=28
-                        compression=None, converters=all_str, keep_default_na=False)
-
-    # table modular extensions
-    if add_full_chain:
-        table = add_dssp_full_chain(table)
-        logger.info("DSSP added full chain...")
-
-    table['SS'] = table.SS.fillna('-')
-    if add_ss_reduced:
-        table = add_dssp_ss_reduced(table)
-        logger.info("DSSP added reduced SS...")
-
-    if add_rsa:
-        table = add_dssp_rsa(table, method=method)
-        logger.info("DSSP added RSA...")
-
-    if add_rsa_class:
-        table = add_dssp_rsa_class(table)
-        logger.info("DSSP added RSA class...")
-
-    # drop missing residues ("!")  and chain breaks ("!*")
-    table = table[table['AA'] != '!']
-    table = table[table['AA'] != '!*']
-
-    if reset_res_id:
-        table.reset_index(inplace=True)
-        table = table.drop(['index'], axis=1)
-        table['LINE'] = table.index + 1
-        logger.info("DSSP reset residue number...")
-
-    # excluding columns
-    table = exclude_columns(table, excluded=excluded)
-
-    # enforce some specific column types
-    table = constrain_column_types(table, dssp_types)
-
-    if table.empty:
-        raise ValueError('{} resulted in an empty DataFrame...'.format(inputfile))
-
-    return table
-
-
-def get_dssp_selected_from_table(data, chain=None, chain_full=None, res=None):
-    """
-    Utility that filters a pandas DataFrame by the input tuples.
-
-    :param data: pandas DataFrame object
-    :param chain: (tuple) chain IDs or None
-    :param chain_full: (tuple) alternative chain IDs or None
-    :param res: (tuple) res IDs or None
-    :return: returns a modified pandas DataFrame
-    """
-
-    # excluding rows
-    table = data
-    if chain is not None:
-        table = row_selector(table, 'CHAIN', chain)
-        logger.info("DSSP table filtered by CHAIN...")
-
-    if chain_full is not None:
-        table = row_selector(table, 'CHAIN_FULL', chain_full)
-        logger.info("DSSP table filtered by CHAIN_FULL...")
-
-    if res is not None:
-        table = row_selector(table, 'RES', res)
-        logger.info("DSSP table filtered by RES...")
-
-    return table
-
-
-def add_dssp_full_chain(data):
-    """
-    Utility that adds a new column to the table.
-    Specific to DSSP outputs that are generated from mmCIF files containing
-    multiple char chain IDs (e.g. 'AA' and 'BA'). These are found in the
-    Biological Unit mmCIF structures.
-
-    :param data: pandas DataFrame object
-    :return: returns a modified pandas DataFrame
-    """
-
-    # BioUnits chain naming seems to follow the pattern:
-    # chain A becomes AA then
-    # AA->AZ then A0->A9 [A-Z then 0-9] and then AAA->AAZ and AA0->AA9
-    # then ABA->ABZ and AB0->AB9
-    alpha1 = [k for k in ascii_uppercase + digits]
-    alpha2 = ['A' + k for k in alpha1]
-    alpha3 = ['B' + k for k in alpha1]
-    new_alphabet = alpha1 + alpha2 + alpha3
-
-    table = data
-    chains_full = []
-    c = -1
-    for ix in table.index:
-        chain_id = table.loc[ix, "CHAIN"]
-        aa_id = table.loc[ix, "AA"]
-        if aa_id == "!*":
-            if table.loc[ix - 1, "CHAIN"] == table.loc[ix + 1, "CHAIN"]:
-                c += 1
-            else:
-                c = -1
-        if c != -1 and aa_id != "!*" and aa_id != "!":
-            if c >= len(new_alphabet):
-                raise IndexError('Alphabet needs update to accommodate '
-                                 'such high number of chains...')
-            chain_id += new_alphabet[c]
-        chains_full.append(chain_id)
-    if not chains_full:
-        table["CHAIN_FULL"] = table["CHAIN"]
+    filename, extension = os.path.splitext(filename)
+    if run_unbound:
+        filename_output = filename + "_unbound.dssp"
     else:
-        table["CHAIN_FULL"] = chains_full
-    return table
+        filename_output = filename + ".dssp"
+    return filename_output
 
 
-def add_dssp_rsa(data, method="Sander"):
-    """
-    Utility that adds a new column to the table.
-    Adds a new column with Relative Solvent Accessibility (RSA).
-
-    :param data: pandas DataFrame object
-    :param method: name of the method
-    :return: returns a modified pandas DataFrame
-    """
-
-    table = data
-    rsas = []
-    for i in table.index:
-        rsas.append(get_rsa(table.loc[i, "ACC"], table.loc[i, "AA"],
-                            method=method))
-    table["RSA"] = rsas
-    return table
-
-
-def add_dssp_rsa_class(data, rsa_col='RSA'):
-    """
-    Utility that adds a new column to the table.
-    Adds a new column with Relative Solvent Accessibility (RSA) classes.
-
-    :param data: pandas DataFrame object
-    :param rsa_col: column name
-    :return: returns a modified pandas DataFrame
-    """
-
-    table = data
-    rsas_class = []
-    for i in table.index:
-        rsas_class.append(get_rsa_class(table.loc[i, "{}".format(rsa_col)]))
-    table["{}_CLASS".format(rsa_col)] = rsas_class
-    return table
-
-
-def add_dssp_ss_reduced(data):
-    """
-    Utility that adds a new column to the table.
-    Adds a reduced-stated Secondary Structure (SS).
-
-    :param data: pandas DataFrame object
-    :return: returns a modified pandas DataFrame
-    """
-
-    table = data
-    alphas = ['H']
-    betas = ['E']
-    coils = ['G', 'I', 'B', 'C', 'T', 'S', '', ' ']
-
-    # replace some NaN with custom strings
-    # table['SS'] = table.SS.fillnan('-')
-    sss = []
-    for ix in table.index:
-        ss = table.loc[ix, "SS"]
-        if ss in alphas:
-            ss = 'H'
-        elif ss in betas:
-            ss = 'E'
-        elif ss in coils:
-            ss = 'C'
-        else:
-            ss = '-'
-        sss.append(ss)
-
-    table["SS_CLASS"] = sss
-
-    return table
-
-
-class DSSPreader(object):
-    def __init__(self, inputfile):
-        """
-        :param inputfile: Needs to point to a valid DSSP file.
-        """
-        self.inputfile = inputfile
-        self.data = None
-        self.excluded = ("LINE", "STRUCTURE", "BP1", "BP2", "BP2_CHAIN",
-                         "NH_O_1", "NH_O_1_nrg", "O_HN_1", "O_HN_1_nrg",
-                         "NH_O_2", "NH_O_2_nrg", "O_HN_2", "O_HN_2_nrg",
-                         "X-CA", "Y-CA", "Z-CA")
-
-        if not os.path.isfile(inputfile):
-            raise IOError("{} not available or could not be read...".format(inputfile))
-
-    def read(self, **kwargs):
-        return self.residues(**kwargs)
-
-    def residues(self, excluded=None, add_full_chain=True, add_ss_reduced=False,
-                 add_rsa=True, method="Sander", add_rsa_class=False,
-                 reset_res_id=False):
-        if excluded is None:
-            excluded = self.excluded
-        self.data = parse_dssp_from_file(self.inputfile, excluded=excluded,
-                                         add_full_chain=add_full_chain,
-                                         add_ss_reduced=add_ss_reduced,
-                                         add_rsa=add_rsa, method=method,
-                                         add_rsa_class=add_rsa_class,
-                                         reset_res_id=reset_res_id)
-        return self.data
-
-    def to_json(self, pretty=True):
-        if self.data is not None:
-            if type(self.data) is pd.core.frame.DataFrame:
-                data = self.data.to_dict(orient='records')
-            else:
-                data = self.data
-            if pretty:
-                return json.dumps(data, sort_keys=False, indent=4)
-            else:
-                return json.dumps(data)
-        else:
-            logger.info("No DSSP data parsed...")
-
-
-class DSSPrunner(object):
-    def __init__(self, inputfile, outputfile=None):
-        """
-        :param inputfile: Needs to point to a valid PDB or mmCIF file.
-        :param outputfile: if not provided will use the same file name and
-          <.dssp> extension
-        """
-        self.inputfile = inputfile
-        self.outputfile = outputfile
-        self.data = None
-
-        if not os.path.isfile(self.inputfile):
-            raise IOError("{} not available or could not be read..."
-                          "".format(self.inputfile))
-
-        # inputfile needs to be in PDB or mmCIF format
-        filename, extension = os.path.splitext(self.inputfile)
-        if extension not in ['.pdb', '.ent', '.cif']:
-            raise ValueError("{} is expected to be in mmCIF or PDB format..."
-                             "".format(self.inputfile))
-
-    def _generate_output(self, run_unbound=False):
-        filename, extension = os.path.splitext(self.inputfile)
-        if run_unbound:
-            self.outputfile = filename + "_unbound.dssp"
-        else:
-            self.outputfile = filename + ".dssp"
-
-    def _run(self, dssp_bin, run_unbound=False, override=False, save_new_input=False,
+def run_dssp(filename_input,  filename_output=None, dssp_bin=None,
+             run_unbound=False, overwrite=False, save_new_input=False,
              clean_output=True, category='label'):
-        """
-        If run_unbound=True, the structure is split into its chains and dssp run for
-        each independently.
-        """
+    """
+    If run_unbound=True, the structure is split into its chains and dssp run for
+    each independently.
+
+    :param filename_input: Needs to point to a valid PDB or mmCIF file.
+    :param filename_output: if not provided will use the same file name and
+      <.dssp> extension
+
+    :param filename_input: path to input file
+    :param filename_output: path to output file
+    :param dssp_bin: path to the DSSP binary/executable (overwrites the config)
+    :param run_unbound: boolean
+    :param overwrite: boolean
+    :param save_new_input: boolean
+    :param clean_output: boolean
+    :param category: data category to be used as precedence in _atom_site.*_*
+        asym_id, seq_id and atom_id
+    :return: (side-effects) generates a DSSP file
+    """
+
+    InputFileHandler(filename_input)
+
+    # input file needs to be in PDB or mmCIF format
+    filename, extension = os.path.splitext(filename_input)
+    if extension not in ['.pdb', '.ent', '.cif', '.mmcif']:
+        raise ValueError("{} is expected to be in mmCIF or PDB format..."
+                         "".format(filename_input))
+
+    # generate output file if missing
+    if not filename_output:
+        dssp_generate_output_filename(filename=filename_input, run_unbound=run_unbound)
+
+    if not os.path.exists(filename_output) or overwrite or run_unbound:
+        if dssp_bin and os.path.isfile(dssp_bin):
+            pass
+        elif os.path.isfile(config.dssp_bin):
+            dssp_bin = config.dssp_bin
+        else:
+            raise IOError('DSSP executable is not available...')
 
         if not run_unbound:
-            cmd = "{} -i {} -o {}".format(dssp_bin, self.inputfile, self.outputfile)
+            cmd = "{} -i {} -o {}".format(dssp_bin, filename_input, filename_output)
             os.system(cmd)
-            if not os.path.isfile(self.outputfile):
-                raise IOError("DSSP output not generated for {}".format(self.outputfile))
+            if not os.path.isfile(filename_output):
+                raise IOError("DSSP output not generated for {}".format(filename_output))
         else:
             # read the file and get available chains
-            r = PDBXreader(inputfile=self.inputfile)
-            data = r.atoms(add_res_full=False, add_contacts=False, format_type=None)
-            chains = [k for k in data.loc[:, '{}_asym_id'.format(category)].unique()]
+            r = mmCIF.read(filename=filename_input)
+            table = filter_structures(r, add_res_full=False, add_contacts=False)
+            chains = [k for k in table.loc[:, '{}_asym_id'.format(category)].unique()]
             new_inputs = []
             new_outputs = []
             for chain in chains:
                 # since len(chain) > 1 (e.g. 'AA' or 'BA') are repetitions and are skipped
                 if len(chain) == 1:
                     # write out the new cif file with the current chain
-                    filename, extension = os.path.splitext(self.inputfile)
+                    filename, extension = os.path.splitext(filename_input)
                     outputpdb = filename + '_{}.pdb'.format(chain)
                     new_inputs.append(outputpdb)
-                    if not os.path.isfile(outputpdb) or override:
-                        w = PDBXwriter(inputfile=None, outputfile=outputpdb)
+                    if not os.path.isfile(outputpdb) or overwrite:
                         try:
-                            w.run(data=data, chain=(chain,), res=None, atom=None,
-                                  lines=('ATOM',), override=override, format_type="pdb",
-                                  category=category)
+                            table = filter_structures(table, chains=(chain,), res=None, atoms=None,
+                                                      lines='ATOM', category=category)
+                            PDB.write(table=table, filename=outputpdb,
+                                      output_format="pdb", overwrite=overwrite)
                         except ValueError:
                             # skipping only HETATM chains or (generally) empty tables
                             continue
                     else:
                         logger.info("PDB for %s already available...", outputpdb)
                     # generating the dssp output for the current chain
-                    filename, extension = os.path.splitext(self.outputfile)
+                    filename, extension = os.path.splitext(filename_output)
                     outputdssp = filename + '_{}.dssp'.format(chain)
                     new_outputs.append(outputdssp)
-                    if not os.path.isfile(outputdssp) or override:
-                        d = DSSPrunner(outputpdb, outputdssp)
-                        d.run(override=override, run_unbound=False, save_new_input=False)
+                    if not os.path.isfile(outputdssp) or overwrite:
+                        DSSP.generate(outputpdb, outputdssp, run_unbound=False,
+                                      overwrite=overwrite, save_new_input=save_new_input,
+                                      clean_output=clean_output, category=category)
                     else:
                         logger.info("DSSP for %s already available...", outputdssp)
 
@@ -464,37 +174,24 @@ class DSSPrunner(object):
                 if clean_output:
                     lazy_file_remover(outputdssp)
 
-            with open(self.outputfile, 'w') as outlines:
+            with open(filename_output, 'w') as outlines:
                 outlines.write(''.join(lines))
 
             if not save_new_input:
                 for outputpdb in new_inputs:
                     lazy_file_remover(outputpdb)
+    else:
+        logger.info("DSSP for %s already available...", filename_output)
+    return
 
-    def write(self, **kwargs):
-        return self.run(**kwargs)
 
-    def run(self, run_unbound=False, override=False, save_new_input=False,
-            clean_output=True, category='label'):
+class DSSP(GenericInputs):
+    def generate(self, filename_input=None, filename_output=None, **kwargs):
+        self.table = run_dssp(filename_input, filename_output, **kwargs)
+        return self.table
 
-        # generate outputfile if missing
-        if not self.outputfile:
-            self._generate_output(run_unbound=run_unbound)
 
-        if not os.path.exists(self.outputfile) or override or run_unbound:
-            if os.path.isfile(config.dssp_bin):
-                dssp_bin = config.dssp_bin
-            else:
-                raise IOError('DSSP executable is not available...')
-
-            # run dssp and generate output
-            self._run(dssp_bin, run_unbound=run_unbound, override=override,
-                      save_new_input=save_new_input, clean_output=clean_output,
-                      category=category)
-        else:
-            logger.info("DSSP for %s already available...", self.outputfile)
-        return
-
+DSSP = DSSP()
 
 if __name__ == '__main__':
     pass
