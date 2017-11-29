@@ -15,118 +15,6 @@ Fábio Madeira, 2015+
 
 """
 
-_mmcif_types = {
-    'group_PDB': str,
-    'id': int,
-    'type_symbol': str,
-    'label_atom_id': str,
-    'label_alt_id': str,
-    'label_comp_id': str,
-    'label_asym_id': str,
-    'label_entity_id': str,
-    'label_seq_id': str,
-    'new_asym_id': str,
-    'new_seq_id': str,
-    'pdbx_PDB_ins_code': str,
-    'Cartn_x': float,
-    'Cartn_y': float,
-    'Cartn_z': float,
-    'occupancy': float,
-    'B_iso_or_equiv': float,
-    'Cartn_x_esd': float,
-    'Cartn_y_esd': float,
-    'Cartn_z_esd': float,
-    'occupancy_esd': float,
-    'B_iso_or_equiv_esd': float,
-    'pdbx_formal_charge': int,
-    'auth_seq_id': str,
-    'auth_comp_id': str,
-    'auth_asym_id': str,
-    'auth_atom_id': str,
-    'pdbx_PDB_model_num': str,
-    'pdbe_label_seq_id': str,
-    'orig_label_asym_id': str,
-    'orig_auth_asym_id': str,
-    'auth_seq_id_full': str,
-    'label_seq_id_full': str,
-    'contact_indexes': str,
-}
-
-_dssp_types = {
-    'LINE': int,
-    'RES': str,
-    'CHAIN': str,
-    'CHAIN_FULL': str,
-    'AA': str,
-    'SS': str,
-    'SS_CLASS': str,
-    'STRUCTURE': str,
-    'BP1': str,
-    'BP2': str,
-    'BP2_CHAIN': str,
-    'ACC': int,
-    'RSA': float,
-    'RSA_class': str,
-    'NH_O_1': int,
-    'NH_O_1_nrg': float,
-    'O_HN_1': int,
-    'O_HN_1_nrg': float,
-    'NH_O_2': int,
-    'NH_O_2_nrg': float,
-    'O_HN_2': int,
-    'O_HN_2_nrg': float,
-    'TCO': float,
-    'KAPPA': float,
-    'ALPHA': float,
-    'PHI': float,
-    'PSI': float,
-    'X-CA': float,
-    'Y-CA': float,
-    'Z-CA': float
-}
-
-_sifts_types = {
-    'PDB_regionId': int,
-    'PDB_regionStart': int,
-    'PDB_regionEnd': int,
-    'PDB_regionResNum': str,
-    'PDB_dbVersion': str,
-    'PDB_dbAccessionId': str,
-    'PDB_dbResNum': str,
-    'PDB_dbResName': str,
-    'PDB_dbChainId': str,
-    'PDB_Annotation': str,
-    'PDB_entityId': str,
-    'PDB_codeSecondaryStructure': str,
-    'PDB_nameSecondaryStructure': str,
-    'UniProt_regionId': int,
-    'UniProt_regionStart': int,
-    'UniProt_regionEnd': int,
-    'UniProt_regionResNum': str,
-    'UniProt_dbVersion': str,
-    'UniProt_dbAccessionId': str,
-    'UniProt_dbResNum': str,
-    'UniProt_dbResName': str,
-    'CATH_regionId': int,
-    'CATH_regionStart': int,
-    'CATH_regionEnd': int,
-    'CATH_regionResNum': str,
-    'CATH_dbVersion': str,
-    'CATH_dbAccessionId': str,
-    'SCOP_regionId': int,
-    'SCOP_regionStart': int,
-    'SCOP_regionEnd': int,
-    'SCOP_regionResNum': str,
-    'SCOP_dbVersion': str,
-    'SCOP_dbAccessionId': str,
-    'Pfam_regionId': int,
-    'Pfam_regionStart': int,
-    'Pfam_regionEnd': int,
-    'Pfam_regionResNum': str,
-    'Pfam_dbVersion': str,
-    'Pfam_dbAccessionId': str
-}
-
 _hbplus_types = {
     "CHAIN_D": str,
     "RES_D": str,
@@ -182,23 +70,6 @@ _arpeggio_types = {
 
 _probe_types = {}
 
-_stamp_types = {
-    "Domain1": str,
-    "Domain2": str,
-    "Fits": int,
-    "Sc": float,
-    "RMS": float,
-    "A_Len": int,
-    "B_Len": int,
-    "Align_Len": int,
-    "N_Fit": int,
-    "N_Equiv": int,
-    "N_SS_Equiv": int,
-    "PID": float,
-    "SS_PID": float,
-    "Pm": float,
-}
-
 _uni_ens_var_types = {
     'begin': int,
     'end': int,
@@ -212,13 +83,10 @@ _dtypes_convert = {
     str: 'object'
 }
 
-mmcif_types = {k: _dtypes_convert[v] for k, v in _mmcif_types.items()}
-dssp_types = {k: _dtypes_convert[v] for k, v in _dssp_types.items()}
-sifts_types = {k: _dtypes_convert[v] for k, v in _sifts_types.items()}
+
 hbplus_types = {k: _dtypes_convert[v] for k, v in _hbplus_types.items()}
 arpeggio_types = {k: _dtypes_convert[v] for k, v in _arpeggio_types.items()}
 probe_types = {k: _dtypes_convert[v] for k, v in _probe_types.items()}
-stamp_types = {k: _dtypes_convert[v] for k, v in _stamp_types.items()}
 uni_ens_var_types = {k: _dtypes_convert[v] for k, v in _uni_ens_var_types.items()}
 
 arpeggio_col_renames = {
