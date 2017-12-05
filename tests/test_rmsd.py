@@ -81,7 +81,7 @@ class TestSupRMSD(unittest.TestCase):
         # to be run only once
         super(TestSupRMSD, cls).setUpClass()
 
-        cls.inputcif = os.path.join(c.db_root, c.db_pdbx, "2pah.cif")
+        cls.inputcif = os.path.join(c.db_root, c.db_mmcif, "2pah.cif")
 
         r = PDBXreader(inputfile=cls.inputcif)
         table = r.atoms(format_type="mmcif")

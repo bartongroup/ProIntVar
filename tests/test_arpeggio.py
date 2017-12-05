@@ -17,7 +17,7 @@ try:
 except ImportError:
     from unittest.mock import patch
 
-from prointvar.pdbx import PDBXreader, PDBXwriter
+from proteofav.structures import PDB, filter_structures
 
 from prointvar.arpeggio import (ARPEGGIOreader, ARPEGGIOrunner,
                                 parse_arpeggio_from_file,
@@ -43,10 +43,10 @@ class TestARPEGGIO(unittest.TestCase):
 
         self.pdbid = '2pah'
         self.pdbid_small = '2rea'
-        self.inputpdb = os.path.join(c.db_root, c.db_pdbx, "{}.pdb".format(self.pdbid))
-        self.inputpdb_fast = os.path.join(c.db_root, c.db_pdbx,
+        self.inputpdb = os.path.join(c.db_root, c.db_pdb, "{}.pdb".format(self.pdbid))
+        self.inputpdb_fast = os.path.join(c.db_root, c.db_pdb,
                                           "{}.pdb".format(self.pdbid_small))
-        self.inputcif = os.path.join(c.db_root, c.db_pdbx, "{}.cif".format(self.pdbid))
+        self.inputcif = os.path.join(c.db_root, c.db_mmcif, "{}.cif".format(self.pdbid))
         self.inputarpeggio = os.path.join(c.db_root, c.db_contacts,
                                           "{}.contacts".format(self.pdbid))
         self.input_amam = os.path.join(c.db_root, c.db_contacts, "{}.amam".format(self.pdbid))
@@ -140,8 +140,8 @@ class TestARPEGGIO(unittest.TestCase):
     # @unittest.expectedFailure
     def test_generator_pdb_exec_fail(self):
         pdbid = "1ejg"
-        inputpdb = os.path.join(c.db_root, c.db_pdbx, "{}.pdb".format(pdbid))
-        inputarpeggio = os.path.join(c.db_root, c.db_pdbx, "{}.contacts".format(pdbid))
+        inputpdb = os.path.join(c.db_root, c.db_pdb, "{}.pdb".format(pdbid))
+        inputarpeggio = os.path.join(c.db_root, c.db_pdb, "{}.contacts".format(pdbid))
         try:
             self.generator(inputpdb,
                            inputarpeggio).run(clean_output=True,
@@ -151,13 +151,12 @@ class TestARPEGGIO(unittest.TestCase):
             msg = "PDB with residues have missing atoms..."
             self.assertFalse(os.path.isfile(inputarpeggio), msg)
 
-        inputpdb_new = os.path.join(c.db_root, c.db_pdbx, "{}_new.pdb".format(pdbid))
-        r = PDBXreader(inputpdb)
-        data = r.atoms(format_type="pdb", remove_altloc=True,
-                       remove_hydrogens=True, reset_atom_id=True,
-                       remove_partial_res=True)
-        w = PDBXwriter(inputfile=None, outputfile=inputpdb_new)
-        w.run(data, format_type='pdb')
+        inputpdb_new = os.path.join(c.db_root, c.db_pdb, "{}_new.pdb".format(pdbid))
+        data = PDB.read(filename=inputpdb)
+        data = filter_structures(data, remove_altloc=True, remove_hydrogens=True,
+                                 reset_atom_id=True, remove_partial_res=True)
+
+        PDB.write(table=data, filename=inputpdb_new, category="auth")
 
         self.generator(inputpdb_new,
                        inputarpeggio).run(clean_output=True,
@@ -165,10 +164,10 @@ class TestARPEGGIO(unittest.TestCase):
         self.assertTrue(os.path.isfile(inputarpeggio))
         os.remove(inputpdb_new)
         os.remove(inputarpeggio)
-        os.remove(os.path.join(c.db_root, c.db_pdbx, "{}.amam".format(pdbid)))
-        os.remove(os.path.join(c.db_root, c.db_pdbx, "{}.amri".format(pdbid)))
-        os.remove(os.path.join(c.db_root, c.db_pdbx, "{}.ari".format(pdbid)))
-        os.remove(os.path.join(c.db_root, c.db_pdbx, "{}.ri".format(pdbid)))
+        os.remove(os.path.join(c.db_root, c.db_pdb, "{}.amam".format(pdbid)))
+        os.remove(os.path.join(c.db_root, c.db_pdb, "{}.amri".format(pdbid)))
+        os.remove(os.path.join(c.db_root, c.db_pdb, "{}.ari".format(pdbid)))
+        os.remove(os.path.join(c.db_root, c.db_pdb, "{}.ri".format(pdbid)))
 
     def test_generator_pdb(self):
         if os.path.isfile(self.inputpdb):

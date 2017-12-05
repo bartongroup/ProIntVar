@@ -117,10 +117,10 @@ class TestMerger(unittest.TestCase):
         super(TestMerger, cls).setUpClass()
 
         cls.pdbid = '2pah'
-        cls.inputcif = os.path.join(c.db_root, c.db_pdbx, "{}.cif".format(cls.pdbid))
+        cls.inputcif = os.path.join(c.db_root, c.db_mmcif, "{}.cif".format(cls.pdbid))
         cls.inputdssp = os.path.join(c.db_root, c.db_dssp, "{}.dssp".format(cls.pdbid))
 
-        cls.inputbiocif = os.path.join(c.db_root, c.db_pdbx, "{}_bio.cif".format(cls.pdbid))
+        cls.inputbiocif = os.path.join(c.db_root, c.db_mmcif, "{}_bio.cif".format(cls.pdbid))
         cls.inputbiodssp = os.path.join(c.db_root, c.db_dssp, "{}_bio.dssp".format(cls.pdbid))
 
         cls.inputsifts = os.path.join(c.db_root, c.db_sifts, "{}.xml".format(cls.pdbid))
@@ -143,7 +143,7 @@ class TestMerger(unittest.TestCase):
         cls.dssp_bio = d.residues(add_rsa_class=True, add_ss_reduced=True)
 
         # chain A only: unbound
-        cls.outputcif_A = os.path.join(c.db_root, c.db_pdbx, "{}_A.cif".format(cls.pdbid))
+        cls.outputcif_A = os.path.join(c.db_root, c.db_mmcif, "{}_A.cif".format(cls.pdbid))
         w = PDBXwriter(inputfile=cls.inputcif,
                        outputfile=cls.outputcif_A)
         w.run(chain=('A',))

@@ -173,15 +173,15 @@ class TestFetchers(unittest.TestCase):
 
     def test_download_structure_from_pdbe_pdb(self):
         self.download_structure_from_pdbe(self.pdbid, pdb=True)
-        os.remove(os.path.join(c.db_root, c.db_pdbx, "{}.pdb".format(self.pdbid)))
+        os.remove(os.path.join(c.db_root, c.db_pdb, "{}.pdb".format(self.pdbid)))
 
     def test_download_structure_from_pdbe_mmcif(self):
         self.download_structure_from_pdbe(self.pdbid, pdb=False)
-        os.remove(os.path.join(c.db_root, c.db_pdbx, "{}.cif".format(self.pdbid)))
+        os.remove(os.path.join(c.db_root, c.db_mmcif, "{}.cif".format(self.pdbid)))
 
     def test_download_structure_from_pdbe_mmcif_bio(self):
         self.download_structure_from_pdbe(self.pdbid, pdb=False, bio=True)
-        os.remove(os.path.join(c.db_root, c.db_pdbx, "{}_bio.cif".format(self.pdbid)))
+        os.remove(os.path.join(c.db_root, c.db_mmcif, "{}_bio.cif".format(self.pdbid)))
 
     def test_download_sifts_from_ebi(self):
         self.download_sifts_from_ebi(self.pdbid)

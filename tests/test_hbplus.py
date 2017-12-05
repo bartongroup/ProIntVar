@@ -35,10 +35,10 @@ class TestHBPLUS(unittest.TestCase):
         """Initialize the framework for testing."""
 
         self.pdbid = '2pah'
-        self.inputpdb = os.path.join(c.db_root, c.db_pdbx, "{}.pdb".format(self.pdbid))
-        self.inputcif = os.path.join(c.db_root, c.db_pdbx, "{}.cif".format(self.pdbid))
+        self.inputpdb = os.path.join(c.db_root, c.db_pdb, "{}.pdb".format(self.pdbid))
+        self.inputcif = os.path.join(c.db_root, c.db_mmcif, "{}.cif".format(self.pdbid))
         self.outputhbplus = os.path.join(c.db_root, c.db_contacts, "{}.h2b".format(self.pdbid))
-        self.outputhbplus_h = os.path.join(c.db_root, c.db_pdbx, "{}.hbplus.pdb".format(self.pdbid))
+        self.outputhbplus_h = os.path.join(c.db_root, c.db_pdb, "{}.hbplus.pdb".format(self.pdbid))
         self.emptyfile = os.path.join(c.db_root, c.db_tmp, "{}.tmp".format(self.pdbid))
         self.notfound = ""
         self.excluded = ()
