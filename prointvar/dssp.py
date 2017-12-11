@@ -90,6 +90,7 @@ def run_dssp(filename_input, filename_output=None, dssp_bin=None,
 
     :param filename_input: path to input file
     :param filename_output: path to output file
+      if not provided will use the same file name and <*.dssp> extension
     :param dssp_bin: path to the DSSP binary/executable (overwrites the config)
     :param run_unbound: boolean
     :param overwrite: boolean
@@ -110,7 +111,8 @@ def run_dssp(filename_input, filename_output=None, dssp_bin=None,
 
     # generate output file if missing
     if not filename_output:
-        dssp_generate_output_filename(filename=filename_input, run_unbound=run_unbound)
+        filename_output = dssp_generate_output_filename(filename=filename_input,
+                                                        run_unbound=run_unbound)
 
     if not os.path.exists(filename_output) or overwrite or run_unbound:
         if dssp_bin and os.path.isfile(dssp_bin):
@@ -155,9 +157,9 @@ def run_dssp(filename_input, filename_output=None, dssp_bin=None,
                     outputdssp = filename + '_{}.dssp'.format(chain)
                     new_outputs.append(outputdssp)
                     if not os.path.isfile(outputdssp) or overwrite:
-                        DSSP.generate(outputpdb, outputdssp, run_unbound=False,
-                                      overwrite=overwrite, save_new_input=save_new_input,
-                                      clean_output=clean_output, category=category)
+                        DSSP.run(outputpdb, outputdssp, run_unbound=False,
+                                 overwrite=overwrite, save_new_input=save_new_input,
+                                 clean_output=clean_output, category=category)
                     else:
                         logger.info("DSSP for %s already available...", outputdssp)
 
@@ -187,7 +189,7 @@ def run_dssp(filename_input, filename_output=None, dssp_bin=None,
 
 
 class _DSSP(_proteofav_DSSP):
-    def generate(self, filename_input=None, filename_output=None, **kwargs):
+    def run(self, filename_input=None, filename_output=None, **kwargs):
         self.table = run_dssp(filename_input, filename_output, **kwargs)
         return self.table
 
