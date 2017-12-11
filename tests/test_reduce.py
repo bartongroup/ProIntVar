@@ -1,4 +1,3 @@
-#!/local/bin/python
 # -*- coding: utf-8 -*-
 
 
@@ -16,15 +15,12 @@ try:
 except ImportError:
     from unittest.mock import patch
 
-from prointvar.reduce import REDUCErunner
+from prointvar.reduce import REDUCE
 
-from prointvar.config import config as c
-
-root = os.path.abspath(os.path.dirname(__file__))
-c.db_root = "{}/testdata/".format(root)
+from prointvar.config import config
 
 
-@patch("prointvar.config.config.db_root", c.db_root)
+@patch("prointvar.config.config", config)
 class TestREDUCE(unittest.TestCase):
     """Test the REDUCE parser methods."""
 
@@ -32,14 +28,14 @@ class TestREDUCE(unittest.TestCase):
         """Initialize the framework for testing."""
 
         self.pdbid = '2pah'
-        self.inputpdb = os.path.join(c.db_root, c.db_pdb, "{}.pdb".format(self.pdbid))
-        self.inputcif = os.path.join(c.db_root, c.db_mmcif, "{}.cif".format(self.pdbid))
-        self.outputred = os.path.join(c.db_root, c.db_pdb, "{}.reduce.pdb".format(self.pdbid))
-        self.emptyfile = os.path.join(c.db_root, c.db_tmp, "{}.tmp".format(self.pdbid))
-        self.notfound = ""
+        self.inputpdb = os.path.join(os.path.dirname(__file__), "testdata",
+                                     config.db_pdb, "{}.pdb".format(self.pdbid))
+        self.inputcif = os.path.join(os.path.dirname(__file__), "testdata",
+                                     config.db_mmcif, "{}.cif".format(self.pdbid))
+        self.outputred = os.path.join(os.path.dirname(__file__), "testdata",
+                                      config.db_pdb, "{}.reduce.pdb".format(self.pdbid))
         self.excluded = ()
-
-        self.generator = REDUCErunner
+        self.REDUCE = REDUCE
 
         logging.disable(logging.DEBUG)
 
@@ -50,29 +46,23 @@ class TestREDUCE(unittest.TestCase):
         self.inputpdb = None
         self.inputcif = None
         self.outputred = None
-
-        self.emptyfile = None
-        self.notfound = None
         self.excluded = None
-
-        self.generator = None
+        self.REDUCE = None
 
         logging.disable(logging.NOTSET)
 
-    def test_file_not_found_generator(self):
-        with self.assertRaises(IOError):
-            self.generator(self.notfound)
-
     def test_generator_pdb(self):
         if os.path.isfile(self.inputpdb):
-            self.generator(self.inputpdb, self.outputred).run(override=True)
+            self.REDUCE.run(self.inputpdb, self.outputred,
+                            overwrite=True, save_new_input=False)
             self.assertTrue(os.path.isfile(self.outputred))
         else:
             raise IOError("%s" % self.inputpdb)
 
     def test_generator_cif(self):
         if os.path.isfile(self.inputcif):
-            self.generator(self.inputcif, self.outputred).run(override=True)
+            self.REDUCE.run(self.inputcif, self.outputred,
+                            overwrite=True, save_new_input=False)
             self.assertTrue(os.path.isfile(self.outputred))
         else:
             raise IOError("%s" % self.inputcif)

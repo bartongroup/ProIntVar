@@ -1,4 +1,3 @@
-#!/usr/bin/env python
 # -*- coding: utf-8 -*-
 
 """
@@ -12,7 +11,9 @@ Fábio Madeira, 2017+
 import os
 import logging
 
-from prointvar.pdbx import PDBXwriter
+from proteofav.structures import PDB, mmCIF, filter_structures
+from proteofav.utils import GenericInputs
+from proteofav.utils import InputFileHandler
 
 from prointvar.utils import lazy_file_remover
 
@@ -21,80 +22,73 @@ from prointvar.config import config
 logger = logging.getLogger("prointvar")
 
 
-class REDUCErunner(object):
-    def __init__(self, inputfile, outputfile=None):
-        """
-        :param inputfile: Needs to point to a valid PDB or mmCIF file.
-        :param outputfile: if not provided will use the same file name and
-          <*.h> extension
-        """
-        self.inputfile = inputfile
-        self.inputfile_back = inputfile
-        self.outputfile = outputfile
-        self.data = None
+def run_reduce(filename_input, filename_output=None,
+               save_new_input=False, overwrite=False):
+    """
+    Runs REDUCE to add explicit Hydrogen atoms to a PDB
+    structure.
 
-        if not os.path.isfile(self.inputfile):
-            raise IOError("{} not available or could not be read..."
-                          "".format(self.inputfile))
+    :param filename_input: path to input file.
+      Needs to point to a valid PDB or mmCIF file.
+    :param filename_output: path to output file
+      if not provided will use the same file name and <*.h> extension
+    :param save_new_input: boolean
+    :param overwrite: boolean
+    :return: Runs REDUCE on the provided PDB structure
+    """
 
-        # inputfile needs to be in PDB or mmCIF format
-        filename, extension = os.path.splitext(self.inputfile)
-        if extension not in ['.pdb', '.ent', '.cif']:
-            raise ValueError("{} is expected to be in mmCIF or PDB format..."
-                             "".format(self.inputfile))
+    InputFileHandler(filename_input)
 
-    def _generate_output(self):
-        filename, extension = os.path.splitext(self.inputfile)
-        self.outputfile = filename + ".h"
+    # inputfile needs to be in PDB or mmCIF format
+    filename, extension = os.path.splitext(filename_input)
+    if extension not in ['.pdb', '.ent', '.cif']:
+        raise ValueError("{} is expected to be in mmCIF or PDB format..."
+                         "".format(filename_input))
 
-    def _generate_pdb(self, override=False):
-        filename, extension = os.path.splitext(self.inputfile)
-        self.inputfile = filename + "_new.pdb"
-        w = PDBXwriter(inputfile=self.inputfile_back, outputfile=self.inputfile)
-        w.run(format_type="pdb", override=override)
+    if not filename_output:
+        filename, extension = os.path.splitext(filename_input)
+        filename_output = filename + ".h"
 
-    def _run(self, reduce_bin, clean_output=False):
-
-        # reduce generates new coordinates adding Hydrogen atoms
-        cmd = "{} -noflip -quiet {} > {}".format(reduce_bin, self.inputfile,
-                                                 self.outputfile)
-        os.system(cmd)
-        if not os.path.isfile(self.outputfile):
-            raise IOError("Reduce output not generated for {}"
-                          "".format(self.outputfile))
-
-    def write(self, **kwargs):
-        return self.run(**kwargs)
-
-    def run(self, override=False, clean_output=True, save_new_input=False):
-
-        # generate outputfile if missing
-        if not self.outputfile:
-            self._generate_output()
-
-        if not os.path.exists(self.outputfile) or override:
-            if os.path.isfile(config.reduce_bin):
-                reduce_bin = config.reduce_bin
-            else:
-                raise IOError('REDUCE executables are not available...')
-
-            # inputfile needs to be in PDB format
-            filename, extension = os.path.splitext(self.inputfile)
-            if extension == '.cif':
-                self._generate_pdb(override=override)
-
-            # run probe and generate output - also clean unnecessary output
-            self._run(reduce_bin, clean_output=clean_output)
-
-            # clean the new PDB input file generated
-            if not save_new_input:
-                if self.inputfile != self.inputfile_back:
-                    lazy_file_remover(self.inputfile)
-
+    if not os.path.exists(filename_output) or overwrite:
+        if os.path.isfile(config.reduce_bin):
+            reduce_bin = config.reduce_bin
         else:
-            logger.info("REDUCE for %s already available...", self.outputfile)
-        return
+            raise IOError('REDUCE executables are not available...')
+
+        # inputfile needs to be in PDB format
+        filename_input_back = filename_input
+        filename, extension = os.path.splitext(filename_input)
+        if extension == '.cif':
+            filename, extension = os.path.splitext(filename_input)
+            filename_input = filename + "_new.pdb"
+            r = mmCIF.read(filename=filename_input_back)
+            table = filter_structures(r, add_res_full=False, add_contacts=False,
+                                      lines='ATOM', category='auth')
+            PDB.write(table=table, filename=filename_input,
+                      output_format="pdb", overwrite=overwrite)
+
+        # run probe and generate output - also clean unnecessary output
+        # reduce generates new coordinates adding Hydrogen atoms
+        cmd = "{} -noflip -quiet {} > {}".format(reduce_bin, filename_input,
+                                                 filename_output)
+        os.system(cmd)
+        if not os.path.isfile(filename_output):
+            raise IOError("Reduce output not generated for {}"
+                          "".format(filename_output))
+
+        # clean the new PDB input file generated
+        if not save_new_input:
+            if filename_input != filename_input_back:
+                lazy_file_remover(filename_input)
+    else:
+        logger.info("REDUCE for %s already available...", filename_output)
 
 
-if __name__ == '__main__':
-    pass
+class _REDUCE(GenericInputs):
+    def run(self, filename_input=None, filename_output=None, **kwargs):
+        self.table = run_reduce(filename_input=filename_input,
+                                filename_output=filename_output, **kwargs)
+        return self.table
+
+
+REDUCE = _REDUCE()
