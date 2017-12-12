@@ -5,15 +5,7 @@ import os
 import sys
 import logging
 import unittest
-
-try:
-    from StringIO import StringIO
-except ImportError:
-    from io import StringIO
-try:
-    from mock import patch
-except ImportError:
-    from unittest.mock import patch
+from unittest.mock import patch
 
 from prointvar.hbplus import (parse_hb2_from_file,
                               filter_hbplus, hbplus_generate_output_filename,
@@ -38,7 +30,8 @@ class TestHBPLUS(unittest.TestCase):
                                          config.db_contacts, "{}.h2b".format(self.pdbid))
         self.outputhbplus_h = os.path.join(os.path.dirname(__file__), "testdata",
                                            config.db_pdb, "{}.hbplus.pdb".format(self.pdbid))
-        self.excluded = ()
+        self.excluded = ("NUM_AAS", "DIST_CA-CA", "ANGLE_D-H-A",
+                         "DIST_H-A", "ANGLE_H-A-AA", "ANGLE_D-A-AA")
         self.parser = parse_hb2_from_file
         self.filter_hbplus = filter_hbplus
         self.run_hbplus = run_hbplus
@@ -134,17 +127,7 @@ class TestHBPLUS(unittest.TestCase):
         self.assertIn("ANGLE_D-A-AA", data)
 
     def test_reader_new_excluded(self):
-        data = self.HBPLUS.read(self.outputhbplus,
-                                excluded_cols=self.excluded)
-        self.assertIn("NUM_AAS", data)
-        self.assertIn("DIST_CA-CA", data)
-        self.assertIn("DIST_H-A", data)
-        self.assertIn("ANGLE_D-H-A", data)
-        self.assertIn("ANGLE_H-A-AA", data)
-        self.assertIn("ANGLE_D-A-AA", data)
-        excluded = ("NUM_AAS", "DIST_CA-CA", "ANGLE_D-H-A",
-                    "DIST_H-A", "ANGLE_H-A-AA", "ANGLE_D-A-AA")
-        data = self.HBPLUS.read(self.outputhbplus, excluded_cols=excluded)
+        data = self.HBPLUS.read(self.outputhbplus, excluded_cols=self.excluded)
         self.assertNotIn("NUM_AAS", data)
         self.assertNotIn("DIST_CA-CA", data)
         self.assertNotIn("DIST_H-A", data)

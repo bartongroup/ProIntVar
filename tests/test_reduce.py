@@ -5,15 +5,7 @@ import os
 import sys
 import logging
 import unittest
-
-try:
-    from StringIO import StringIO
-except ImportError:
-    from io import StringIO
-try:
-    from mock import patch
-except ImportError:
-    from unittest.mock import patch
+from unittest.mock import patch
 
 from prointvar.reduce import REDUCE
 
@@ -34,7 +26,6 @@ class TestREDUCE(unittest.TestCase):
                                      config.db_mmcif, "{}.cif".format(self.pdbid))
         self.outputred = os.path.join(os.path.dirname(__file__), "testdata",
                                       config.db_pdb, "{}.reduce.pdb".format(self.pdbid))
-        self.excluded = ()
         self.REDUCE = REDUCE
 
         logging.disable(logging.DEBUG)
@@ -46,7 +37,6 @@ class TestREDUCE(unittest.TestCase):
         self.inputpdb = None
         self.inputcif = None
         self.outputred = None
-        self.excluded = None
         self.REDUCE = None
 
         logging.disable(logging.NOTSET)
