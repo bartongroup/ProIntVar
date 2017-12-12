@@ -277,48 +277,6 @@ def run_hbplus(filename_input, filename_output=None,
         logger.info("HBPLUS for %s already available...", filename_output)
 
 
-# def select_hbplus(identifier, excluded_cols=(),
-#                   run_clean=False, hydro_pdb_out=False,
-#                   clean_output=True, save_new_input=False,
-#                   chain_A=None, chain_D=None,
-#                   res_A=None, res_D=None,
-#                   overwrite=False):
-#     """
-#     Runs HBPLUS to add explicit Hydrogen atoms to a PDB
-#     structure.
-#
-#     :param identifier: PDB ID
-#     :param run_clean: boolean
-#     :param hydro_pdb_out: boolean
-#     :param clean_output: boolean
-#     :param save_new_input: boolean
-#     :param overwrite: boolean
-#     :return: Runs HBPLUS on the provided PDB structure
-#     """
-#
-#     filename_input = os.path.join(config.db_mmcif,
-#                                   "{}.cif".format(identifier))
-#     filename_output = os.path.join(config.db_contacts,
-#                                    "{}.contacts".format(identifier))
-#
-#     run_hbplus(filename_input=filename_input,
-#                filename_output=filename_output,
-#                run_clean=run_clean, hydro_pdb_out=hydro_pdb_out,
-#                clean_output=clean_output, save_new_input=save_new_input,
-#                overwrite=overwrite)
-#
-#     if not excluded_cols:
-#         excluded_cols = ("NUM_AAS", "DIST_CA-CA", "ANGLE_D-H-A",
-#                          "DIST_H-A", "ANGLE_H-A-AA", "ANGLE_D-A-AA")
-#
-#     table = parse_hb2_from_file(filename=filename_output,
-#                                 excluded_cols=excluded_cols)
-#
-#     table = filter_hbplus(table, chain_A=chain_A, chain_D=chain_D,
-#                           res_A=res_A, res_D=res_D)
-#     return table
-
-
 class _HBPLUS(GenericInputs):
     def read(self, filename=None, **kwargs):
         self.table = parse_hb2_from_file(filename=filename, **kwargs)
@@ -328,11 +286,6 @@ class _HBPLUS(GenericInputs):
         self.table = run_hbplus(filename_input=filename_input,
                                 filename_output=filename_output, **kwargs)
         return self.table
-
-    # def select(self, identifier=None, **kwargs):
-    #     identifier = self._get_identifier(identifier)
-    #     self.table = select_hbplus(identifier=identifier, **kwargs)
-    #     return self.table
 
 
 HBPLUS = _HBPLUS()

@@ -723,48 +723,6 @@ def filter_arpeggio(table, chain_A=None, chain_B=None,
     return table
 
 
-# def select_arpeggio(identifier, excluded_cols=(),
-#                     add_res_split=True, parse_special=False,
-#                     chain_A=None, chain_B=None,
-#                     res_A=None, res_B=None,
-#                     res_full_A=None, res_full_B=None,
-#                     atom_A=None, atom_B=None,
-#                     residue_agg=False, agg_method='minimum',
-#                     int_filter=False, int_mode='inter-chain',
-#                     collapsed_cont=False, col_method='full',
-#                     ignore_consecutive=False, numb_res=3,
-#                     hydro_method="arpeggio",
-#                     clean_output=True, save_new_input=False,
-#                     overwrite=False):
-#
-#     filename_input = os.path.join(config.db_mmcif,
-#                                   "{}.cif".format(identifier))
-#     filename_output = os.path.join(config.db_contacts,
-#                                    "{}.contacts".format(identifier))
-#
-#     run_arpeggio(filename_input=filename_input, filename_output=filename_output,
-#                  hydro_method=hydro_method, overwrite=overwrite,
-#                  clean_output=clean_output, save_new_input=save_new_input)
-#
-#     if not excluded_cols:
-#         excluded_cols = ("ENTRY_A", "ENTRY_B", "ENTITIES")
-#
-#     table = parse_arpeggio_from_file(filename=filename_output,
-#                                      excluded_cols=excluded_cols,
-#                                      add_res_split=add_res_split,
-#                                      parse_special=parse_special)
-#
-#     table = filter_arpeggio(table, chain_A=chain_A, chain_B=chain_B,
-#                             res_A=res_A, res_B=res_B,
-#                             res_full_A=res_full_A, res_full_B=res_full_B,
-#                             atom_A=atom_A, atom_B=atom_B,
-#                             residue_agg=residue_agg, agg_method=agg_method,
-#                             int_filter=int_filter, int_mode=int_mode,
-#                             collapsed_cont=collapsed_cont, col_method=col_method,
-#                             ignore_consecutive=ignore_consecutive, numb_res=numb_res)
-#     return table
-
-
 class _Arpeggio(GenericInputs):
     def read(self, filename=None, **kwargs):
         self.table = parse_arpeggio_from_file(filename=filename, **kwargs)
@@ -774,11 +732,6 @@ class _Arpeggio(GenericInputs):
         self.table = run_arpeggio(filename_input=filename_input,
                                   filename_output=filename_output, **kwargs)
         return self.table
-
-        # def select(self, identifier=None, **kwargs):
-        #     identifier = self._get_identifier(identifier)
-        #     self.table = select_arpeggio(identifier=identifier, **kwargs)
-        #     return self.table
 
 
 ARPEGGIO = _Arpeggio()
