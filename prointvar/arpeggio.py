@@ -1,4 +1,3 @@
-#!/usr/bin/env python
 # -*- coding: utf-8 -*-
 
 """
@@ -10,10 +9,10 @@ Needs the Edited Arpeggio Fork from: https://bitbucket.org/biomadeira/arpeggio
 Propositions for things to work:
 - Generate new PDB file from mmCIF and (even) PDB so that some issues (below) are cleared
     - Remove alternative locations and reset the atom sequential id
-      PDBXreader(<...>).atoms(remove_altloc=True, reset_atom_id=True)
+      PDB/mmCIF.read(<...>).read(remove_altloc=True, reset_atom_id=True)
 
     - Chain IDs need to be a single character so it is safer to run with category='auth'
-      PDBXwriter(<...>).run(category='auth')
+      PDB/mmCIF.read(<...>).run(category='auth')
 
     - Remove hydrogens
       PDBXreader(<...>).atoms(remove_hydrogens=True)
@@ -23,24 +22,20 @@ Fábio Madeira, 2017+
 """
 
 import os
-import json
 import shutil
 import logging
 import pandas as pd
-from operator import attrgetter
-from collections import Counter
-from collections import namedtuple
 
-from prointvar.pdbx import PDBXwriter
-from prointvar.pdbx import PDBXreader
-from prointvar.reduce import REDUCErunner
-from prointvar.hbplus import HBPLUSrunner
+from proteofav.structures import PDB, mmCIF, filter_structures
+from proteofav.utils import InputFileHandler, GenericInputs
+from proteofav.utils import row_selector
+from proteofav.utils import constrain_column_types
+from proteofav.utils import exclude_columns
+
+from prointvar.reduce import REDUCE
+from prointvar.hbplus import HBPLUS
 
 from prointvar.utils import lazy_file_remover
-from prointvar.utils import row_selector
-from prointvar.utils import string_split
-from prointvar.utils import constrain_column_types
-from prointvar.utils import exclude_columns
 from prointvar.library import arpeggio_types
 from prointvar.library import arpeggio_col_renames
 
@@ -49,13 +44,13 @@ from prointvar.config import config
 logger = logging.getLogger("prointvar")
 
 
-def parse_arpeggio_from_file(inputfile, excluded=(), add_res_split=True,
+def parse_arpeggio_from_file(filename, excluded_cols=(), add_res_split=True,
                              parse_special=False):
     """
     Parse lines of the ARPEGGIO *contacts* file to get entries from...
 
-    :param inputfile: path to the ARPEGGIO file
-    :param excluded: option to exclude ARPEGGIO columns
+    :param filename: path to the ARPEGGIO file
+    :param excluded_cols: option to exclude ARPEGGIO columns
     :param add_res_split: (boolean) splits ENTRY_* into 'CHAIN', 'ATOM', 'RES', 'INSCODE'
     :param parse_special: (boolean) tries to parse special contact types
     :return: returns a pandas DataFrame
@@ -75,8 +70,8 @@ def parse_arpeggio_from_file(inputfile, excluded=(), add_res_split=True,
     B/375/NE2	B/377/N	0	0	0	0	1	0	0	0	0	0	0	0	0	0	0	4.944	1.844	INTRA_SELECTION
     """
 
-    if not os.path.isfile(inputfile):
-        raise IOError("{} not available or could not be read...".format(inputfile))
+    if not os.path.isfile(filename):
+        raise IOError("{} not available or could not be read...".format(filename))
 
     # column width descriptors
     header = ("ENTRY_A", "ENTRY_B", "STERIC_CLASH", "COVALENT", "VDW_CLASH", "VDW_INTER",
@@ -85,7 +80,7 @@ def parse_arpeggio_from_file(inputfile, excluded=(), add_res_split=True,
               "DIST", "VDW_DIST", "ENTITIES")
 
     all_str = {key: str for key in header}
-    table = pd.read_csv(inputfile, delim_whitespace=True, low_memory=False,
+    table = pd.read_csv(filename, delim_whitespace=True, low_memory=False,
                         names=header, compression=None, converters=all_str,
                         keep_default_na=False)
 
@@ -96,28 +91,28 @@ def parse_arpeggio_from_file(inputfile, excluded=(), add_res_split=True,
 
     if parse_special:
         # tries to parse *.amam, *.amri, *.ari and *.ri
-        table = add_special_cont_types(inputfile, table)
+        table = add_special_cont_types(filename, table)
         logger.info("Parsed special contact-types...")
 
     # excluding columns
-    table = exclude_columns(table, excluded=excluded)
+    table = exclude_columns(table, excluded=excluded_cols)
 
     # enforce some specific column types
     table = constrain_column_types(table, arpeggio_types)
 
     if table.empty:
-        raise ValueError('{} resulted in an empty DataFrame...'.format(inputfile))
+        raise ValueError('{} resulted in an empty DataFrame...'.format(filename))
 
     return table
 
 
-def parse_arpeggio_spec_from_file(inputfile, excluded=(), add_res_split=True,
+def parse_arpeggio_spec_from_file(inputfile, excluded_cols=(), add_res_split=True,
                                   int_type="res-res"):
     """
     Parse lines of the ARPEGGIO *.amam*, *.amri*, *.ri*  and *.ari* files..
 
     :param inputfile: path to the ARPEGGIO file
-    :param excluded: option to exclude ARPEGGIO columns
+    :param excluded_cols: option to exclude ARPEGGIO columns
     :param add_res_split: (boolean) splits ENTRY_* into 'CHAIN', 'ATOM', 'RES', 'INSCODE'
     :param int_type: (str) 'res-res' or 'atom-res'
     :return: returns a pandas DataFrame
@@ -176,7 +171,7 @@ def parse_arpeggio_spec_from_file(inputfile, excluded=(), add_res_split=True,
         table = add_arpeggio_res_split(table)
 
     # excluding columns
-    table = exclude_columns(table, excluded=excluded)
+    table = exclude_columns(table, excluded=excluded_cols)
 
     if table.empty:
         raise ValueError('{} resulted in an empty DataFrame...'.format(inputfile))
@@ -198,7 +193,7 @@ def add_arpeggio_res_split(data):
     """
     table = data
 
-    #FIXME: This is no longer used... I don't think it was working as intended in the first place
+    # FIXME: This is no longer used... I don't think it was working as intended in the first place
     # # get most frequent chain in ENTRY_A and use it to define the inter. direction
     # # for multiple chains use decreasing frequency
     # chains_a = [v.split('/')[0] for v in table['ENTRY_A'].tolist()]
@@ -214,7 +209,8 @@ def add_arpeggio_res_split(data):
 
         # Rename columns
         suffix = s.name[-1]
-        column_name_dict = {k: v.format(suffix) for k, v in enumerate(['CHAIN_{}', 'RES_FULL_{}', 'ATOM_{}', 'X_{}'])}
+        column_name_dict = {k: v.format(suffix) for k, v in enumerate(['CHAIN_{}', 'RES_FULL_{}',
+                                                                       'ATOM_{}', 'X_{}'])}
         table = table.rename(columns=column_name_dict)
 
         # Parse RES_FULL_X to DataFrame
@@ -255,24 +251,24 @@ def add_special_cont_types(inputfile, data):
 
     filename, extension = os.path.splitext(inputfile)
     input_amam = filename + ".amam"
-    amam = parse_arpeggio_spec_from_file(input_amam, excluded=tuple(excluded),
+    amam = parse_arpeggio_spec_from_file(input_amam, excluded_cols=tuple(excluded),
                                          int_type="res-res")
     table = add_contact_info(table, amam, col_name="Amide-Amide", int_type="res-res")
 
     input_amri = filename + ".amri"
-    amri = parse_arpeggio_spec_from_file(input_amri, excluded=tuple(excluded),
+    amri = parse_arpeggio_spec_from_file(input_amri, excluded_cols=tuple(excluded),
                                          int_type="res-res")
     table = add_contact_info(table, amri, col_name="Amide-Aromatic", int_type="res-res")
 
     input_ri = filename + ".ri"
-    ri = parse_arpeggio_spec_from_file(input_ri, excluded=tuple(excluded),
+    ri = parse_arpeggio_spec_from_file(input_ri, excluded_cols=tuple(excluded),
                                        int_type="res-res")
     table = add_contact_info(table, ri, col_name="Aromatic-Aromatic", int_type="res-res")
 
     excluded.remove("ID_A")
     excluded.remove("COORDS_A")
     input_ari = filename + ".ari"
-    ari = parse_arpeggio_spec_from_file(input_ari, excluded=tuple(excluded),
+    ari = parse_arpeggio_spec_from_file(input_ari, excluded_cols=tuple(excluded),
                                         int_type="atom-res")
     table = add_contact_info(table, ari, col_name="Atom-Ring", int_type="atom-res")
 
@@ -323,63 +319,6 @@ def add_contact_info(data, info, col_name="Amide-Amide", int_type="res-res"):
 
     table[col_name] = values
     table = table.drop(['a2b', 'b2a'], axis=1)
-    return table
-
-
-def get_arpeggio_selected_from_table(data, chain_A=None, chain_B=None,
-                                     res_A=None, res_B=None,
-                                     res_full_A=None, res_full_B=None,
-                                     atom_A=None, atom_B=None):
-    """
-    Utility that filters a pandas DataFrame by the input tuples.
-
-    :param data: pandas DataFrame object
-    :param chain_A: (tuple) chain IDs or None (donor)
-    :param chain_B: (tuple) chain IDs or None (acceptor)
-    :param res_A: (tuple) res IDs or None (donor)
-    :param res_B: (tuple) res IDs or None (acceptor)
-    :param res_full_A: (tuple) res IDs + inscode or None (donor)
-    :param res_full_B: (tuple) res IDs + inscode or None (acceptor)
-    :param atom_A: (tuple) atom IDs or None (donor)
-    :param atom_B: (tuple) atom IDs or None (acceptor)
-    :return: returns a modified pandas DataFrame
-    """
-
-    # excluding rows
-    table = data
-
-    if chain_A is not None:
-        table = row_selector(table, 'CHAIN_A', chain_A)
-        logger.info("Arpeggio table filtered by CHAIN_A...")
-
-    if chain_B is not None:
-        table = row_selector(table, 'CHAIN_B', chain_B)
-        logger.info("Arpeggio table filtered by CHAIN_B...")
-
-    if res_A is not None:
-        table = row_selector(table, 'RES_A', res_A)
-        logger.info("Arpeggio table filtered by RES_A...")
-
-    if res_B is not None:
-        table = row_selector(table, 'RES_B', res_B)
-        logger.info("Arpeggio table filtered by RES_B...")
-
-    if res_full_A is not None:
-        table = row_selector(table, 'RES_FULL_A', res_full_A)
-        logger.info("Arpeggio table filtered by RES_FULL_A...")
-
-    if res_full_B is not None:
-        table = row_selector(table, 'RES_FULL_B', res_full_B)
-        logger.info("Arpeggio table filtered by RES_FULL_B...")
-
-    if atom_A is not None:
-        table = row_selector(table, 'ATOM_A', atom_A)
-        logger.info("Arpeggio table filtered by ATOM_A...")
-
-    if atom_B is not None:
-        table = row_selector(table, 'ATOM_B', atom_B)
-        logger.info("Arpeggio table filtered by ATOM_B...")
-
     return table
 
 
@@ -486,6 +425,7 @@ def collapsed_contacts(data, col_method='full'):
         table = table.drop(excluded, axis=1)
     # aggregate results
     melted = pd.melt(table.reset_index(), id_vars=['index'], value_vars=col_names, var_name='Int_Types')
+    melted.value = melted.value.dropna().apply(lambda x: int(x[0]) if hasattr(x, '__iter__') else int(x))
     melted.query('value == 1', inplace=True)
     aggregated = melted.groupby(['index'])['Int_Types'].aggregate(lambda x: set(x))
     table = table.join(aggregated)
@@ -511,7 +451,7 @@ def ignore_consecutive_residues(data, numb_res=3):
     ins_codes_1 = [k for k in table.INSCODE_A.unique()]
     ins_codes_2 = [k for k in table.INSCODE_B.unique()]
     if (len(ins_codes_1) and len(ins_codes_2) and
-            ins_codes_1[0] == '?' and ins_codes_2[0] == '?'):
+                ins_codes_1[0] == '?' and ins_codes_2[0] == '?'):
         table = table.loc[((table["CHAIN_A"] != table["CHAIN_B"]) |
                            ((table["CHAIN_A"] == table["CHAIN_B"]) &
                             (abs(table["RES_A"].astype(int) -
@@ -523,221 +463,322 @@ def ignore_consecutive_residues(data, numb_res=3):
     return table
 
 
-class ARPEGGIOreader(object):
-    def __init__(self, inputfile):
-        """
-        :param inputfile: Needs to point to a valid ARPEGGIO file.
-        """
-        self.inputfile = inputfile
-        self.data = None
-        self.excluded = ("ENTRY_A", "ENTRY_B", "ENTITIES")
+def arpeggio_generate_pdb_with_hydrogens(filename_input, filename_input_h,
+                                         hydro_method="hbplus", overwrite=False):
+    """
+    Wrapper for getting PDB structure with explicit Hydrogens, using one
+    of the supported methods.
 
-        if not os.path.isfile(inputfile):
-            raise IOError("{} not available or could not be read...".format(inputfile))
+    :param filename_input: path to input file
+    :param filename_input_h: path to input file
+    :param hydro_method:
+    :param overwrite: boolean
+    :return: (side-effects) writes '*.h' file
+    """
+    if hydro_method == "hbplus":
+        w = HBPLUS.run(inputfile=filename_input, outputfile=filename_input_h)
+        w.run(hydro_pdb_out=True, overwrite=overwrite)
+    elif hydro_method == "reduce":
+        w = REDUCE.run(inputfile=filename_input, outputfile=filename_input_h)
+        w.run(overwrite=overwrite)
+    else:
+        raise ValueError('Method {} is not currently implemented...'
+                         ''.format(hydro_method))
 
-    def read(self, **kwargs):
-        return self.contacts(**kwargs)
 
-    def contacts(self, excluded=None, add_res_split=True,
-                 residue_agg=False, agg_method='minimum',
-                 int_filter=False, int_mode='inter-chain',
-                 collapsed_cont=False, col_method='full',
-                 ignore_consecutive=False, numb_res=3,
-                 parse_special=False):
+def _run_arpeggio(filename_input, filename_output, filename_input_h,
+                  python_path, python_exe, arpeggio_bin, clean_output=True,
+                  hydro_method="arpeggio"):
+    """
+    Method that calls the arpeggio CLI passing on the input structure and
+    output file paths.
 
-        if excluded is None:
-            excluded = self.excluded
-        self.data = parse_arpeggio_from_file(self.inputfile, excluded=excluded,
-                                             add_res_split=add_res_split,
-                                             parse_special=parse_special)
-        if ignore_consecutive:
-            self.data = ignore_consecutive_residues(self.data, numb_res=numb_res)
+    :param filename_input: path to input file
+    :param filename_output: path to input file
+    :param filename_input_h: path to input file
+    :param python_path: Python path
+    :param python_exe: path to python executable
+    :param arpeggio_bin: path to arpeggio executable
+    :param clean_output: boolean
+    :param hydro_method: either "arpeggio", "hbplus" or "reduce"
+    :return: (side-effects) runs arpeggio
+    """
 
-        if residue_agg:
-            self.data = residues_aggregation(self.data, agg_method=agg_method)
+    filename, extension = os.path.splitext(filename_input)
+    input_arpeggio = filename + ".pdb"
+    output_arpeggio = filename + ".contacts"  # atom-atom contact information
+    output_bs_contacts = filename + ".bs_contacts"
+    output_atomtypes = filename + ".atomtypes"  # atom types
+    output_hydro = filename + "_hydrogenated.pdb"
 
-        if collapsed_cont:
-            self.data = collapsed_contacts(self.data, col_method=col_method)
+    output_amam = filename + ".amam"  # res-res amide-amide
+    output_amri = filename + ".amri"  # res-res amide-ring
+    output_ari = filename + ".ari"  # atom-res atom-ring
+    output_ri = filename + ".ri"  # res-res aromatic ring-aromatic ring
+    output_rings = filename + ".rings"  # list of res rings
+    output_residue_sifts = filename + ".residue_sifts"
+    output_sift = filename + ".sift"
+    output_siftmatch = filename + ".siftmatch"
+    output_polarmatch = filename + ".polarmatch"
+    output_specific_sift = filename + ".specific.sift"
+    output_specific_siftmatch = filename + ".specific.siftmatch"
+    output_specific_polarmatch = filename + ".specific.polarmatch"
 
-        if int_filter:
-            self.data = interaction_modes(self.data, int_mode=int_mode)
+    if hydro_method in ["hbplus", "reduce"]:
+        input_arpeggio = filename + ".h.pdb"
 
-        return self.data
+    # run arpeggio
+    cmd = 'PYTHONPATH={} {} {} -wh {}'.format(python_path, python_exe,
+                                              arpeggio_bin, input_arpeggio)
+    os.system(cmd)
+    if not os.path.isfile(output_arpeggio):
+        raise IOError("ARPEGGIO output not generated for {}".format(input_arpeggio))
 
-    def to_json(self, pretty=True):
-        if self.data is not None:
-            if type(self.data) is pd.core.frame.DataFrame:
-                data = self.data.to_dict(orient='records')
-            else:
-                data = self.data
-            if pretty:
-                return json.dumps(data, sort_keys=False, indent=4)
-            else:
-                return json.dumps(data)
+    # mv the automatically generated file -> to the provided outputfile
+    if output_arpeggio != filename_output:
+        shutil.copyfile(output_arpeggio, filename_output)
+        nfilename, nextension = os.path.splitext(filename_output)
+        new_output_amam = nfilename + ".amam"
+        new_output_amri = nfilename + ".amri"
+        new_output_ari = nfilename + ".ari"
+        new_output_ri = nfilename + ".ri"
+        shutil.copyfile(output_amam, new_output_amam)
+        shutil.copyfile(output_amri, new_output_amri)
+        shutil.copyfile(output_ari, new_output_ari)
+        shutil.copyfile(output_ri, new_output_ri)
+
+    if hydro_method == "arpeggio":
+        shutil.copyfile(output_hydro, filename_input_h)
+
+    if clean_output:
+        # remove output files
+        if output_arpeggio != filename_output:
+            lazy_file_remover(output_arpeggio)
+            lazy_file_remover(output_amam)
+            lazy_file_remover(output_amri)
+            lazy_file_remover(output_ari)
+            lazy_file_remover(output_ri)
+
+        lazy_file_remover(output_bs_contacts)
+        lazy_file_remover(output_atomtypes)
+        lazy_file_remover(output_hydro)
+        lazy_file_remover(output_rings)
+        lazy_file_remover(output_residue_sifts)
+        lazy_file_remover(output_sift)
+        lazy_file_remover(output_siftmatch)
+        lazy_file_remover(output_polarmatch)
+        lazy_file_remover(output_specific_sift)
+        lazy_file_remover(output_specific_siftmatch)
+        lazy_file_remover(output_specific_polarmatch)
+
+
+def run_arpeggio(filename_input=None, filename_output=None,
+                 hydro_method="arpeggio", overwrite=False,
+                 clean_output=True, save_new_input=False):
+    """
+    Method that calls the arpeggio CLI passing on the input structure and
+    output file paths.
+
+    :param filename_input: path to input file
+    :param filename_output: path to input file
+      if not provided will use the same file name and <*.contacts> extension
+    :param hydro_method: either "arpeggio", "hbplus" or "reduce"
+    :param overwrite: boolean
+    :param clean_output: boolean
+    :param save_new_input: boolean
+    :return: (side-effects) runs arpeggio
+    """
+
+    filename_input_back = filename_input
+
+    InputFileHandler(filename_input)
+
+    # inputfile needs to be in PDB or mmCIF format
+    filename, extension = os.path.splitext(filename_input)
+    if extension not in ['.pdb', '.ent', '.cif']:
+        raise ValueError("{} is expected to be in mmCIF or PDB format..."
+                         "".format(filename_input))
+
+    # generate outputfile if missing
+    if not filename_output:
+        filename, extension = os.path.splitext(filename)
+        filename_output = filename + ".contacts"
+
+    if not os.path.exists(filename_output) or overwrite:
+        if os.path.isfile(config.python_exe) and os.path.exists(config.arpeggio_bin):
+            arpeggio_bin = config.arpeggio_bin
+            python_exe = config.python_exe
+            python_path = config.python_path
         else:
-            logger.info("No ARPEGGIO data parsed...")
+            raise IOError('ARPEGGIO executable is not available...')
 
+        # inputfile needs to be in PDB format
+        filename, extension = os.path.splitext(filename_input)
+        filename_input = filename + "_new.pdb"
 
-class ARPEGGIOrunner(object):
-    def __init__(self, inputfile, outputfile=None):
-        """
-        :param inputfile: Needs to point to a valid PDB or mmCIF file.
-        :param outputfile: if not provided will use the same file name and
-          <.contacts> extension
-        """
-        self.inputfile = inputfile
-        self.inputfile_back = inputfile
-        self.outputfile = outputfile
-        self.data = None
-        self.inputfile_h = None
+        data = mmCIF.read(filename=filename_input_back)
+        data = filter_structures(data, remove_altloc=True, reset_atom_id=True,
+                                 remove_partial_res=True)
+        PDB.write(table=data, filename=filename_input, category="auth",
+                  overwrite=overwrite)
 
-        if not os.path.isfile(self.inputfile):
-            raise IOError("{} not available or could not be read..."
-                          "".format(self.inputfile))
-
-        # inputfile needs to be in PDB or mmCIF format
-        filename, extension = os.path.splitext(self.inputfile)
-        if extension not in ['.pdb', '.ent', '.cif']:
-            raise ValueError("{} is expected to be in mmCIF or PDB format..."
-                             "".format(self.inputfile))
-
-    def _generate_output(self):
-        filename, extension = os.path.splitext(self.inputfile)
-        self.outputfile = filename + ".contacts"
-
-    def _generate_pdb(self, override=False, pro_format=False):
-        filename, extension = os.path.splitext(self.inputfile)
-        self.inputfile = filename + "_new.pdb"
-        w = PDBXwriter(inputfile=None, outputfile=self.inputfile)
-        r = PDBXreader(inputfile=self.inputfile_back)
-        data = r.atoms(remove_altloc=True, reset_atom_id=True, add_new_pro_id=True,
-                       remove_partial_res=True, format_type=None)
-        w.run(data=data, format_type="pdb", category="auth",
-              override=override, pro_format=pro_format)
-
-    def _generate_pdb_with_hydrogens(self, hydro_method="hbplus", override=False):
-        if hydro_method == "hbplus":
-            w = HBPLUSrunner(inputfile=self.inputfile, outputfile=self.inputfile_h)
-            w.run(hydro_pdb_out=True, override=override)
-        elif hydro_method == "reduce":
-            w = REDUCErunner(inputfile=self.inputfile, outputfile=self.inputfile_h)
-            w.run(override=override)
-        else:
-            raise ValueError('Method {} is not currently implemented...'
-                             ''.format(hydro_method))
-
-    def _run(self, python_path, python_exe, arpeggio_bin, clean_output=True,
-             hydro_method="arpeggio"):
-
-        filename, extension = os.path.splitext(self.inputfile)
-        input_arpeggio = filename + ".pdb"
-        output_arpeggio = filename + ".contacts"  # atom-atom contact information
-        output_bs_contacts = filename + ".bs_contacts"
-        output_atomtypes = filename + ".atomtypes"  # atom types
-        output_hydro = filename + "_hydrogenated.pdb"
-
-        output_amam = filename + ".amam"  # res-res amide-amide
-        output_amri = filename + ".amri"  # res-res amide-ring
-        output_ari = filename + ".ari"  # atom-res atom-ring
-        output_ri = filename + ".ri"  # res-res aromatic ring-aromatic ring
-        output_rings = filename + ".rings"  # list of res rings
-        output_residue_sifts = filename + ".residue_sifts"
-        output_sift = filename + ".sift"
-        output_siftmatch = filename + ".siftmatch"
-        output_polarmatch = filename + ".polarmatch"
-        output_specific_sift = filename + ".specific.sift"
-        output_specific_siftmatch = filename + ".specific.siftmatch"
-        output_specific_polarmatch = filename + ".specific.polarmatch"
-
+        # get PDB with explicit hydrogen atoms
+        filename_input_h = filename + ".h.pdb"
         if hydro_method in ["hbplus", "reduce"]:
-            input_arpeggio = filename + ".h.pdb"
+            arpeggio_generate_pdb_with_hydrogens(filename_input, filename_input_h,
+                                                 hydro_method=hydro_method,
+                                                 overwrite=overwrite)
 
-        # run arpeggio
-        cmd = 'PYTHONPATH={} {} {} -wh {}'.format(python_path, python_exe,
-                                                  arpeggio_bin, input_arpeggio)
-        os.system(cmd)
-        if not os.path.isfile(output_arpeggio):
-            raise IOError("ARPEGGIO output not generated for {}".format(input_arpeggio))
-
-        # mv the automatically generated file -> to the provided outputfile
-        if output_arpeggio != self.outputfile:
-            shutil.copyfile(output_arpeggio, self.outputfile)
-            nfilename, nextension = os.path.splitext(self.outputfile)
-            new_output_amam = nfilename + ".amam"
-            new_output_amri = nfilename + ".amri"
-            new_output_ari = nfilename + ".ari"
-            new_output_ri = nfilename + ".ri"
-            shutil.copyfile(output_amam, new_output_amam)
-            shutil.copyfile(output_amri, new_output_amri)
-            shutil.copyfile(output_ari, new_output_ari)
-            shutil.copyfile(output_ri, new_output_ri)
-
-        if hydro_method == "arpeggio":
-            shutil.copyfile(output_hydro, self.inputfile_h)
-
-        if clean_output:
-            # remove output files
-            if output_arpeggio != self.outputfile:
-                lazy_file_remover(output_arpeggio)
-                lazy_file_remover(output_amam)
-                lazy_file_remover(output_amri)
-                lazy_file_remover(output_ari)
-                lazy_file_remover(output_ri)
-
-            lazy_file_remover(output_bs_contacts)
-            lazy_file_remover(output_atomtypes)
-            lazy_file_remover(output_hydro)
-            lazy_file_remover(output_rings)
-            lazy_file_remover(output_residue_sifts)
-            lazy_file_remover(output_sift)
-            lazy_file_remover(output_siftmatch)
-            lazy_file_remover(output_polarmatch)
-            lazy_file_remover(output_specific_sift)
-            lazy_file_remover(output_specific_siftmatch)
-            lazy_file_remover(output_specific_polarmatch)
-
-    def write(self, **kwargs):
-        return self.run(**kwargs)
-
-    def run(self, hydro_method="arpeggio", override=False,
-            clean_output=True, save_new_input=False, pro_format=False):
-
-        # generate outputfile if missing
-        if not self.outputfile:
-            self._generate_output()
-
-        if not os.path.exists(self.outputfile) or override:
-            if os.path.isfile(config.python_exe) and os.path.exists(config.arpeggio_bin):
-                arpeggio_bin = config.arpeggio_bin
-                python_exe = config.python_exe
-                python_path = config.python_path
-            else:
-                raise IOError('ARPEGGIO executable is not available...')
-
-            # inputfile needs to be in PDB format
-            filename, extension = os.path.splitext(self.inputfile)
-            self._generate_pdb(override=override, pro_format=pro_format)
-
-            # get PDB with explicit hydrogen atoms
-            self.inputfile_h = filename + ".h.pdb"
-            if hydro_method in ["hbplus", "reduce"]:
-                self._generate_pdb_with_hydrogens(hydro_method=hydro_method,
-                                                  override=override)
-
-            # run arpeggio and generate output - also clean unnecessary output
-            self._run(python_path, python_exe, arpeggio_bin, clean_output=clean_output,
+        # run arpeggio and generate output - also clean unnecessary output
+        _run_arpeggio(filename_input, filename_output, filename_input_h,
+                      python_path, python_exe, arpeggio_bin, clean_output=clean_output,
                       hydro_method=hydro_method)
 
-            # clean the new PDB input file generated
-            if not save_new_input:
-                if self.inputfile != self.inputfile_back:
-                    lazy_file_remover(self.inputfile)
-                    lazy_file_remover(self.inputfile_h)
-
-        else:
-            logger.info("ARPEGGIO for %s already available...", self.outputfile)
-        return
+        # clean the new PDB input file generated
+        if not save_new_input:
+            if filename_input != filename_input_back:
+                lazy_file_remover(filename_input)
+            lazy_file_remover(filename_input_h)
+    else:
+        logger.info("ARPEGGIO for %s already available...", filename_output)
 
 
-if __name__ == '__main__':
-    pass
+def filter_arpeggio(table, chain_A=None, chain_B=None,
+                    res_A=None, res_B=None,
+                    res_full_A=None, res_full_B=None,
+                    atom_A=None, atom_B=None,
+                    residue_agg=False, agg_method='minimum',
+                    int_filter=False, int_mode='inter-chain',
+                    collapsed_cont=False, col_method='full',
+                    ignore_consecutive=False, numb_res=3):
+    """
+    Utility that filters a pandas DataFrame by the input tuples.
+
+    :param table: pandas DataFrame object
+    :param chain_A: (tuple) chain IDs or None (donor)
+    :param chain_B: (tuple) chain IDs or None (acceptor)
+    :param res_A: (tuple) res IDs or None (donor)
+    :param res_B: (tuple) res IDs or None (acceptor)
+    :param res_full_A: (tuple) res IDs + inscode or None (donor)
+    :param res_full_B: (tuple) res IDs + inscode or None (acceptor)
+    :param atom_A: (tuple) atom IDs or None (donor)
+    :param atom_B: (tuple) atom IDs or None (acceptor)
+    :param residue_agg: boolean
+    :param agg_method: current values: 'first', 'unique', and 'minimum'
+    :param int_filter: boolean
+    :param int_mode: current values: 'inter-chain' and 'intra-chain'
+    :param collapsed_cont: boolean
+    :param col_method: collapse method: 'full' means all columns are used
+        'minimal': only selected contact types are kept
+    :param ignore_consecutive: boolean
+    :param numb_res: (int) number of residues that are skipped
+    :return: returns a modified pandas DataFrame
+    """
+
+    # excluding rows
+    if chain_A is not None:
+        table = row_selector(table, 'CHAIN_A', chain_A)
+        logger.info("Arpeggio table filtered by CHAIN_A...")
+
+    if chain_B is not None:
+        table = row_selector(table, 'CHAIN_B', chain_B)
+        logger.info("Arpeggio table filtered by CHAIN_B...")
+
+    if res_A is not None:
+        table = row_selector(table, 'RES_A', res_A)
+        logger.info("Arpeggio table filtered by RES_A...")
+
+    if res_B is not None:
+        table = row_selector(table, 'RES_B', res_B)
+        logger.info("Arpeggio table filtered by RES_B...")
+
+    if res_full_A is not None:
+        table = row_selector(table, 'RES_FULL_A', res_full_A)
+        logger.info("Arpeggio table filtered by RES_FULL_A...")
+
+    if res_full_B is not None:
+        table = row_selector(table, 'RES_FULL_B', res_full_B)
+        logger.info("Arpeggio table filtered by RES_FULL_B...")
+
+    if atom_A is not None:
+        table = row_selector(table, 'ATOM_A', atom_A)
+        logger.info("Arpeggio table filtered by ATOM_A...")
+
+    if atom_B is not None:
+        table = row_selector(table, 'ATOM_B', atom_B)
+        logger.info("Arpeggio table filtered by ATOM_B...")
+
+    if residue_agg:
+        table = residues_aggregation(table, agg_method=agg_method)
+
+    if int_filter:
+        table = interaction_modes(table, int_mode=int_mode)
+
+    if collapsed_cont:
+        table = collapsed_contacts(table, col_method=col_method)
+
+    if ignore_consecutive:
+        table = ignore_consecutive_residues(table, numb_res=numb_res)
+
+    return table
+
+
+# def select_arpeggio(identifier, excluded_cols=(),
+#                     add_res_split=True, parse_special=False,
+#                     chain_A=None, chain_B=None,
+#                     res_A=None, res_B=None,
+#                     res_full_A=None, res_full_B=None,
+#                     atom_A=None, atom_B=None,
+#                     residue_agg=False, agg_method='minimum',
+#                     int_filter=False, int_mode='inter-chain',
+#                     collapsed_cont=False, col_method='full',
+#                     ignore_consecutive=False, numb_res=3,
+#                     hydro_method="arpeggio",
+#                     clean_output=True, save_new_input=False,
+#                     overwrite=False):
+#
+#     filename_input = os.path.join(config.db_mmcif,
+#                                   "{}.cif".format(identifier))
+#     filename_output = os.path.join(config.db_contacts,
+#                                    "{}.contacts".format(identifier))
+#
+#     run_arpeggio(filename_input=filename_input, filename_output=filename_output,
+#                  hydro_method=hydro_method, overwrite=overwrite,
+#                  clean_output=clean_output, save_new_input=save_new_input)
+#
+#     if not excluded_cols:
+#         excluded_cols = ("ENTRY_A", "ENTRY_B", "ENTITIES")
+#
+#     table = parse_arpeggio_from_file(filename=filename_output,
+#                                      excluded_cols=excluded_cols,
+#                                      add_res_split=add_res_split,
+#                                      parse_special=parse_special)
+#
+#     table = filter_arpeggio(table, chain_A=chain_A, chain_B=chain_B,
+#                             res_A=res_A, res_B=res_B,
+#                             res_full_A=res_full_A, res_full_B=res_full_B,
+#                             atom_A=atom_A, atom_B=atom_B,
+#                             residue_agg=residue_agg, agg_method=agg_method,
+#                             int_filter=int_filter, int_mode=int_mode,
+#                             collapsed_cont=collapsed_cont, col_method=col_method,
+#                             ignore_consecutive=ignore_consecutive, numb_res=numb_res)
+#     return table
+
+
+class _Arpeggio(GenericInputs):
+    def read(self, filename=None, **kwargs):
+        self.table = parse_arpeggio_from_file(filename=filename, **kwargs)
+        return self.table
+
+    def run(self, filename_input=None, filename_output=None, **kwargs):
+        self.table = run_arpeggio(filename_input=filename_input,
+                                  filename_output=filename_output, **kwargs)
+        return self.table
+
+        # def select(self, identifier=None, **kwargs):
+        #     identifier = self._get_identifier(identifier)
+        #     self.table = select_arpeggio(identifier=identifier, **kwargs)
+        #     return self.table
+
+
+ARPEGGIO = _Arpeggio()
