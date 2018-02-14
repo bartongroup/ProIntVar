@@ -421,7 +421,7 @@ def table_generator(uniprot_id=None, pdb_id=None, chain=None, res=None,
                 contacts_table = r.contacts(residue_agg=residue_agg,
                                             collapsed_cont=True, col_method="full",
                                             ignore_consecutive=False, numb_res=3,
-                                            parse_special=True)
+                                            parse_special=False)
             else:
                 contacts_table = None
         else:
