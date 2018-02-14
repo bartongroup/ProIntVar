@@ -667,10 +667,11 @@ class ARPEGGIOrunner(object):
             new_output_amri = nfilename + ".amri"
             new_output_ari = nfilename + ".ari"
             new_output_ri = nfilename + ".ri"
-            shutil.copyfile(output_amam, new_output_amam)
-            shutil.copyfile(output_amri, new_output_amri)
-            shutil.copyfile(output_ari, new_output_ari)
-            shutil.copyfile(output_ri, new_output_ri)
+            # TODO: catch error instead?
+            # shutil.copyfile(output_amam, new_output_amam)
+            # shutil.copyfile(output_amri, new_output_amri)
+            # shutil.copyfile(output_ari, new_output_ari)
+            # shutil.copyfile(output_ri, new_output_ri)
 
         if hydro_method == "arpeggio":
             shutil.copyfile(output_hydro, self.inputfile_h)
