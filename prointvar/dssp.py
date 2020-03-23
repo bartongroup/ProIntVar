@@ -446,7 +446,12 @@ class DSSPrunner(object):
                     new_outputs.append(outputdssp)
                     if not os.path.isfile(outputdssp) or override:
                         d = DSSPrunner(outputpdb, outputdssp)
-                        d.run(override=override, run_unbound=False, save_new_input=False)
+                        try:
+                            d.run(override=override, run_unbound=False, save_new_input=False)
+                        except IOError:
+                            # skipping DSSP incompatible chains, e.g. nucleotides
+                            new_outputs = new_outputs[:-1]
+                            logger.info('Skipping {} due to DSSP failure.'.format(outputdssp))
                     else:
                         logger.info("DSSP for %s already available...", outputdssp)
 
