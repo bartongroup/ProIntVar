@@ -182,30 +182,17 @@ def contacts_mmcif_table_merger(contacts_table, mmcif_table, suffix='A'):
     :return: merged pandas DataFrame
     """
 
-    if ('new_seq_id' in mmcif_table and 'new_asym_id' in mmcif_table and
+    if ('auth_seq_id_full' in mmcif_table and 'label_asym_id' in mmcif_table and
             'RES_FULL_{}'.format(suffix) in contacts_table and
             'CHAIN_{}'.format(suffix) in contacts_table):
 
         new_col_names = {k: '{}_{}'.format(k, suffix) for k in list(mmcif_table)}
         mmcif_table = mmcif_table.rename(columns=new_col_names)
 
-        table = contacts_table.merge(mmcif_table, how='left',
-                                     right_on=['new_seq_id_{}'.format(suffix),
-                                               'new_asym_id_{}'.format(suffix)],
-                                     left_on=['RES_FULL_{}'.format(suffix),
-                                              'CHAIN_{}'.format(suffix)],
-                                     suffixes=('', '_{}'.format(suffix)))
-
-    elif ('auth_seq_id_full' in mmcif_table and 'label_asym_id' in mmcif_table and
-            'RES_FULL_{}'.format(suffix) in contacts_table and
-            'CHAIN_{}'.format(suffix) in contacts_table):
-
-        new_col_names = {k: '{}_{}'.format(k, suffix) for k in list(mmcif_table)}
-        mmcif_table = mmcif_table.rename(columns=new_col_names)
-
-        table = contacts_table.merge(mmcif_table, how='inner',
+        # TODO: is the right join correct or should it be outer?
+        table = contacts_table.merge(mmcif_table, how='right',  # Inner loses all ligand contacts if not in sifts...
                                      right_on=['auth_seq_id_full_{}'.format(suffix),
-                                               'label_asym_id_{}'.format(suffix)],
+                                               'auth_asym_id_{}'.format(suffix)],
                                      left_on=['RES_FULL_{}'.format(suffix),
                                               'CHAIN_{}'.format(suffix)],
                                      suffixes=('', '_{}'.format(suffix)))
@@ -413,7 +400,7 @@ def table_generator(uniprot_id=None, pdb_id=None, chain=None, res=None,
                 if bio:
                     # write new PDB file used by arpeggio using 'pro_format' defined in
                     # pdbx.py ('write_pdb_from_table' method)
-                    g.run(override=override, pro_format=True)
+                    g.run(override=override, pro_format=False)
                 else:
                     g.run(override=override)
             if os.path.exists(outputarp):
