@@ -61,7 +61,7 @@ Installing ProIntVar
 ```sh
 
 # git cloning repository JSU_branch
-$ git clone -b JSU_branch https://github.com/bartongroup/ProIntVar-Core.git
+$ git clone -b JSU_branch https://github.com/bartongroup/ProIntVar.git
 
 # installing requirements
 $ cd ProIntVar
@@ -127,7 +127,7 @@ from prointvar.fetchers import download_structure_from_pdbe
 
 download_structure_from_pdbe('2pah')
 input_struct = os.path.join(cfg.db_root, cfg.db_pdbx, '2pah.cif')
-df = PDBXreader(inputfile=input_struct).atoms(format_type="mmcif")
+df = PDBXreader(inputfile=input_struct).atoms(format_type="mmcif", excluded=())
 # pandas DataFrame
 df.head()
 
