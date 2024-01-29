@@ -59,14 +59,12 @@ $ source env/bin/activate
 Installing ProIntVar
 
 ```sh
-$ wget https://github.com/bartongroup/ProIntVar-Core/archive/master.zip -O ProIntVar-Core.zip
-$ unzip ProIntVar-Core.zip
 
-# alternatively
-$ git clone https://github.com/bartongroup/ProIntVar-Core.git
+# git cloning repository JSU_branch
+$ git clone -b JSU_branchhttps://github.com/bartongroup/ProIntVar-Core.git
 
 # installing requirements
-$ cd ProIntVar-Core
+$ cd ProIntVar
 $ pip install -r requirements.txt
 
 # then...  
@@ -82,10 +80,10 @@ Editing the provided template configuration settings
 $ cd /path/to/desired/working/dir/
 
 # Get a copy of the template config.ini file shipped with ProIntVar
-$ ProIntVar-Core-config-setup new_config.ini
+$ ProIntVar-config-setup new_config.ini
 
 # Update the settings according to user preferences and push them
-$ ProIntVar-Core-config-load new_config.ini
+$ ProIntVar-config-load new_config.ini
 ```
 
 Testing that the new values are correctly loaded by ProIntVar
