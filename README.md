@@ -61,7 +61,7 @@ Installing ProIntVar
 ```sh
 
 # git cloning repository JSU_branch
-$ git clone -b JSU_branchhttps://github.com/bartongroup/ProIntVar-Core.git
+$ git clone -b JSU_branch https://github.com/bartongroup/ProIntVar-Core.git
 
 # installing requirements
 $ cd ProIntVar
