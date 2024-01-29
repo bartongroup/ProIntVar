@@ -612,8 +612,9 @@ class ARPEGGIOrunner(object):
         r = PDBXreader(inputfile=self.inputfile_back)
         data = r.atoms(remove_altloc=True, reset_atom_id=True, add_new_pro_id=True,
                        remove_partial_res=True, format_type=None)
-        w.run(data=data, format_type="pdb", category="auth",
+        id_equiv_dict = w.run(data=data, format_type="pdb", category="auth",
               override=override, pro_format=pro_format)
+        return id_equiv_dict
 
     def _generate_pdb_with_hydrogens(self, hydro_method="hbplus", override=False):
         if hydro_method == "hbplus":
@@ -667,10 +668,10 @@ class ARPEGGIOrunner(object):
             new_output_amri = nfilename + ".amri"
             new_output_ari = nfilename + ".ari"
             new_output_ri = nfilename + ".ri"
-            shutil.copyfile(output_amam, new_output_amam)
-            shutil.copyfile(output_amri, new_output_amri)
-            shutil.copyfile(output_ari, new_output_ari)
-            shutil.copyfile(output_ri, new_output_ri)
+            # shutil.copyfile(output_amam, new_output_amam)
+            # shutil.copyfile(output_amri, new_output_amri)
+            # shutil.copyfile(output_ari, new_output_ari)
+            # shutil.copyfile(output_ri, new_output_ri)
 
         if hydro_method == "arpeggio":
             shutil.copyfile(output_hydro, self.inputfile_h)
@@ -716,7 +717,8 @@ class ARPEGGIOrunner(object):
 
             # inputfile needs to be in PDB format
             filename, extension = os.path.splitext(self.inputfile)
-            self._generate_pdb(override=override, pro_format=pro_format)
+            logger.info("pro format is {} here!".format(pro_format))
+            id_equiv_dict = self._generate_pdb(override=override, pro_format=pro_format)
 
             # get PDB with explicit hydrogen atoms
             self.inputfile_h = filename + ".h.pdb"
@@ -736,7 +738,7 @@ class ARPEGGIOrunner(object):
 
         else:
             logger.info("ARPEGGIO for %s already available...", self.outputfile)
-        return
+        return id_equiv_dict
 
 
 if __name__ == '__main__':

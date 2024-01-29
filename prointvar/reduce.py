@@ -51,7 +51,7 @@ class REDUCErunner(object):
         filename, extension = os.path.splitext(self.inputfile)
         self.inputfile = filename + "_new.pdb"
         w = PDBXwriter(inputfile=self.inputfile_back, outputfile=self.inputfile)
-        w.run(format_type="pdb", override=override)
+        id_equiv_dict = w.run(format_type="pdb", override=override)
 
     def _run(self, reduce_bin, clean_output=False):
 

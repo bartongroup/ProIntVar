@@ -134,14 +134,14 @@ def parse_dssp_from_file(inputfile, excluded=(), add_full_chain=True, add_ss_red
               "NH_O_1", "NH_O_1_nrg", "O_HN_1", "O_HN_1_nrg",
               "NH_O_2", "NH_O_2_nrg", "O_HN_2", "O_HN_2_nrg",
               "TCO", "KAPPA", "ALPHA", "PHI", "PSI",
-              "X-CA", "Y-CA", "Z-CA")
+              "X-CA", "Y-CA", "Z-CA", "CHAIN_REAL_LABEL", "CHAIN_REAL_AUTH")
 
     widths = ((0, 5), (5, 11), (11, 12), (12, 15), (16, 17), (17, 25),
               (25, 29), (29, 33), (33, 34), (34, 38),
               (38, 45), (46, 50), (50, 56), (57, 61),
               (61, 67), (68, 72), (72, 78), (79, 84),
               (85, 91), (91, 97), (97, 103), (103, 109), (109, 115),
-              (115, 123), (123, 130), (130, 137))
+              (115, 123), (123, 130), (130, 137), (149, 153), (159, 163)) # added by JSU
 
     all_str = {key: str for key in header}
     table = pd.read_fwf(StringIO(lines), names=header, colspecs=widths,  # skiprows=28
@@ -413,42 +413,53 @@ class DSSPrunner(object):
         if not run_unbound:
             cmd = "{} -i {} -o {}".format(dssp_bin, self.inputfile, self.outputfile)
             os.system(cmd)
+            #print(self.inputfile, self.outputfile)
             if not os.path.isfile(self.outputfile):
                 raise IOError("DSSP output not generated for {}".format(self.outputfile))
         else:
             # read the file and get available chains
             r = PDBXreader(inputfile=self.inputfile)
-            data = r.atoms(add_res_full=False, add_contacts=False, format_type=None)
-            chains = [k for k in data.loc[:, '{}_asym_id'.format(category)].unique()]
+            data = r.atoms(add_res_full=True, add_contacts=False, format_type=None)
+            #print('{}_asym_id'.format(category))
+            #chains = [k for k in data.loc[:, 'orig_{}_asym_id'.format(category)].unique()] # added by JSU to work with mmcif
+            chains = [k for k in data.loc[:, '{}_asym_id'.format(category)].unique()] # back to original to work again with pdb
             new_inputs = []
             new_outputs = []
             for chain in chains:
                 # since len(chain) > 1 (e.g. 'AA' or 'BA') are repetitions and are skipped
-                if len(chain) == 1:
-                    # write out the new cif file with the current chain
-                    filename, extension = os.path.splitext(self.inputfile)
-                    outputpdb = filename + '_{}.pdb'.format(chain)
-                    new_inputs.append(outputpdb)
-                    if not os.path.isfile(outputpdb) or override:
-                        w = PDBXwriter(inputfile=None, outputfile=outputpdb)
-                        try:
-                            w.run(data=data, chain=(chain,), res=None, atom=None,
-                                  lines=('ATOM',), override=override, format_type="pdb",
-                                  category=category)
-                        except ValueError:
-                            # skipping only HETATM chains or (generally) empty tables
-                            continue
-                    else:
-                        logger.info("PDB for %s already available...", outputpdb)
-                    # generating the dssp output for the current chain
-                    filename, extension = os.path.splitext(self.outputfile)
-                    outputdssp = filename + '_{}.dssp'.format(chain)
-                    new_outputs.append(outputdssp)
-                    if not os.path.isfile(outputdssp) or override:
-                        d = DSSPrunner(outputpdb, outputdssp)
+                #if len(chain) == 1:
+                # write out the new cif file with the current chain
+                filename, extension = os.path.splitext(self.inputfile)
+                outputpdb = filename + '_{}{}'.format(chain, extension)
+                #print(filename, extension)
+                #print(outputpdb)
+                new_inputs.append(outputpdb)
+                if not os.path.isfile(outputpdb) or override:
+                    w = PDBXwriter(inputfile=None, outputfile=outputpdb)
+                    try:
+                        id_equiv_dict = w.run(data=data, chain=(chain,), res=None, atom=None,
+                              lines=('ATOM',), override=override, format_type="pdb", #change format accordingly, just changed for fragsys
+                              category=category)
+                        #print(outputpdb)
+                    except ValueError:
+                        # skipping only HETATM chains or (generally) empty tables
+                        continue
+                else:
+                    logger.info("PDB for %s already available...", outputpdb)
+                # generating the dssp output for the current chain
+                filename, extension = os.path.splitext(self.outputfile)
+                outputdssp = filename + '_{}.dssp'.format(chain)
+                new_outputs.append(outputdssp)
+                if not os.path.isfile(outputdssp) or override:
+                    d = DSSPrunner(outputpdb, outputdssp)
+                    try:
                         d.run(override=override, run_unbound=False, save_new_input=False)
-                    else:
-                        logger.info("DSSP for %s already available...", outputdssp)
+                    except IOError:
+                        # skipping DSSP incompatible chains, e.g. nucleotides
+                        new_outputs = new_outputs[:-1]
+                        logger.info('Skipping {} due to DSSP failure.'.format(outputdssp))
+                else:
+                    logger.info("DSSP for %s already available...", outputdssp)
 
             # concat the DSSP output to a single file
             lines = ["  # DSSP generated by ProIntVar\n"]

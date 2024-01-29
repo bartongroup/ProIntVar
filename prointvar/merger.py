@@ -11,6 +11,7 @@ Fábio Madeira, 2017+
 """
 
 import os
+import re # JAVIER DID THIS
 import logging
 import numpy as np
 import pandas as pd
@@ -36,6 +37,68 @@ class TableMergerError(Exception):
     pass
 
 
+######################################### JAVIER DID THIS #################################################
+
+
+def get_exp_method(inputfile):
+    """
+    :param inputfile: path to the mmCIF file
+    :return: returns a string indicating the experimental method
+    """
+
+    #print("Getting experimental method...")
+    
+    p_exp_method = re.compile("""_exptl.method\s*["'](.*)["']\s*""") # JAVIER DID THIS
+
+    if not os.path.isfile(inputfile):
+        raise IOError("{} not available or could not be read...".format(inputfile))
+
+    # parsing atom lines
+    header = []
+    lines = []
+    with open(inputfile) as inlines:
+        for line in inlines:
+            m_exp = p_exp_method.match(line)
+            if m_exp:
+                return m_exp.groups()[0]
+
+def get_start_end_domain_coords(protein_id, aln_df):
+    protein_reps = aln_df[aln_df.uniprot_id == protein_id].sort_values(["start_end"])
+    if len(protein_reps) == 0:
+        return None
+    start = protein_reps.loc[protein_reps.index[0],"start_end"][0]
+    end = protein_reps.loc[protein_reps.index[-1],"start_end"][-1]
+    return start, end
+
+def get_pdb_res_range(protein_id, mmcif_sifts_table):
+    mmcif_sifts_table = mmcif_sifts_table[mmcif_sifts_table.UniProt_dbAccessionId == protein_id].sort_values(["UniProt_dbResNum"])
+    struc_res = mmcif_sifts_table.sort_values(["UniProt_dbResNum"]).UniProt_dbResNum.unique().tolist()
+    return tuple([struc_res[0], struc_res[-1]])
+
+def get_intersection_between_coords(prot_range, domain_range):
+    prot_set = set([i for i in range(prot_range[0], prot_range[1]+1)])
+    domain_set = set([i for i in range(domain_range[0], domain_range[1]+1)])
+    return prot_set.intersection(domain_set)
+
+def check_struc_domain_overlap(pdb_id, aln_info, mmcif_sifts):
+    mmcif_sifts.dropna(subset=["UniProt_dbAccessionId", 'UniProt_dbResNum'], how='any', inplace=True)
+    mmcif_sifts.UniProt_dbResNum = mmcif_sifts.UniProt_dbResNum.astype(int)
+    prots = mmcif_sifts.UniProt_dbAccessionId.unique().tolist()
+    #print(prots)
+    for prot in prots:
+        #print(prot)
+        domain_range = get_start_end_domain_coords(prot, aln_info)
+        prot_range = get_pdb_res_range(prot, mmcif_sifts)
+        #print(domain_range, prot_range)
+        if domain_range != None and prot_range != None:
+            intersection = get_intersection_between_coords(prot_range, domain_range)
+            return intersection
+        elif domain_range == None:
+            continue
+    return None
+
+######################################### JAVIER DID THIS #################################################
+
 def mmcif_sifts_table_merger(mmcif_table, sifts_table):
     """
     Merge the mmCIF and SIFTS tables.
@@ -47,17 +110,17 @@ def mmcif_sifts_table_merger(mmcif_table, sifts_table):
 
     # bare minimal columns needed
     if ('auth_seq_id_full' in mmcif_table and 'label_asym_id' in mmcif_table and
-            'PDB_dbResNum' in sifts_table and 'PDB_entityId' in sifts_table):
+            'PDB_dbResNum' in sifts_table and 'PDB_dbChainId' in sifts_table):
 
         # workaround for BioUnits
         if 'orig_label_asym_id' in mmcif_table:
             table = mmcif_table.merge(sifts_table, how='left',
-                                      left_on=['auth_seq_id_full', 'orig_label_asym_id'],
-                                      right_on=['PDB_dbResNum', 'PDB_entityId'])
+                                      left_on=['auth_seq_id_full', 'orig_auth_asym_id'],
+                                      right_on=['PDB_dbResNum', 'PDB_dbChainId'])
         else:
             table = mmcif_table.merge(sifts_table, how='left',
                                       left_on=['auth_seq_id_full', 'label_asym_id'],
-                                      right_on=['PDB_dbResNum', 'PDB_entityId'])
+                                      right_on=['PDB_dbResNum', 'PDB_dbChainId'])
 
     else:
         raise TableMergerError('Not possible to merge mmCIF and SIFTS table! '
@@ -109,11 +172,11 @@ def dssp_sifts_table_merger(dssp_table, sifts_table):
 
     # bare minimal columns needed
     if ('RES' in dssp_table and 'CHAIN' in dssp_table and
-            'PDB_dbResNum' in sifts_table and 'PDB_entityId' in sifts_table):
+            'PDB_dbResNum' in sifts_table and 'PDB_dbChainId' in sifts_table):
 
         table = dssp_table.merge(sifts_table, how='left',
                                  left_on=['RES', 'CHAIN'],
-                                 right_on=['PDB_dbResNum', 'PDB_entityId'])
+                                 right_on=['PDB_dbResNum', 'PDB_dbChainId'])
 
     else:
         raise TableMergerError('Not possible to merge DSSP and SIFTS table! '
@@ -182,30 +245,16 @@ def contacts_mmcif_table_merger(contacts_table, mmcif_table, suffix='A'):
     :return: merged pandas DataFrame
     """
 
-    if ('new_seq_id' in mmcif_table and 'new_asym_id' in mmcif_table and
+    if ('auth_seq_id_full' in mmcif_table and 'label_asym_id' in mmcif_table and
             'RES_FULL_{}'.format(suffix) in contacts_table and
             'CHAIN_{}'.format(suffix) in contacts_table):
 
         new_col_names = {k: '{}_{}'.format(k, suffix) for k in list(mmcif_table)}
         mmcif_table = mmcif_table.rename(columns=new_col_names)
 
-        table = contacts_table.merge(mmcif_table, how='left',
-                                     right_on=['new_seq_id_{}'.format(suffix),
-                                               'new_asym_id_{}'.format(suffix)],
-                                     left_on=['RES_FULL_{}'.format(suffix),
-                                              'CHAIN_{}'.format(suffix)],
-                                     suffixes=('', '_{}'.format(suffix)))
-
-    elif ('auth_seq_id_full' in mmcif_table and 'label_asym_id' in mmcif_table and
-            'RES_FULL_{}'.format(suffix) in contacts_table and
-            'CHAIN_{}'.format(suffix) in contacts_table):
-
-        new_col_names = {k: '{}_{}'.format(k, suffix) for k in list(mmcif_table)}
-        mmcif_table = mmcif_table.rename(columns=new_col_names)
-
-        table = contacts_table.merge(mmcif_table, how='inner',
+        table = contacts_table.merge(mmcif_table, how='right',  # Inner loses all ligand contacts if not in sifts...
                                      right_on=['auth_seq_id_full_{}'.format(suffix),
-                                               'label_asym_id_{}'.format(suffix)],
+                                               'auth_asym_id_{}'.format(suffix)],
                                      left_on=['RES_FULL_{}'.format(suffix),
                                               'CHAIN_{}'.format(suffix)],
                                      suffixes=('', '_{}'.format(suffix)))
@@ -286,7 +335,7 @@ def table_merger(mmcif_table=None, dssp_table=None, sifts_table=None,
     return table
 
 
-def table_generator(uniprot_id=None, pdb_id=None, chain=None, res=None,
+def table_generator(aln_info=None, uniprot_id=None, pdb_id=None, chain=None, res=None,
                     site=None, atom=None, lines=None, bio=True, sifts=True,
                     dssp=True, dssp_unbound=False, contacts=False,
                     residue_agg=False, override=False):
@@ -332,6 +381,11 @@ def table_generator(uniprot_id=None, pdb_id=None, chain=None, res=None,
         else:
             inputcif = os.path.join(config.db_root, config.db_pdbx, "{}.cif".format(pdb_id))
 
+        exp_method = get_exp_method(inputcif)                                               # JAVIER DID THIS
+        if exp_method != 'X-ray diffraction':                                                # JAVIER DID THIS
+            logger.info("{} was solved by {}. Removing it from dataset!".format(pdb_id, exp_method)) # JAVIER DID THIS
+            raise ValueError('This structure was not solved by X-ray') # JAVIER DID THIS
+
         r = PDBXreader(inputcif)
 
         if contacts:
@@ -355,6 +409,19 @@ def table_generator(uniprot_id=None, pdb_id=None, chain=None, res=None,
                                                         uniprot=uniprot_id, site=site)
         else:
             sifts_table = None
+
+        mmcif_sifts = mmcif_sifts_table_merger(mmcif_table, sifts_table)
+        pdb_dom_overlap = check_struc_domain_overlap(pdb_id, aln_info, mmcif_sifts)
+        if pdb_dom_overlap == None:
+            logger.info("{} apparently does not present an ARD-containing protein. Excluding from dataset!".format(pdb_id)) # JAVIER DID THIS
+            raise ValueError()
+            
+        else:
+            if not pdb_dom_overlap:
+                logger.info("{} does not include the target domain! Excluding it from dataset!".format(pdb_id)) # JAVIER DID THIS
+                raise ValueError("{} does not include the target domain! Excluding it from dataset!".format(pdb_id))
+            else:
+                logger.info("{} presents this overlap: {}".format(pdb_id, len(pdb_dom_overlap)))
 
         # DSSP table
         if dssp:
@@ -401,6 +468,7 @@ def table_generator(uniprot_id=None, pdb_id=None, chain=None, res=None,
 
         # Contacts (Arpeggio) table
         if contacts:
+            id_equiv_dict = {}
             if bio:
                 outputarp = os.path.join(config.db_root, config.db_contacts,
                                          "{}_bio.contacts".format(pdb_id))
@@ -413,15 +481,24 @@ def table_generator(uniprot_id=None, pdb_id=None, chain=None, res=None,
                 if bio:
                     # write new PDB file used by arpeggio using 'pro_format' defined in
                     # pdbx.py ('write_pdb_from_table' method)
-                    g.run(override=override, pro_format=True)
+                    id_equiv_dict = g.run(override=override, pro_format=False)
                 else:
-                    g.run(override=override)
+                    id_equiv_dict = g.run(override=override)
             if os.path.exists(outputarp):
                 r = ARPEGGIOreader(inputfile=outputarp)
                 contacts_table = r.contacts(residue_agg=residue_agg,
                                             collapsed_cont=True, col_method="full",
                                             ignore_consecutive=False, numb_res=3,
-                                            parse_special=True)
+                                            parse_special=False)
+                ############################## JAVIER DID THIS ##############################
+                if id_equiv_dict:
+                    inverted_chain_ids_dict = {}
+                    for k, v in id_equiv_dict.items():
+                        inverted_chain_ids_dict[v] = k
+                    contacts_table.CHAIN_A = contacts_table.CHAIN_A.map(inverted_chain_ids_dict)
+                    contacts_table.CHAIN_B = contacts_table.CHAIN_B.map(inverted_chain_ids_dict)
+                    logger.info("Chain IDs are being changed so Arpeggio can run correctly on {}".format(pdb_id))
+                ############################## JAVIER DID THIS ##############################
             else:
                 contacts_table = None
         else:
