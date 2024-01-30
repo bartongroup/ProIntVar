@@ -464,9 +464,8 @@ def download_sifts_from_ebi(identifier, override=False):
     os.makedirs(os.path.join(config.db_root, config.db_sifts), exist_ok=True)
 
     url_root = config.ftp_sifts
-    url_midpoint = "{}/".format(identifier[1:3]) #added by JSU
     url_endpoint = "{}.xml.gz".format(identifier)
-    url = url_root + url_midpoint + url_endpoint #modified by JSU
+    url = url_root + url_endpoint
     BioDownloader(url=url, outputfile=outputfile,
                   decompress=True, override=override)
     return
