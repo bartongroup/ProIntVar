@@ -27,7 +27,7 @@ from prointvar.pdbx import (PDBXreader, PDBXwriter, parse_mmcif_atoms_from_file,
                             add_mmcif_atom_altloc, residues_aggregation,
                             remove_multiple_altlocs, add_mmcif_new_pro_ids,
                             remove_partial_residues, get_coordinates, get_sequence,
-                            fix_label_alt_id, fix_pdb_ins_code, fix_type_symbol,
+                            pdb_fix_label_alt_id, pdb_fix_pdb_ins_code, pdb_fix_type_symbol,
                             get_real_residue_ranges)
 
 from prointvar.config import config as c
@@ -72,9 +72,9 @@ class TestPDBX(unittest.TestCase):
         self.remove_altloc = remove_multiple_altlocs
         self.add_mmcif_new_pro_ids = add_mmcif_new_pro_ids
         self.remove_partial_residues = remove_partial_residues
-        self.fix_label_alt_id = fix_label_alt_id
-        self.fix_pdb_ins_code = fix_pdb_ins_code
-        self.fix_type_symbol = fix_type_symbol
+        self.fix_label_alt_id = pdb_fix_label_alt_id
+        self.fix_pdb_ins_code = pdb_fix_pdb_ins_code
+        self.fix_type_symbol = pdb_fix_type_symbol
         self.get_coordinates = get_coordinates
         self.get_sequence = get_sequence
         self.get_real_residue_ranges = get_real_residue_ranges
@@ -569,23 +569,27 @@ class TestPDBX(unittest.TestCase):
         self.assertEqual(8, list(data.label_seq_id.tolist()).count('25'))
 
     def test_fix_label_alt_id(self):
-        reader = self.reader(self.inputpdb2)
-        data = reader.atoms(format_type='pdb')
+        data = self.parser_pdb(self.inputpdb2, fix_label_alt_id=False)
+        self.assertEqual(1, data.loc[0, 'id'])
+        self.assertEqual('N', data.loc[0, 'label_atom_id'])
+        self.assertEqual('A', data.loc[0, 'label_alt_id'])
         data = self.fix_label_alt_id(data)
         self.assertEqual(1, data.loc[0, 'id'])
         self.assertEqual('N', data.loc[0, 'label_atom_id'])
         self.assertEqual('A', data.loc[0, 'label_alt_id'])
 
     def test_fix_pdb_ins_code(self):
-        reader = self.reader(self.inputpdb2)
-        data = reader.atoms(format_type='pdb')
+        data = self.parser_pdb(self.inputpdb2, fix_ins_code=False)
+        self.assertEqual(1, data.loc[0, 'id'])
+        self.assertEqual('', data.loc[0, 'pdbx_PDB_ins_code'])
         data = self.fix_pdb_ins_code(data)
         self.assertEqual(1, data.loc[0, 'id'])
         self.assertEqual('?', data.loc[0, 'pdbx_PDB_ins_code'])
 
     def test_fix_type_symbol(self):
-        reader = self.reader(self.inputpdb2)
-        data = reader.atoms(format_type='pdb')
+        data = self.parser_pdb(self.inputpdb2, fix_type_symbol=False)
+        self.assertEqual(1, data.loc[0, 'id'])
+        self.assertEqual('', data.loc[0, 'type_symbol'])
         data = self.fix_type_symbol(data)
         self.assertEqual(1, data.loc[0, 'id'])
         self.assertEqual('N', data.loc[0, 'type_symbol'])
