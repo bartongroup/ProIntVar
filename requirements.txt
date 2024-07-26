@@ -12,5 +12,5 @@ lxml>=3.7.3
 click>=6.7
 click_log>=0.2.1
 lxml>=4.1.0
-biopython>=1.68
+biopython>=1.75
 proteofav>=0.2.0

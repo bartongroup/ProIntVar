@@ -30,13 +30,22 @@ from datetime import datetime
 from collections import OrderedDict
 
 from Bio import pairwise2
-from Bio.SubsMat import MatrixInfo as matlist
+from Bio.Align import substitution_matrices
 
 from prointvar.library import (ASA_Miller, ASA_Wilke, ASA_Sander)
 from prointvar.library import aa_codes_1to3_extended
 
 logger = logging.getLogger("prointvar")
 requests_cache.install_cache('prointvar')
+
+
+class Matrices:
+    """Class to access substitution matrices as attributes"""
+    def __init__(self):
+        self.blosum62 = substitution_matrices.load("BLOSUM62")
+
+
+matlist = Matrices()
 
 
 class Make:
@@ -335,7 +344,7 @@ def get_pairwise_alignment(sequence1, sequence2, method="global",
     :param gap_extend: (float)
     :param gap_beg: (float)
     :param gap_end: (float)
-    :param matrix: biopython matlist object
+    :param matrix: Matrices class containing substitution matrices from Bio.Align
     :return: returns the two aligned sequences
     """
 
