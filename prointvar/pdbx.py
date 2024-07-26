@@ -682,16 +682,14 @@ def remove_multiple_altlocs(data):
     for row in table.itertuples():
         altloc = getattr(row, 'label_alt_id')
         if altloc != '.':
-            # table.loc[ix, 'label_alt_id'] = '.'
             ix = getattr(row, 'Index')
-            table.set_value(ix, 'label_alt_id', '.')
+            table.at[ix, 'label_alt_id'] = '.'
             atomid = getattr(row, 'label_atom_id')
             try:
                 for nx in range(1, 100, 1):
                     altnx = table.loc[ix + nx, 'label_alt_id']
                     atomnx = table.loc[ix + nx, 'label_atom_id']
                     if altnx != '.' and atomnx == atomid:
-                        # store indexes of the rows to be dropped
                         drop_ixs.append(ix + nx)
                     else:
                         break
