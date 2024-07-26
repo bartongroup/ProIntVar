@@ -127,9 +127,15 @@ class TestARPEGGIO(unittest.TestCase):
 
     def test_generator_pdb_exec(self):
         if os.path.isfile(self.inputpdb_fast):
-            self.generator(self.inputpdb_fast,
-                           self.inputarpeggio_fast).run(clean_output=True,
-                                                        override=True)
+            try:
+                self.generator(self.inputpdb_fast,
+                               self.inputarpeggio_fast).run(clean_output=True,
+                                                            override=True)
+            except OSError as e:
+                if str(e) == "ARPEGGIO executable is not available...":
+                    self.skipTest("ARPEGGIO executable is not available")
+                else:
+                    raise e
             msg = ("Arpeggio execution failed: make sure the settings "
                    "are set properly in config.ini!")
             self.assertTrue(os.path.isfile(self.inputarpeggio_fast), msg)
