@@ -821,6 +821,8 @@ def get_atom_line(data, index, atom_number, pro_format=False,
     icode = table.loc[ix, 'pdbx_PDB_ins_code']
     if icode == "?":
         icode = " "
+    if not icode:
+        icode = " "
 
     # overriding the original coordinates
     if coords is not None:
