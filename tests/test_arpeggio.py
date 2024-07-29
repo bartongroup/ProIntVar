@@ -165,9 +165,15 @@ class TestARPEGGIO(unittest.TestCase):
         w = PDBXwriter(inputfile=None, outputfile=inputpdb_new)
         w.run(data, format_type='pdb')
 
-        self.generator(inputpdb_new,
-                       inputarpeggio).run(clean_output=True,
-                                          override=True)
+        try:
+            self.generator(inputpdb_new,
+                           inputarpeggio).run(clean_output=True,
+                                              override=True)
+        except OSError as e:
+            if str(e) == "ARPEGGIO executable is not available...":
+                self.skipTest("ARPEGGIO executable is not available")
+            else:
+                raise e
         self.assertTrue(os.path.isfile(inputarpeggio))
         os.remove(inputpdb_new)
         os.remove(inputarpeggio)
