@@ -14,8 +14,8 @@ Fábio Madeira, 2015+
 import os
 import click
 import logging
-import pkg_resources
 from configparser import ConfigParser
+import importlib.resources as pkg_resources
 
 logger = logging.getLogger("prointvar")
 
@@ -27,7 +27,7 @@ class Defaults(object):
     def __init__(self, config_file=None):
         if config_file is not None:
             if not os.path.isfile(config_file):
-                raise IOError("{config_file} not available!")
+                raise IOError(f"{config_file} not available!")
         elif os.path.isfile(os.path.join(os.path.dirname(__file__), CONFIG_FILE)):
             config_file = os.path.join(os.path.dirname(__file__), CONFIG_FILE)
         elif os.path.isfile(os.path.join(os.path.dirname(__file__), CONFIG_FILE_TEMPLATE)):
@@ -64,12 +64,13 @@ config = Defaults()
 @click.argument("filename")
 def config_setup(filename):
     if os.path.isfile(filename):
-        click.confirm("Config file already exist. Do you want to override it?",
+        click.confirm("Config file already exists. Do you want to override it?",
                       abort=True)
 
-    with open(filename, 'wb') as f:
-        f.write(pkg_resources.resource_string(
-            'prointvar', 'config_template.ini'))
+    template_content = pkg_resources.read_text('prointvar', CONFIG_FILE_TEMPLATE)
+
+    with open(filename, 'w') as f:
+        f.write(template_content)
 
     logger.info("Wrote a template config file at %s", filename)
 
@@ -79,13 +80,13 @@ def config_setup(filename):
 @click.argument("filename")
 def config_load(filename):
     if not os.path.isfile(filename):
-        raise IOError("{filename} not available!")
+        raise IOError(f"{filename} not available!")
 
-    with open(filename, 'rb') as r:
+    with open(filename, 'r') as r:
         r = r.read()
 
     setup_dir_file = os.path.join(os.path.dirname(__file__), 'config.ini')
-    with open(setup_dir_file, 'wb') as f:
+    with open(setup_dir_file, 'w') as f:
         f.write(r)
     logger.info("Config file loaded!")
 
