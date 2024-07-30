@@ -198,8 +198,14 @@ def parse_pdb_atoms_from_file(inputfile, excluded=(), add_contacts=False,
             if line.startswith("MODEL"):
                 modelnumb = line.split()[1]
             elif line.startswith("ATOM"):
+                if len(line) < 78:
+                    line = line + " " * (78 - len(line))
+                    logger.warning("PDB ATOM line with less than 78 characters: %s", line)
                 lines.append(line + "%s" % modelnumb)
             elif line.startswith("HETATM"):
+                if len(line) < 78:
+                    line = line + " " * (78 - len(line))
+                    logger.warning("PDB HETATM line with less than 78 characters: %s", line)
                 lines.append(line + "%s" % modelnumb)
     lines = "\n".join(lines)
 
