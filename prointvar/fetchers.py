@@ -24,6 +24,7 @@ from prointvar.config import config
 
 logger = logging.getLogger("prointvar")
 
+# TODO: Consider using requests_cache for caching instead of pickle files
 
 class InvalidEnsemblSpecies(ValueError):
     pass
@@ -92,11 +93,12 @@ def fetch_uniprot_id_from_name(identifier, cached=False, retry_in=(429,)):
     """
 
     url_root = config.http_uniprot
-    url_endpoint = "?query={}&columns=id&format=list".format(identifier)
+    url_endpoint = "search"
     url = url_root + url_endpoint
+    params = {"query": identifier, "fields": "id", "format": "list"}
     b = BioFetcher(url=url, cached=cached,
                    cache_output="{}_id.pkl".format(identifier),
-                   json=False, retry_in=retry_in)
+                   json=False, retry_in=retry_in, **params)
     return b.response
 
 
@@ -111,11 +113,12 @@ def fetch_uniprot_species_from_id(identifier, cached=False, retry_in=(429,)):
     """
 
     url_root = config.http_uniprot
-    url_endpoint = "?query={}&columns=organism&format=tab".format(identifier)
+    url_endpoint = "search"
+    params = {"query": identifier, "fields": "organism_name", "format": "tsv"}
     url = url_root + url_endpoint
     b = BioFetcher(url=url, cached=cached,
                    cache_output="{}_org.pkl".format(identifier),
-                   json=False, retry_in=retry_in)
+                   json=False, retry_in=retry_in, **params)
     return b.response
 
 
@@ -501,6 +504,8 @@ def download_data_from_uniprot(identifier, file_format="fasta", override=False):
 def download_alignment_from_cath(identifier, max_sequences=200, override=False):
     """
     Downloads a MSA in fasta format from CATH to the filesystem.
+
+    See example at https://www.cathdb.info/version/v4_3_0/superfamily/1.50.10.100/funfam/1/files/stockholm?task_id=&max_sequences=200&onlyseq=1
 
     :param identifier: (str) CATH ID (<Superfamily>_<Funfam>)
     :param max_sequences: (str) Maximum number of sequences (default = 200)

@@ -68,7 +68,7 @@ class TestFetchers(unittest.TestCase):
 
         self.uniprotid = "P00439"
         self.pdbid = "2pah"
-        self.cathid = "1.50.10.100_1318"
+        self.cathid = "1.50.10.100_1"  # IDs changed in CATH v4.2.0 -> v4.3.0
         self.pfamid = "PF08124"
         self.ensemblid = "ENSP00000448059"
         self.varid = "rs750420403"
@@ -199,6 +199,7 @@ class TestFetchers(unittest.TestCase):
         self.download_data_from_uniprot(self.uniprotid, file_format="txt")
         os.remove(os.path.join(c.db_root, c.db_uniprot, "{}.txt".format(self.uniprotid)))
 
+    # TODO: Needs reviewed. No explicit test, os.remove raises error if file not downloaded
     def test_download_alignment_from_cath(self):
         self.download_alignment_from_cath(self.cathid)
         os.remove(os.path.join(c.db_root, c.db_cath, "{}.fasta".format(self.cathid)))
