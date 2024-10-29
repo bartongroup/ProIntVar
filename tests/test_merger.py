@@ -38,6 +38,12 @@ from prointvar.config import config as c
 root = os.path.abspath(os.path.dirname(__file__))
 c.db_root = "{}/testdata/".format(root)
 
+# Establish if the DSSP executable is available
+if not os.path.isfile(c.dssp_bin):
+    dssp_installed = False
+    logging.warning("DSSP executable not found!")
+else:
+    dssp_installed = True
 
 @patch("prointvar.config.config.db_root", c.db_root)
 class TestMerger(unittest.TestCase):
@@ -150,12 +156,15 @@ class TestMerger(unittest.TestCase):
         cls.outputdssp_A = os.path.join(c.db_root, c.db_dssp, "{}_A.dssp".format(cls.pdbid))
         d = DSSPrunner(inputfile=cls.outputcif_A,
                        outputfile=cls.outputdssp_A)
-        d.run()
+        if dssp_installed:
+            d.run()
+            d = DSSPreader(cls.outputdssp_A)
+            cls.dssp_unbound = d.residues(add_full_chain=True, add_ss_reduced=True,
+                  add_rsa=True, add_rsa_class=True)
+            os.remove(cls.outputdssp_A)
+        else:
+            cls.dssp_unbound = None
         os.remove(cls.outputcif_A)
-        d = DSSPreader(cls.outputdssp_A)
-        cls.dssp_unbound = d.residues(add_full_chain=True, add_ss_reduced=True,
-                                      add_rsa=True, add_rsa_class=True)
-        os.remove(cls.outputdssp_A)
 
         d = SIFTSreader(cls.inputsifts)
         cls.sifts = d.read(add_regions=True, add_dbs=False)
@@ -198,6 +207,7 @@ class TestMerger(unittest.TestCase):
         cls.uni_vars = None
         cls.ens_vars = None
 
+    @unittest.skipIf(not dssp_installed, "DSSP executable not found!")
     def test_mmcif_dssp_merger(self):
         table = self.mmcif_dssp(self.mmcif, self.dssp)
         # Chain level
@@ -214,6 +224,7 @@ class TestMerger(unittest.TestCase):
         self.assertEqual('118', table.loc[0, 'RES'])
         self.assertEqual('V', table.loc[0, 'AA'])
 
+    @unittest.skipIf(not dssp_installed, "DSSP executable not found!")
     def test_mmcif_dssp_bio_merger(self):
         table = self.mmcif_dssp(self.mmcif_bio, self.dssp_bio)
         # Chain level
@@ -386,6 +397,7 @@ class TestMerger(unittest.TestCase):
         self.assertEqual('VAL', table.loc[329, 'PDB_dbResName'])
         self.assertEqual('V', table.loc[329, 'UniProt_dbResName'])
 
+    # TODO: Could be loading the table from a file. Review.
     def test_table_generator_full_dssp(self):
         mmcif_table, dssp_table, sifts_table, contacts_table = \
             self.generator(uniprot_id=None, pdb_id=self.pdbid, chain=None,
@@ -459,6 +471,7 @@ class TestMerger(unittest.TestCase):
         self.assertEqual('VAL', table.loc[329, 'PDB_dbResName'])
         self.assertEqual('V', table.loc[329, 'UniProt_dbResName'])
 
+    @unittest.skipIf(not dssp_installed, "DSSP executable not found!")
     def test_table_merger_dssp_dssp(self):
         table = self.dssp_dssp(self.dssp, self.dssp_unbound)
         table = table.loc[table['RES'] == '438']
@@ -520,6 +533,7 @@ class TestMerger(unittest.TestCase):
         self.assertTrue('366', table.loc[0, 'RES_FULL_A'])
         self.assertTrue(1.694, table.loc[0, 'VDW_DIST'])
 
+    @unittest.skipIf(not dssp_installed, "DSSP executable not found!")
     def test_table_merger_contacts_mmcif_bio_sifts_dssp_no_residue_agg(self):
         mmcif_table, dssp_table, sifts_table, contacts_table = \
             self.generator(uniprot_id=None, pdb_id=self.pdbid, chain=None,
@@ -541,6 +555,7 @@ class TestMerger(unittest.TestCase):
         self.assertTrue('203', table.loc[0, 'label_seq_id_full_A'])
         self.assertTrue(3.109, table.loc[0, 'DIST'])
 
+    @unittest.skipIf(not dssp_installed, "DSSP executable not found!")
     def test_table_merger_contacts_mmcif_bio_sifts_dssp_residue_agg(self):
         mmcif_table, dssp_table, sifts_table, contacts_table = \
             self.generator(uniprot_id=None, pdb_id=self.pdbid, chain=None,
