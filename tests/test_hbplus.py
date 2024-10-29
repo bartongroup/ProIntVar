@@ -26,6 +26,13 @@ from prointvar.config import config as c
 root = os.path.abspath(os.path.dirname(__file__))
 c.db_root = "{}/testdata/".format(root)
 
+# Establish if the HBPLUS executable is available
+if not os.path.isfile(c.hbplus_bin):
+    hbplus_installed = False
+    logging.warning("HBPLUS executable not found!")
+else:
+    hbplus_installed = True
+
 
 @patch("prointvar.config.config.db_root", c.db_root)
 class TestHBPLUS(unittest.TestCase):
@@ -86,6 +93,7 @@ class TestHBPLUS(unittest.TestCase):
             self.reader(self.emptyfile).read()
             os.remove(self.emptyfile)
 
+    @unittest.skipIf(not hbplus_installed, "HBPLUS executable not found!")
     def test_generator_pdb_exec(self):
         if os.path.isfile(self.inputpdb):
             self.generator(self.inputpdb,
@@ -191,6 +199,7 @@ class TestHBPLUS(unittest.TestCase):
         data = self.filter(reader.data, res_A=('127',))
         self.assertNotIn('119', data.RES_A.unique())
 
+    @unittest.skipIf(not hbplus_installed, "HBPLUS executable not found!")
     def test_generator_pdb_hydrogen(self):
         if os.path.isfile(self.inputpdb):
             self.generator(self.inputpdb, self.outputhbplus_h).run(hydro_pdb_out=True,

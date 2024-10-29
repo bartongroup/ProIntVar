@@ -23,6 +23,13 @@ from prointvar.config import config as c
 root = os.path.abspath(os.path.dirname(__file__))
 c.db_root = "{}/testdata/".format(root)
 
+# Establish if the reduce executable is available
+if not os.path.isfile(c.reduce_bin):
+    reduce_installed = False
+    logging.warning("Reduce executable not found!")
+else:
+    reduce_installed = True
+
 
 @patch("prointvar.config.config.db_root", c.db_root)
 class TestREDUCE(unittest.TestCase):
@@ -63,6 +70,7 @@ class TestREDUCE(unittest.TestCase):
         with self.assertRaises(IOError):
             self.generator(self.notfound)
 
+    @unittest.skipIf(not reduce_installed, "Reduce executable not found!")
     def test_generator_pdb(self):
         if os.path.isfile(self.inputpdb):
             self.generator(self.inputpdb, self.outputred).run(override=True)
@@ -70,6 +78,7 @@ class TestREDUCE(unittest.TestCase):
         else:
             raise IOError("%s" % self.inputpdb)
 
+    @unittest.skipIf(not reduce_installed, "Reduce executable not found!")
     def test_generator_cif(self):
         if os.path.isfile(self.inputcif):
             self.generator(self.inputcif, self.outputred).run(override=True)

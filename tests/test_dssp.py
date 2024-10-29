@@ -27,6 +27,13 @@ from prointvar.config import config as c
 root = os.path.abspath(os.path.dirname(__file__))
 c.db_root = "{}/testdata/".format(root)
 
+# Establish if the DSSP executable is available
+if not os.path.isfile(c.dssp_bin):
+    dssp_installed = False
+    logging.warning("DSSP executable not found!")
+else:
+    dssp_installed = True
+
 
 @patch("prointvar.config.config.db_root", c.db_root)
 class TestDSSP(unittest.TestCase):
@@ -97,6 +104,7 @@ class TestDSSP(unittest.TestCase):
             self.reader(self.emptyfile).read()
             os.remove(self.emptyfile)
 
+    @unittest.skipIf(not dssp_installed, "DSSP executable not found!")
     def test_generator_cif_exec(self):
         if os.path.isfile(self.inputcif):
             self.generator(self.inputcif, self.inputdssp + '.test').run(override=True)
@@ -261,6 +269,7 @@ class TestDSSP(unittest.TestCase):
         data = self.add_rsa_class(data)
         self.assertEqual('Surface', data.loc[2, 'RSA_CLASS'])
 
+    @unittest.skipIf(not dssp_installed, "DSSP executable not found!")
     def test_generator_run_unbound(self):
         if os.path.isfile(self.inputcif):
             filename, extension = os.path.splitext(self.inputdssp)
