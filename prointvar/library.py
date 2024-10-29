@@ -148,36 +148,22 @@ _hbplus_types = {
 }
 
 _arpeggio_types = {
-    "ENTRY_A": str,
-    "CHAIN_A": str,
-    "RES_A": str,
-    "INSCODE_A": str,
-    "RES_FULL_A": str,
-    "ATOM_A": str,
-    "ENTRY_B": str,
-    "CHAIN_B": str,
-    "RES_B": str,
-    "INSCODE_B": str,
-    "RES_FULL_B": str,
-    "ATOM_B": str,
-    "STERIC_CLASH": int,
-    "COVALENT": int,
-    "VDW_CLASH": int,
-    "VDW_INTER": int,
-    "PROXIMAL": int,
-    "HYDROGEN": int,
-    "WEAK_HYDROGEN": int,
-    "HALOGEN": int,
-    "IONIC": int,
-    "METAL_COMPLEX": int,
-    "AROMATIC": int,
-    "HYDROPHOBIC": int,
-    "CARBONYL": int,
-    "POLAR": int,
-    "WEAK_POLAR": int,
-    "DIST": float,
-    "VDW_DIST": float,
-    "ENTITIES": str
+    "bgn.auth_asym_id": str,
+    "bgn.auth_seq_id": str,
+    "bgn.pdbx_PDB_ins_code": str,
+    "bgn.auth_atom_id": str,
+    "bgn.label_comp_id": str,
+    "bgn.label_comp_type": str,
+    "end.auth_asym_id": str,
+    "end.auth_seq_id": str,
+    "end.pdbx_PDB_ins_code": str,
+    "end.auth_atom_id": str,
+    "end.label_comp_id": str,
+    "end.label_comp_type": str,
+    "contact": list,
+    "distance": float,
+    "type": str,
+    "interacting_entities": str,
 }
 
 _probe_types = {}
@@ -209,7 +195,8 @@ _uni_ens_var_types = {
 _dtypes_convert = {
     int: 'int64',
     float: 'float64',
-    str: 'object'
+    str: 'object',
+    list: 'object'
 }
 
 mmcif_types = {k: _dtypes_convert[v] for k, v in _mmcif_types.items()}

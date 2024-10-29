@@ -1,0 +1,100 @@
+[
+   {
+        "bgn": {
+            "auth_asym_id": "A",
+            "auth_atom_id": "CB",
+            "auth_seq_id": 313,
+            "label_comp_id": "VAL",
+            "label_comp_type": "P",
+            "pdbx_PDB_ins_code": " "
+        },
+        "contact": [
+            "proximal",
+            "hydrophobic"
+        ],
+        "distance": 4.02,
+        "end": {
+            "auth_asym_id": "A",
+            "auth_atom_id": "CBB",
+            "auth_seq_id": 508,
+            "label_comp_id": "HEM",
+            "label_comp_type": "B",
+            "pdbx_PDB_ins_code": " "
+        },
+        "interacting_entities": "INTER",
+        "type": "atom-atom"
+    },
+    {
+        "bgn": {
+            "auth_asym_id": "A",
+            "auth_atom_id": "O",
+            "auth_seq_id": 523,
+            "label_comp_id": "HOH",
+            "label_comp_type": "W",
+            "pdbx_PDB_ins_code": " "
+        },
+        "contact": [
+            "DONORPI"
+        ],
+        "distance": 3.9,
+        "end": {
+            "auth_asym_id": "A",
+            "auth_atom_id": "C1A,C2A,C3A,C4A,NA",
+            "auth_seq_id": 508,
+            "label_comp_id": "HEM",
+            "label_comp_type": "B",
+            "pdbx_PDB_ins_code": " "
+        },
+        "interacting_entities": "INTER",
+        "type": "atom-plane"
+    },
+{
+        "bgn": {
+            "auth_asym_id": "A",
+            "auth_atom_id": "C1B,C2B,C3B,C4B,NB",
+            "auth_seq_id": 508,
+            "label_comp_id": "HEM",
+            "label_comp_type": "B",
+            "pdbx_PDB_ins_code": " "
+        },
+        "contact": [
+            "FT",
+            "ET"
+        ],
+        "distance": 4.72,
+        "end": {
+            "auth_asym_id": "A",
+            "auth_atom_id": "CD1,CD2,CE1,CE2,CG,CZ",
+            "auth_seq_id": 435,
+            "label_comp_id": "PHE",
+            "label_comp_type": "P",
+            "pdbx_PDB_ins_code": " "
+        },
+        "interacting_entities": "INTER",
+        "type": "plane-plane"
+    },
+    {
+        "bgn": {
+            "auth_asym_id": "A",
+            "auth_atom_id": "C,CA,N,O",
+            "auth_seq_id": 308,
+            "label_comp_id": "GLU",
+            "label_comp_type": "P",
+            "pdbx_PDB_ins_code": " "
+        },
+        "contact": [
+            "AMIDEAMIDE"
+        ],
+        "distance": 4.29,
+        "end": {
+            "auth_asym_id": "A",
+            "auth_atom_id": "C,CA,N,O",
+            "auth_seq_id": 310,
+            "label_comp_id": "THR",
+            "label_comp_type": "P",
+            "pdbx_PDB_ins_code": " "
+        },
+        "interacting_entities": "INTRA_BINDING_SITE",
+        "type": "group-group"
+    }
+]

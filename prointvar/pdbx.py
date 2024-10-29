@@ -29,7 +29,7 @@ from prointvar.utils import constrain_column_types
 from prointvar.utils import exclude_columns
 from prointvar.library import mmcif_types
 from prointvar.library import aa_default_atoms
-from prointvar.library import aa_codes_3to1_extended
+from prointvar.library import aa_codes_3to1_common, aa_codes_3to1_extended
 
 logger = logging.getLogger("prointvar")
 
@@ -94,6 +94,8 @@ def parse_mmcif_atoms_from_file(inputfile, excluded=(), add_res_full=True,
     table = pd.read_table(StringIO(lines), delim_whitespace=True, low_memory=False,
                           names=header, compression=None, converters=all_str,
                           keep_default_na=False)
+    if table.empty:
+        raise ValueError('{} resulted in an empty DataFrame. Is this valid mmCIF?'.format(inputfile))
 
     # excluding columns
     table = exclude_columns(table, excluded=excluded)
@@ -223,6 +225,8 @@ def parse_pdb_atoms_from_file(inputfile, excluded=(), add_contacts=False,
     all_str = {key: str for key in header}
     table = pd.read_fwf(StringIO(lines), names=header, colspecs=widths,
                         compression=None, converters=all_str, keep_default_na=False)
+    if table.empty:
+        raise ValueError('{} resulted in an empty DataFrame. Is this valid PDB format?'.format(inputfile))
 
     # excluding columns
     table = exclude_columns(table, excluded=excluded)
@@ -451,7 +455,18 @@ def write_mmcif_from_table(outputfile, data, override=False):
     """
 
     table = data
-    atom_lines = ['data_mmCIF_generated_by_ProIntVar', 'loop_']
+    
+    chem_comp_lines = ['loop_']
+    chem_comp_lines += ["_chem_comp.id", "_chem_comp.type", "_chem_comp.name"]  # name not mandatory but WATER is checked for by Arpeggio
+    # take from the table the unique comp_ids (label_comp_id)
+    comp_ids = table['label_comp_id'].unique()
+    for comp_id in comp_ids:
+        comp_type = '"L-peptide linking"' if comp_id in aa_codes_3to1_common.keys() else 'non-polymer'
+        name = 'water' if comp_id == 'HOH' else comp_id
+        line = f"{comp_id} {comp_type} {name}"
+        chem_comp_lines.append(line)
+    
+    atom_lines = ['loop_']
     atom_lines += ["_atom_site.{}".format(v) for v in list(table)]
     for i in table.index:
         line = ' '.join([str(v) for v in list(table.loc[i, :])])
@@ -460,7 +475,9 @@ def write_mmcif_from_table(outputfile, data, override=False):
     # write the final output
     if not os.path.exists(outputfile) or override:
         with open(outputfile, 'w') as outlines:
-            outlines.write("\n".join(atom_lines))
+            outlines.write("data_mmCIF_generated_by_ProIntVar\n")
+            outlines.write("\n".join(chem_comp_lines) + "\n")
+            outlines.write("\n".join(atom_lines) + "\n")
     else:
         logger.info("mmCIF for %s already available...", outputfile)
     return
@@ -565,6 +582,7 @@ def pdb_fix_pdb_ins_code(data):
 
     table = data
     table['pdbx_PDB_ins_code'] = table['pdbx_PDB_ins_code'].str.replace('| ', '?')
+    table['pdbx_PDB_ins_code'] = table['pdbx_PDB_ins_code'].replace('', '?')  # fix Wrong number of values in loop _atom_site.* error caught with arpeggio/gemmi
     table['pdbx_PDB_ins_code'] = table['pdbx_PDB_ins_code'].fillna('?').astype(str)
     return table
 

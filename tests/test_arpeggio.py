@@ -22,11 +22,8 @@ from prointvar.pdbx import PDBXreader, PDBXwriter
 from prointvar.arpeggio import (ARPEGGIOreader, ARPEGGIOrunner,
                                 parse_arpeggio_from_file,
                                 get_arpeggio_selected_from_table,
-                                add_arpeggio_res_split,
                                 interaction_modes, residues_aggregation,
-                                collapsed_contacts, ignore_consecutive_residues,
-                                parse_arpeggio_spec_from_file, add_contact_info,
-                                add_special_cont_types)
+                                ignore_consecutive_residues)
 
 from prointvar.config import config as c
 
@@ -47,30 +44,22 @@ class TestARPEGGIO(unittest.TestCase):
         self.inputpdb_fast = os.path.join(c.db_root, c.db_pdbx,
                                           "{}.pdb".format(self.pdbid_small))
         self.inputcif = os.path.join(c.db_root, c.db_pdbx, "{}.cif".format(self.pdbid))
+        self.inputcif_fast = os.path.join(c.db_root, c.db_pdbx, "{}.cif".format(self.pdbid_small))
         self.inputarpeggio = os.path.join(c.db_root, c.db_contacts,
-                                          "{}.contacts".format(self.pdbid))
-        self.input_amam = os.path.join(c.db_root, c.db_contacts, "{}.amam".format(self.pdbid))
-        self.input_amri = os.path.join(c.db_root, c.db_contacts, "{}.amri".format(self.pdbid))
-        self.input_ari = os.path.join(c.db_root, c.db_contacts, "{}.ari".format(self.pdbid))
-        self.input_ri = os.path.join(c.db_root, c.db_contacts, "{}.ri".format(self.pdbid))
+                                          "{}.json".format(self.pdbid))
         self.inputarpeggio_fast = os.path.join(c.db_root, c.db_contacts,
-                                               "{}.contacts".format(self.pdbid_small))
+                                               "{}.json".format(self.pdbid_small))
+        self.inputarpeggio_demo = os.path.join(c.db_root, c.db_contacts, "pdbe-arpeggio-demo.json")
         self.emptyfile = os.path.join(c.db_root, c.db_tmp, "{}.tmp".format(self.pdbid))
         self.notfound = ""
-        self.excluded = ()
 
         self.parser = parse_arpeggio_from_file
         self.reader = ARPEGGIOreader
         self.generator = ARPEGGIOrunner
         self.filter = get_arpeggio_selected_from_table
-        self.add_arpeggio_res_split = add_arpeggio_res_split
         self.interaction_modes = interaction_modes
         self.residues_aggregation = residues_aggregation
-        self.collapsed_contacts = collapsed_contacts
         self.ignore_consecutive = ignore_consecutive_residues
-        self.parser_spec = parse_arpeggio_spec_from_file
-        self.add_contact_info = add_contact_info
-        self.add_special_cont_types = add_special_cont_types
 
         logging.disable(logging.DEBUG)
 
@@ -82,28 +71,20 @@ class TestARPEGGIO(unittest.TestCase):
         self.inputpdb = None
         self.inputpdb_fast = None
         self.inputcif = None
+        self.inputcif_fast = None
         self.inputarpeggio = None
-        self.input_amam = None
-        self.input_amri = None
-        self.input_ari = None
-        self.input_ri = None
         self.inputarpeggio_fast = None
 
         self.emptyfile = None
         self.notfound = None
-        self.excluded = None
         self.parser = None
         self.reader = None
         self.generator = None
         self.filter = None
-        self.add_arpeggio_res_split = None
         self.interaction_modes = None
         self.residues_aggregation = None
-        self.collapsed_contacts = None
         self.ignore_consecutive = None
         self.parser_spec = None
-        self.add_contact_info = None
-        self.add_special_cont_types = None
 
         logging.disable(logging.NOTSET)
 
@@ -143,11 +124,10 @@ class TestARPEGGIO(unittest.TestCase):
         else:
             raise IOError("%s" % self.inputpdb_fast)
 
-    # @unittest.expectedFailure
     def test_generator_pdb_exec_fail(self):
         pdbid = "1ejg"
         inputpdb = os.path.join(c.db_root, c.db_pdbx, "{}.pdb".format(pdbid))
-        inputarpeggio = os.path.join(c.db_root, c.db_pdbx, "{}.contacts".format(pdbid))
+        inputarpeggio = os.path.join(c.db_root, c.db_pdbx, "{}.json".format(pdbid))
         try:
             self.generator(inputpdb,
                            inputarpeggio).run(clean_output=True,
@@ -177,11 +157,8 @@ class TestARPEGGIO(unittest.TestCase):
         self.assertTrue(os.path.isfile(inputarpeggio))
         os.remove(inputpdb_new)
         os.remove(inputarpeggio)
-        os.remove(os.path.join(c.db_root, c.db_pdbx, "{}.amam".format(pdbid)))
-        os.remove(os.path.join(c.db_root, c.db_pdbx, "{}.amri".format(pdbid)))
-        os.remove(os.path.join(c.db_root, c.db_pdbx, "{}.ari".format(pdbid)))
-        os.remove(os.path.join(c.db_root, c.db_pdbx, "{}.ri".format(pdbid)))
 
+    # TODO: This test might not test the generator as 2pah.json is already generated. Review.
     def test_generator_pdb(self):
         if os.path.isfile(self.inputpdb):
             self.generator(self.inputpdb, self.inputarpeggio).run()
@@ -198,145 +175,99 @@ class TestARPEGGIO(unittest.TestCase):
 
     def test_parser_keys(self):
         self.assertListEqual(sorted([k for k in
-                                     self.parser(self.inputarpeggio).CHAIN_A.unique()]),
+                                     self.parser(self.inputarpeggio)['bgn.auth_asym_id'].unique()]),
                              ['A', 'B'])
         self.assertListEqual(sorted([k for k in
-                                     self.parser(self.inputarpeggio).CHAIN_B.unique()]),
+                                     self.parser(self.inputarpeggio)['end.auth_asym_id'].unique()]),
                              ['A', 'B'])
 
     def test_reader_data(self):
         reader = self.reader(self.inputarpeggio)
         data = reader.read()
-        self.assertEqual(data.loc[0, 'CHAIN_A'], 'B')
-        self.assertEqual(data.loc[0, 'CHAIN_B'], 'B')
-        self.assertEqual(data.loc[0, 'RES_A'], '376')
-        self.assertEqual(data.loc[0, 'RES_B'], '374')
-        self.assertEqual(data.loc[0, 'INSCODE_A'], '?')
-        self.assertEqual(data.loc[0, 'INSCODE_B'], '?')
-        self.assertEqual(data.loc[0, 'ATOM_A'], 'ND2')
-        self.assertEqual(data.loc[0, 'ATOM_B'], 'O')
-        self.assertEqual(data.loc[0, 'DIST'], 4.971)
-        self.assertEqual(data.loc[0, 'VDW_DIST'], 1.901)
+        self.assertEqual(data.loc[27419, 'bgn.auth_asym_id'], 'B')
+        self.assertEqual(data.loc[27419, 'end.auth_asym_id'], 'B')
+        self.assertEqual(data.loc[27419, 'end.auth_seq_id'], 376)
+        self.assertEqual(data.loc[27419, 'bgn.auth_seq_id'], 374)
+        self.assertEqual(data.loc[27419, 'bgn.pdbx_PDB_ins_code'], '?')
+        self.assertEqual(data.loc[27419, 'end.pdbx_PDB_ins_code'], '?')
+        self.assertEqual(data.loc[27419, 'end.auth_atom_id'], 'ND2')
+        self.assertEqual(data.loc[27419, 'bgn.auth_atom_id'], 'O')
+        self.assertEqual(data.loc[27419, 'distance'], 4.97)
 
     def test_reader_to_json_pretty(self):
         reader = self.reader(self.inputarpeggio)
         reader.read()
         data = reader.to_json()
-        self.assertEqual(json.loads(data)[0]['CHAIN_A'], 'B')
-        self.assertEqual(json.loads(data)[0]['RES_A'], '376')
+        self.assertEqual(json.loads(data)[13851]['end.auth_asym_id'], 'B')
+        self.assertEqual(json.loads(data)[13851]['end.auth_seq_id'], 376)
 
     def test_reader_to_json(self):
         reader = self.reader(self.inputarpeggio)
         reader.read()
         data = reader.to_json(pretty=False)
-        self.assertEqual(json.loads(data)[0]['DIST'], 4.971)
-        self.assertEqual(json.loads(data)[0]['VDW_DIST'], 1.901)
-
-    def test_reader_default_excluded(self):
-        reader = self.reader(self.inputarpeggio)
-        keys = reader.read()
-        self.assertNotIn("ENTRY_A", keys)
-        self.assertNotIn("ENTRY_B", keys)
-
-    def test_reader_new_excluded(self):
-        reader = self.reader(self.inputarpeggio)
-        keys = reader.read(excluded=self.excluded)
-        self.assertIn("ENTRY_A", keys)
-        self.assertIn("ENTRY_B", keys)
+        self.assertEqual(json.loads(data)[13851]['distance'], 4.97)
 
     def test_filter_chain(self):
         reader = self.reader(self.inputarpeggio)
-        reader.read(excluded=self.excluded)
+        reader.read()
         data = self.filter(reader.data, chain_B=('A',))
-        self.assertNotIn("B", data.CHAIN_B.unique())
+        self.assertNotIn("B", data['end.auth_asym_id'].unique())
 
     def test_filter_res(self):
         reader = self.reader(self.inputarpeggio)
-        reader.read(excluded=self.excluded)
-        data = self.filter(reader.data, res_A=('374',))
-        self.assertNotIn('119', data.RES_A.unique())
-
-    def test_add_split_res(self):
-        reader = self.reader(self.inputarpeggio)
-        data = reader.contacts(excluded=self.excluded, add_res_split=False)
-        self.assertNotIn('CHAIN_A', data)
-        self.assertNotIn('CHAIN_B', data)
-        data = self.add_arpeggio_res_split(data)
-        self.assertIn('CHAIN_A', data)
-        self.assertIn('CHAIN_B', data)
-        self.assertEqual(data.loc[0, 'CHAIN_A'], 'B')
+        reader.read()
+        data = self.filter(reader.data, res_A=(374,))
+        self.assertNotIn('119', data['bgn.auth_seq_id'].unique())
 
     def test_interaction_modes(self):
         reader = self.reader(self.inputarpeggio)
         data = reader.contacts(int_filter=True, int_mode='inter-chain')
         self.assertEqual(285, len(data))
-        self.assertNotEqual(data.loc[0, 'CHAIN_A'], data.loc[0, 'CHAIN_B'])
+        self.assertNotEqual(data.loc[0, 'bgn.auth_asym_id'], data.loc[0, 'end.auth_asym_id'])
         data = reader.contacts(int_filter=True, int_mode='intra-chain')
         self.assertEqual(27135, len(data))
-        self.assertEqual(data.loc[0, 'CHAIN_A'], data.loc[0, 'CHAIN_B'])
+        self.assertEqual(data.loc[0, 'bgn.auth_asym_id'], data.loc[0, 'end.auth_asym_id'])
         data = reader.contacts()
         data = self.interaction_modes(data, int_mode='inter-chain')
         self.assertEqual(285, len(data))
-        self.assertEqual(data.loc[0, 'RES_FULL_A'], '368')
-        self.assertEqual(data.loc[0, 'RES_FULL_B'], '368')
-
-    def test_collapsed_contacts(self):
-        reader = self.reader(self.inputarpeggio)
-        data = reader.contacts(collapsed_cont=True, col_method='full')
-        self.assertNotIn('IONIC', list(data))
-        self.assertIn('Int_Types', list(data))
-        self.assertEqual('Polar-Bond, VDW-Proximal',
-                         ', '.join(sorted(list(data.loc[3, 'Int_Types']))))
-        reader = self.reader(self.inputarpeggio)
-        data = reader.contacts()
-        data = self.collapsed_contacts(data, col_method='minimal')
-        self.assertNotIn('IONIC', list(data))
-        self.assertIn('Int_Types', list(data))
-        self.assertEqual('Polar-Bond', ', '.join(list(data.loc[3, 'Int_Types'])))
+        self.assertEqual(data.loc[0, 'bgn.auth_seq_id'], 431)
+        self.assertEqual(data.loc[0, 'end.auth_seq_id'], 452)
+        self.assertEqual(data.loc[124, 'bgn.auth_seq_id'], 368)
+        self.assertEqual(data.loc[124, 'end.auth_seq_id'], 368)
 
     def test_residues_agg(self):
         reader = self.reader(self.inputarpeggio)
         data = reader.contacts(residue_agg=True, agg_method='minimum')
-        self.assertEqual(data.loc[0, 'RES_FULL_A'], '118')
-        self.assertEqual(data.loc[0, 'RES_FULL_B'], '312')
-        self.assertEqual(data.loc[0, 'ATOM_A'], 'CG1')
-        self.assertEqual(data.loc[0, 'ATOM_B'], 'O')
-        self.assertEqual(data.loc[0, 'DIST'], 3.758)
-        self.assertEqual(data.loc[0, 'VDW_DIST'], 0.538)
-        self.assertEqual(data.loc[1, 'RES_FULL_A'], '118')
-        self.assertEqual(data.loc[1, 'RES_FULL_B'], '409')
-        self.assertEqual(data.loc[1, 'ATOM_A'], 'CG2')
-        self.assertEqual(data.loc[1, 'ATOM_B'], 'CG')
-        self.assertEqual(data.loc[1, 'DIST'], 4.370)
-        self.assertEqual(data.loc[1, 'VDW_DIST'], 0.970)
+        self.assertEqual(data.loc[1, 'bgn.auth_seq_id'], 118)
+        self.assertEqual(data.loc[1, 'end.auth_seq_id'], 312)
+        self.assertEqual(data.loc[1, 'bgn.auth_atom_id'], 'CG1')
+        self.assertEqual(data.loc[1, 'end.auth_atom_id'], 'O')
+        self.assertEqual(data.loc[1, 'distance'], 3.76)
+        self.assertEqual(data.loc[2, 'bgn.auth_seq_id'], 118)
+        self.assertEqual(data.loc[2, 'end.auth_seq_id'], 409)
+        self.assertEqual(data.loc[2, 'bgn.auth_atom_id'], 'CG2')
+        self.assertEqual(data.loc[2, 'end.auth_atom_id'], 'CG')
+        self.assertEqual(data.loc[2, 'distance'], 4.37)
 
     def test_residues_agg_method(self):
         reader = self.reader(self.inputarpeggio)
         data = reader.contacts()
         data = self.residues_aggregation(data, agg_method='first')
-        self.assertEqual(data.loc[0, 'RES_FULL_A'], '118')
-        self.assertEqual(data.loc[0, 'RES_FULL_B'], '312')
-        self.assertEqual(data.loc[0, 'ATOM_A'], 'CG1')
-        self.assertEqual(data.loc[0, 'ATOM_B'], 'C')
-        self.assertEqual(data.loc[0, 'DIST'], 4.458)
-        self.assertEqual(data.loc[0, 'VDW_DIST'], 1.058)
-        self.assertEqual(data.loc[1, 'RES_FULL_A'], '118')
-        self.assertEqual(data.loc[1, 'RES_FULL_B'], '409')
-        self.assertEqual(data.loc[1, 'ATOM_A'], 'CG2')
-        self.assertEqual(data.loc[1, 'ATOM_B'], 'CD')
-        self.assertEqual(data.loc[1, 'DIST'], 4.533)
-        self.assertEqual(data.loc[1, 'VDW_DIST'], 1.133)
-
-    def test_residues_agg_collapsed(self):
-        reader = self.reader(self.inputarpeggio)
-        data = reader.contacts(collapsed_cont=True, col_method='minimal',
-                               residue_agg=True, agg_method='unique')
-        self.assertEqual('Hydrophobic-Bond', ', '.join(list(data.loc[1, 'Int_Types'])))
-        self.assertEqual(len(data.loc[1, 'DIST']), 2)
-        data = reader.contacts(collapsed_cont=True, col_method='minimal',
-                               residue_agg=True, agg_method='minimum')
-        self.assertEqual('Hydrophobic-Bond', ', '.join(list(data.loc[1, 'Int_Types'])))
-        self.assertEqual(data.loc[1, 'DIST'], 4.370)
+        self.assertEqual(data.loc[1, 'bgn.auth_seq_id'], 118)
+        self.assertEqual(data.loc[1, 'end.auth_seq_id'], 312)
+        self.assertEqual(data.loc[1, 'bgn.auth_atom_id'], 'CB')
+        self.assertEqual(data.loc[1, 'end.auth_atom_id'], 'O')
+        self.assertEqual(data.loc[1, 'distance'], 4.98)
+        self.assertEqual(data.loc[2, 'bgn.auth_seq_id'], 118)
+        self.assertEqual(data.loc[2, 'end.auth_seq_id'], 409)
+        self.assertEqual(data.loc[2, 'bgn.auth_atom_id'], 'CG2')
+        self.assertEqual(data.loc[2, 'end.auth_atom_id'], 'CG')
+        self.assertEqual(data.loc[2, 'distance'], 4.37)
+        self.assertEqual(data.loc[1444, 'bgn.auth_seq_id'], 118)
+        self.assertEqual(data.loc[1444, 'end.auth_seq_id'], 409)
+        self.assertEqual(data.loc[1444, 'bgn.auth_atom_id'], 'CG2')
+        self.assertEqual(data.loc[1444, 'end.auth_atom_id'], 'CD')
+        self.assertEqual(data.loc[1444, 'distance'], 4.58)
 
     def test_ignore_consecutive(self):
         reader = self.reader(self.inputarpeggio)
@@ -345,77 +276,17 @@ class TestARPEGGIO(unittest.TestCase):
         data = self.ignore_consecutive(data, numb_res=5)
         self.assertEqual(len(data.index), 12105)
         data = reader.contacts(residue_agg=True, agg_method='minimum')
-        self.assertEqual(len(data.index), 4609)
+        self.assertEqual(len(data.index), 2856)  # reduced since aggregation after reordering bgn/end
         data = self.ignore_consecutive(data, numb_res=5)
-        self.assertEqual(len(data.index), 2252)
-
-    def test_parser_spec_amam(self):
-        data = self.parser_spec(self.input_amam, int_type="res-res")
-        self.assertEqual(data.loc[0, 'CHAIN_A'], 'A')
-        self.assertEqual(data.loc[0, 'CHAIN_B'], 'A')
-        self.assertEqual(data.loc[0, 'RES_FULL_A'], '159')
-        self.assertEqual(data.loc[0, 'RES_FULL_B'], '161')
-
-    def test_parser_spec_amri(self):
-        data = self.parser_spec(self.input_amri, int_type="res-res")
-        self.assertEqual(data.loc[0, 'CHAIN_A'], 'A')
-        self.assertEqual(data.loc[0, 'CHAIN_B'], 'A')
-        self.assertEqual(data.loc[0, 'RES_FULL_A'], '121')
-        self.assertEqual(data.loc[0, 'RES_FULL_B'], '120')
-
-    def test_parser_spec_ari(self):
-        data = self.parser_spec(self.input_ari, int_type="atom-res")
-        self.assertEqual(data.loc[0, 'CHAIN_A'], 'B')
-        self.assertEqual(data.loc[0, 'CHAIN_B'], 'B')
-        self.assertEqual(data.loc[0, 'RES_FULL_A'], '222')
-        self.assertEqual(data.loc[0, 'RES_FULL_B'], '220')
-        self.assertEqual(data.loc[0, 'ATOM_A'], 'N')
-
-    def test_parser_spec_ri(self):
-        data = self.parser_spec(self.input_ri, int_type="res-res")
-        self.assertEqual(data.loc[0, 'CHAIN_A'], 'B')
-        self.assertEqual(data.loc[0, 'CHAIN_B'], 'B')
-        self.assertEqual(data.loc[0, 'RES_FULL_A'], '208')
-        self.assertEqual(data.loc[0, 'RES_FULL_B'], '204')
-
-    def test_add_contact_info_res_res(self):
-        data = self.parser(self.inputarpeggio, excluded=("ENTRY_A", "ENTRY_B", "ENTITIES"))
-        info = self.parser_spec(self.input_ri, int_type="res-res", excluded=("ID_A", "ENTRY_A",
-                                                                             "COORDS_A", "ID_B",
-                                                                             "ENTRY_B", "COORDS_B",
-                                                                             "CONT_TYPE", "INT_TYPE",
-                                                                             "SELECT"))
-        table = self.add_contact_info(data, info, int_type="res-res",
-                                      col_name="Aromatic-Aromatic")
-        self.assertIn('Aromatic-Aromatic', list(table))
-
-    def test_add_contact_info_atom_res(self):
-        data = self.parser(self.inputarpeggio, excluded=("ENTRY_A", "ENTRY_B", "ENTITIES"))
-        info = self.parser_spec(self.input_ari, int_type="atom-res", excluded=("ID_A", "ENTRY_A",
-                                                                               "COORDS_A", "ID_B",
-                                                                               "ENTRY_B", "COORDS_B",
-                                                                               "CONT_TYPE", "INT_TYPE",
-                                                                               "SELECT"))
-        table = self.add_contact_info(data, info, int_type="atom-res",
-                                      col_name="Atom-Ring")
-        self.assertIn('Atom-Ring', list(table))
+        self.assertEqual(len(data.index), 1485)
 
     def test_parse_special_reader(self):
-        reader = self.reader(self.inputarpeggio)
-        data = reader.contacts(parse_special=True)
-        self.assertIn('Amide-Amide', list(data))
-        self.assertIn('Aromatic-Aromatic', list(data))
-        self.assertIn('Amide-Aromatic', list(data))
-        self.assertIn('Atom-Ring', list(data))
-
-    def test_add_special_cont_types(self):
-        reader = self.reader(self.inputarpeggio)
-        data = reader.contacts(parse_special=False)
-        data = self.add_special_cont_types(self.inputarpeggio, data)
-        self.assertIn('Amide-Amide', list(data))
-        self.assertIn('Aromatic-Aromatic', list(data))
-        self.assertIn('Amide-Aromatic', list(data))
-        self.assertIn('Atom-Ring', list(data))
+        reader = self.reader(self.inputarpeggio_demo)
+        data = reader.contacts(parse_special=True)['type']
+        self.assertIn('atom-atom', list(data))
+        self.assertIn('group-group', list(data))
+        self.assertIn('atom-plane', list(data))
+        self.assertIn('plane-plane', list(data))
 
 
 if __name__ == '__main__':

@@ -169,33 +169,50 @@ def dssp_dssp_table_merger(bound_table, unbound_table):
     return table
 
 
-def contacts_mmcif_table_merger(contacts_table, mmcif_table, suffix='A'):
+def contacts_mmcif_table_merger(contacts_table, mmcif_table, prefix='bgn', join='outer'):
     """
-    Merge the Contacts and mmCIF tables. Suffix is used to select the 'side'
-      (there's 'A' and 'B', as in A-B interactions) of the contacts table,
+    Merge the Contacts and mmCIF tables. Prefix is used to select the 'side'
+      (there's 'bgn' and 'end', as in begin-end interactions) of the contacts table,
        which should be used to merge. This is also used to rename the columns
        added to the contacts table.
+       
+    The merger assumes atom level contacts are desired so care should be taken if contacts
+    have been aggregated at residue level.
 
     :param contacts_table: Arpeggio pandas DataFrame
     :param mmcif_table: mmCIF pandas DataFrame
     :param suffix: (str) add to the new columns added to the contacts_table
     :return: merged pandas DataFrame
     """
+    
+    # TODO: Think this function should join both sides, bgn and end, instead of being delegated to table_merger
+    # Ultimately, the mmcif has a natural precednece, so we are unlikely to want to keep contacts without mmcif info,
+    # but resiude level aggregation matters here, and we might want everything for further processing.
+    
+    # Outer is safest default, but inner might be more appropriate if we want to keep only contacts with mmcif info,
+    # but that would require consideration of bgn/end and ligands...
+    
+    # The precise form of contacts table matters. Should I implement an A-B, B-A version?
+    
+    # TODO: handle the case where the contacts are aggregated at residue level
+    mmcif_merge_columns = ['auth_atom_id', 'auth_seq_id', 'auth_asym_id']
+    contacts_merge_columns = ['{}.auth_atom_id'.format(prefix),
+                              '{}.auth_seq_id'.format(prefix),
+                              '{}.auth_asym_id'.format(prefix)]
+    
+    if (set(mmcif_merge_columns).issubset(mmcif_table.columns) and
+        set(contacts_merge_columns).issubset(contacts_table.columns)):
 
-    if ('auth_seq_id_full' in mmcif_table and 'label_asym_id' in mmcif_table and
-            'RES_FULL_{}'.format(suffix) in contacts_table and
-            'CHAIN_{}'.format(suffix) in contacts_table):
-
-        new_col_names = {k: '{}_{}'.format(k, suffix) for k in list(mmcif_table)}
+        new_col_names = {k: '{}.{}'.format(prefix, k) for k in list(mmcif_table)}
         mmcif_table = mmcif_table.rename(columns=new_col_names)
+        mmcif_merge_columns = ['{}.{}'.format(prefix, col) for col in mmcif_merge_columns]
 
         # TODO: is the right join correct or should it be outer?
-        table = contacts_table.merge(mmcif_table, how='right',  # Inner loses all ligand contacts if not in sifts...
-                                     right_on=['auth_seq_id_full_{}'.format(suffix),
-                                               'auth_asym_id_{}'.format(suffix)],
-                                     left_on=['RES_FULL_{}'.format(suffix),
-                                              'CHAIN_{}'.format(suffix)],
-                                     suffixes=('', '_{}'.format(suffix)))
+        contacts_table['{}.auth_seq_id'.format(prefix)] = contacts_table['{}.auth_seq_id'.format(prefix)].astype(str)
+        table = contacts_table.merge(mmcif_table, how=join,  # Inner loses all ligand contacts if not in sifts...
+                                     right_on=mmcif_merge_columns,
+                                     left_on=contacts_merge_columns,
+                                     suffixes=('', '_{}'.format(prefix)))
     else:
         raise TableMergerError('Not possible to merge the Contacts and mmCIF tables! '
                                'Some of the necessary columns are missing...')
@@ -257,10 +274,24 @@ def table_merger(mmcif_table=None, dssp_table=None, sifts_table=None,
         if sifts_table is not None:
             mmcif_table = mmcif_sifts_table_merger(mmcif_table, sifts_table)
         if contacts_table is not None:
+            # TODO: Clean up all these comments and TODOs
+            # TODO: Should this logic should be in the contacts_mmcif_table_merger function?
+            # It may be better to build this with table_bgn and table_end, and then merge them,
+            # instead of sequentially updateing contacts_table.
+            # TODO: Default behaviour should keep everything in all tables! Any filtering could be implemented after merging.
             contacts_table = contacts_mmcif_table_merger(contacts_table, mmcif_table,
-                                                         suffix='A')
+                                                         prefix='bgn', join='outer')
             contacts_table = contacts_mmcif_table_merger(contacts_table, mmcif_table,
-                                                         suffix='B')
+                                                         prefix='end', join='outer')
+            # Here, needs to be outer joins, because we lose contacts where end is not in mmcif even when bgn is.
+            # Unless we want to drop sites here either not in contacts or mmCIF, if so we do that with a subsequent step:
+            # Drop rows with no bgn or end info, but keep rows with only one side
+            # TODO: "how" should be an option, may want to keep contacts with both sides in mmcif, we might even want to
+            #       skip this altogether:
+            # contacts_table = contacts_table.dropna(subset=['bgn.label_asym_id', 'end.label_asym_id'], how='all')
+            # Current tests don't discriminate if this filter is applied or not, so it's not clear if it's necessary, or if
+            # tests should be updated to reflect this.
+            # The whole merging process should be rethought, as it's not clear what the desired behaviour is.
             table = contacts_table
         else:
             table = mmcif_table
@@ -390,10 +421,10 @@ def table_generator(uniprot_id=None, pdb_id=None, chain=None, res=None,
         if contacts:
             if bio:
                 outputarp = os.path.join(config.db_root, config.db_contacts,
-                                         "{}_bio.contacts".format(pdb_id))
+                                         "{}_bio.json".format(pdb_id))
             else:
                 outputarp = os.path.join(config.db_root, config.db_contacts,
-                                         "{}.contacts".format(pdb_id))
+                                         "{}.json".format(pdb_id))
 
             if not os.path.isfile(outputarp) or override:
                 g = ARPEGGIOrunner(inputfile=inputcif, outputfile=outputarp)
@@ -406,7 +437,6 @@ def table_generator(uniprot_id=None, pdb_id=None, chain=None, res=None,
             if os.path.exists(outputarp):
                 r = ARPEGGIOreader(inputfile=outputarp)
                 contacts_table = r.contacts(residue_agg=residue_agg,
-                                            collapsed_cont=True, col_method="full",
                                             ignore_consecutive=False, numb_res=3,
                                             parse_special=False)
             else:

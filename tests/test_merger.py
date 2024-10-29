@@ -7,6 +7,8 @@ import sys
 import logging
 import unittest
 
+from numpy import isnan
+
 try:
     from StringIO import StringIO
 except ImportError:
@@ -132,7 +134,7 @@ class TestMerger(unittest.TestCase):
         cls.inputsifts = os.path.join(c.db_root, c.db_sifts, "{}.xml".format(cls.pdbid))
 
         cls.inputcontacts = os.path.join(c.db_root, c.db_contacts,
-                                         "{}.contacts".format(cls.pdbid))
+                                         "{}.json".format(cls.pdbid))
 
         d = PDBXreader(cls.inputcif)
         cls.mmcif = d.atoms(add_res_full=True)
@@ -170,10 +172,9 @@ class TestMerger(unittest.TestCase):
         cls.sifts = d.read(add_regions=True, add_dbs=False)
 
         r = ARPEGGIOreader(cls.inputcontacts)
-        cls.contacts = r.contacts(residue_agg=True, agg_method="minimum",
-                                  collapsed_cont=True, col_method="full",
+        cls.contacts = r.contacts(residue_agg=False, agg_method="minimum",
                                   int_filter=True, int_mode='inter-chain',
-                                  parse_special=True)
+                                  parse_special=False)
 
         cls.uniprotid = 'P40227'
         v = VariantsAgreggator(cls.uniprotid, uniprot=True, cached=False)
@@ -483,55 +484,64 @@ class TestMerger(unittest.TestCase):
         self.assertEqual(58.0, table.loc[314, 'ACC'])
         self.assertEqual(125.0, table.loc[314, 'ACC_UNB'])
 
+    # @unittest.expectedFailure  # original test residue missing from bgn due to atom level merging
     def test_contacts_mmcif_merger(self):
-        table = self.contacts_mmcif(self.contacts, self.mmcif, suffix='A')
-        self.assertIn('CHAIN_A', list(table))
-        self.assertIn('label_asym_id_A', list(table))
-        self.assertIn('label_seq_id_full_A', list(table))
-        self.assertTrue('366', table.loc[0, 'RES_FULL_A'])
-        self.assertTrue(1.694, table.loc[0, 'VDW_DIST'])
+        table = self.contacts_mmcif(self.contacts, self.mmcif, prefix='bgn', join='right')
+        self.assertIn('bgn.auth_asym_id', list(table))
+        self.assertIn('bgn.label_asym_id', list(table))
+        self.assertIn('bgn.label_seq_id_full', list(table))
+        self.assertEqual('366', table.loc[242, 'bgn.auth_seq_id'])
+        self.assertTrue(isnan(table.loc[242, 'distance']))  # previous test contact was for CG atom and not CA, with right join we have missing values
+        
+    def test_contacts_mmcif_merger_end(self):
+        table = self.contacts_mmcif(self.contacts, self.mmcif, prefix='end', join='right')
+        self.assertIn('end.auth_asym_id', list(table))
+        self.assertIn('end.label_asym_id', list(table))
+        self.assertIn('end.label_seq_id_full', list(table))
+        self.assertEqual('366', table.loc[242, 'end.auth_seq_id'])
+        self.assertTrue(isnan(table.loc[242, 'distance']))  # as above
 
     def test_contacts_mmcif_merger_both_sides(self):
-        table = self.contacts_mmcif(self.contacts, self.mmcif, suffix='A')
-        table = self.contacts_mmcif(table, self.mmcif, suffix='B')
-        self.assertIn('CHAIN_A', list(table))
-        self.assertIn('CHAIN_B', list(table))
-        self.assertIn('label_asym_id_A', list(table))
-        self.assertIn('label_asym_id_B', list(table))
-        self.assertIn('label_seq_id_full_A', list(table))
-        self.assertIn('label_seq_id_full_B', list(table))
-        self.assertTrue('366', table.loc[0, 'RES_FULL_A'])
-        self.assertTrue(1.694, table.loc[0, 'VDW_DIST'])
+        table = self.contacts_mmcif(self.contacts, self.mmcif, prefix='bgn')
+        table = self.contacts_mmcif(table, self.mmcif, prefix='end')
+        self.assertIn('bgn.auth_asym_id', list(table))
+        self.assertIn('end.auth_asym_id', list(table))
+        self.assertIn('bgn.label_asym_id', list(table))
+        self.assertIn('end.label_asym_id', list(table))
+        self.assertIn('bgn.label_seq_id_full', list(table))
+        self.assertIn('end.label_seq_id_full', list(table))
+        self.assertTrue('366', table.loc[0, 'bgn.auth_seq_id'])
+        self.assertTrue(4.91, table.loc[0, 'distance'])
 
     def test_table_generator_contacts_mmcif(self):
         mmcif_table, dssp_table, sifts_table, contacts_table = \
             self.generator(uniprot_id=None, pdb_id=self.pdbid, chain=None,
-                           res=None, site=None, atom=('CA',), lines=None,
+                           res=None, site=None, atom=('CG',), lines=None,  # Needed to choose correct atom for original test case
                            bio=False, sifts=False, dssp=False, dssp_unbound=False,
                            contacts=True)
-        table = self.contacts_mmcif(contacts_table, mmcif_table, suffix='A')
-        self.assertIn('CHAIN_A', list(table))
-        self.assertIn('label_asym_id_A', list(table))
-        self.assertIn('label_seq_id_full_A', list(table))
-        self.assertTrue('366', table.loc[0, 'RES_FULL_A'])
-        self.assertTrue(1.694, table.loc[0, 'VDW_DIST'])
+        table = self.contacts_mmcif(contacts_table, mmcif_table, prefix='bgn', join='right')
+        self.assertIn('bgn.auth_asym_id', list(table))
+        self.assertIn('bgn.label_asym_id', list(table))
+        self.assertIn('bgn.label_seq_id_full', list(table))
+        self.assertEqual('366', table.loc[612, 'bgn.auth_seq_id'])
+        self.assertEqual(4.91, table.loc[612, 'distance'])
 
     def test_table_merger_contacts_mmcif(self):
         mmcif_table, dssp_table, sifts_table, contacts_table = \
             self.generator(uniprot_id=None, pdb_id=self.pdbid, chain=None,
-                           res=None, site=None, atom=('CA',), lines=None,
+                           res=None, site=None, atom=('CG',), lines=None,
                            bio=False, sifts=False, dssp=False, dssp_unbound=False,
                            contacts=True)
 
         table = self.table_merger(mmcif_table, dssp_table, sifts_table, contacts_table)
-        self.assertIn('CHAIN_A', list(table))
-        self.assertIn('CHAIN_B', list(table))
-        self.assertIn('label_asym_id_A', list(table))
-        self.assertIn('label_asym_id_B', list(table))
-        self.assertIn('label_seq_id_full_A', list(table))
-        self.assertIn('label_seq_id_full_B', list(table))
-        self.assertTrue('366', table.loc[0, 'RES_FULL_A'])
-        self.assertTrue(1.694, table.loc[0, 'VDW_DIST'])
+        self.assertIn('bgn.auth_asym_id', list(table))
+        self.assertIn('end.auth_asym_id', list(table))
+        self.assertIn('bgn.label_asym_id', list(table))
+        self.assertIn('end.label_asym_id', list(table))
+        self.assertIn('bgn.label_seq_id_full', list(table))
+        self.assertIn('end.label_seq_id_full', list(table))
+        self.assertEqual('366', table.loc[26290, 'bgn.auth_seq_id'])
+        self.assertEqual(4.91, table.loc[26290, 'distance'])
 
     @unittest.skipIf(not dssp_installed, "DSSP executable not found!")
     def test_table_merger_contacts_mmcif_bio_sifts_dssp_no_residue_agg(self):
@@ -581,6 +591,8 @@ class TestMerger(unittest.TestCase):
         self.assertIn('Amide-Amide', table.loc[0, 'Int_Types'])
 
     def test_uni_ens_vars_merger(self):
+        if self.uni_vars is None or self.ens_vars is None:
+            self.skipTest("No UniProt or Ensembl variants available.")
         table = self.uni_ens_vars(self.uni_vars, self.ens_vars)
         # UniProt
         self.assertNotIn('translation', list(self.uni_vars))

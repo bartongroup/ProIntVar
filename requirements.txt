@@ -12,5 +12,13 @@ lxml>=3.7.3
 click>=6.7
 click_log>=0.2.1
 lxml>=4.1.0
-biopython>=1.75
+
+# biopython >=1.80 is required for Arpeggio, >=1.75 suffices otherwise
+biopython>=1.80
+
 proteofav>=0.2.0
+
+# Arpeggio dependencies
+pdbe-arpeggio
+openbabel>=3.0.0
+gemmi>=0.5.8

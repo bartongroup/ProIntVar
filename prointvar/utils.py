@@ -574,12 +574,20 @@ def merging_down_by_key(table, key="xrefs_id"):
                     elif len(values) == 1:
                         values = values[0]
                     else:
-                        values = tuple(set(values))
+                        try:
+                            tuple(set(values))
+                        except TypeError as e:
+                            logger.error("Error converting values to tuple: %s", e)
+                            if isinstance(v, list) and len(values) == 1:
+                                values = values[0]
+                            else:
+                                values = tuple(set(tuple(v) if isinstance(v, list) else v for v in values))
+
 
                 d[list(table)[i]] = values
             rows.append(d)
             combined = pd.DataFrame(rows)
-            new_table = new_table.append(combined)
+            new_table = pd.concat([new_table, combined], ignore_index=True)
 
     return new_table.reset_index(drop=True)
 
